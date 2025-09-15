@@ -220,3 +220,7 @@ def train_and_save():
         pass
 
     print("[DONE] Training finished.")
+
+
+if __name__ == "__main__":
+    train_and_save()
