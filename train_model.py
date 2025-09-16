@@ -1,4 +1,4 @@
-# train_model.py (SQLite version)
+# train_model.py (SQLite version, patched to prevent dataset corruption)
 import os
 import cv2
 import json
@@ -26,7 +26,6 @@ DB_PATH = os.path.join(DATA_DIR, "person_db.sqlite")
 # Model and label map paths
 LABEL_MAP_PATH = os.path.join(MODELS_DIR, "label_map.json")
 MODEL_PATH = os.path.join(MODELS_DIR, "face_model.yml")
-
 
 CASCADE = cv2.CascadeClassifier(
     cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
@@ -79,8 +78,7 @@ def prepare_training_data():
             if os.path.isdir(os.path.join(DATASET_DIR, d))
         ]
     )
-    faces = []
-    labels = []
+    faces, labels = [], []
     label_map = {}
     label_counter = 0
 
@@ -112,30 +110,18 @@ def prepare_training_data():
                         gray_full, scaleFactor=1.1, minNeighbors=4, minSize=(80, 80)
                     )
                     if len(faces_box) > 0:
-                        faces_box = sorted(
-                            faces_box, key=lambda b: b[2] * b[3], reverse=True
-                        )
-                        x, y, w2, h2 = faces_box[0]
+                        x, y, w2, h2 = max(faces_box, key=lambda b: b[2] * b[3])
                         crop = gray_full[y : y + h2, x : x + w2]
                         if crop.size > 0:
-                            crop = cv2.resize(crop, (200, 200))
-                            if crop.size > 0:
-                                crop = cv2.resize(crop, (200, 200))
-                                faces.append(crop.astype("uint8"))
-                                labels.append(label_counter)
-                            else:
-                                print(f"[WARN] Skipped empty crop from {fpath}")
-
-                        continue
+                            face = cv2.resize(crop, (200, 200))
+                            faces.append(face.astype("uint8"))
+                            labels.append(label_counter)
                 continue
 
             # normal resize path
             face = cv2.resize(img, (200, 200))
-            if face.size > 0:
-                faces.append(face.astype("uint8"))
-                labels.append(label_counter)
-            else:
-                print(f"[WARN] Skipped invalid face image {fpath}")
+            faces.append(face.astype("uint8"))
+            labels.append(label_counter)
 
         label_counter += 1
 
@@ -147,12 +133,12 @@ def prepare_training_data():
 # Training
 # ---------------------------
 def train_and_save():
+    # Clean old model files, but never touch dataset/
     for f in [MODEL_PATH, LABEL_MAP_PATH]:
         if os.path.exists(f):
             os.remove(f)
             print(f"[INFO] Removed old model file: {f}")
 
-    # ✅ Ensure DB and table exist
     if not os.path.exists(DB_PATH):
         print(f"[WARN] Database not found at {DB_PATH}, creating a fresh one...")
     init_db()
@@ -171,50 +157,40 @@ def train_and_save():
         return
 
     print(f"[INFO] Training on {len(faces)} samples, {len(set(labels))} classes.")
-
-    # ✅ FIX: pass list of NumPy arrays + NumPy labels
     recognizer.train(faces, labels)
 
-    # save model
     recognizer.write(MODEL_PATH)
     print(f"[INFO] Model saved to {MODEL_PATH}")
 
-    # write label_map
-    label_map_strkeys = {str(k): v for k, v in label_map.items()}
     with open(LABEL_MAP_PATH, "w", encoding="utf8") as f:
-        json.dump(label_map_strkeys, f, indent=2, ensure_ascii=False)
+        json.dump(
+            {str(k): v for k, v in label_map.items()}, f, indent=2, ensure_ascii=False
+        )
     print(f"[INFO] Label map saved to {LABEL_MAP_PATH}")
 
-    # update persons table with label index
     for k, uid in label_map.items():
         update_person_label(uid, int(k))
     print("[INFO] Updated persons table with label indices.")
 
-    # quick training-set accuracy
     correct = 0
     for i, face in enumerate(faces):
         pred_label, conf = recognizer.predict(face)
-        true_label = int(labels[i])
-        if pred_label == true_label:
+        if pred_label == int(labels[i]):
             correct += 1
     acc = 100.0 * correct / len(faces)
     print(f"[INFO] Training-set accuracy (approx): {acc:.2f}%")
 
-    # optional holdout accuracy
     try:
         if len(faces) >= 30:
-            X = faces  # already list of np arrays
-            y = labels
+            X, y = faces, labels
             Xtr, Xte, ytr, yte = train_test_split(
                 X, y, test_size=0.2, random_state=42, stratify=y
             )
             recognizer = cv2.face.LBPHFaceRecognizer_create()
             recognizer.train(Xtr, ytr)
-            correct = 0
-            for i, x in enumerate(Xte):
-                pred_label, conf = recognizer.predict(x)
-                if pred_label == yte[i]:
-                    correct += 1
+            correct = sum(
+                1 for i, x in enumerate(Xte) if recognizer.predict(x)[0] == yte[i]
+            )
             print(f"[INFO] Holdout accuracy approx: {100.0 * correct / len(Xte):.2f}%")
     except Exception:
         pass
