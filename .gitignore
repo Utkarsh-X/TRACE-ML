@@ -1,0 +1,19 @@
+# Python cache
+__pycache__/
+*.py[cod]
+
+# Data sets / models
+data/
+dataset/
+models/
+
+# Environment files
+.env
+*.venv
+venv/
+.env/
+
+# OS / editor junk
+.DS_Store
+Thumbs.db
+.vscode/
