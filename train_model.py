@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 # train_model.py
+=======
+# train_model.py (SQLite version, patched to prevent dataset corruption)
+>>>>>>> 928aee1a514a4971c861766592a3923f3db7c636
 import os
 import cv2
 import json
