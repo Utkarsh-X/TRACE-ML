@@ -1,0 +1,26 @@
+app:
+  environment: strict
+
+camera:
+  device_index: 0
+
+recognition:
+  accept_threshold: 0.72
+  review_threshold: 0.58
+  active_gallery_search_k: 96
+  log_cooldown_seconds: 4
+  persist_unknown: false
+  persist_review: true
+  robust_matching: true
+  enable_preprocess_fallback: true
+  low_quality_threshold: 0.45
+  threshold_relaxation: 0.08
+
+temporal:
+  decision_window: 8
+  smoothing_alpha: 0.6
+  min_accept_votes: 2
+  track_ttl_seconds: 1.8
+  max_track_distance_px: 110
+  min_track_iou: 0.10
+  track_reuse_min_score: 0.40

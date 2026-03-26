@@ -1,0 +1,140 @@
+"""Configuration loading and validation."""
+
+from __future__ import annotations
+
+import os
+from pathlib import Path
+
+import yaml
+from pydantic import BaseModel, Field, field_validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+from trace_ml.core.errors import ConfigError
+
+
+class AppSettings(BaseModel):
+    name: str = "TRACE-ML"
+    environment: str = "demo"
+    timezone: str = "UTC"
+
+
+class CameraSettings(BaseModel):
+    device_index: int = 0
+    width: int = 1280
+    height: int = 720
+    fps: int = 30
+
+    @field_validator("device_index")
+    @classmethod
+    def validate_device_index(cls, value: int) -> int:
+        if value != 0:
+            raise ValueError("For v3 MVP, only built-in webcam index 0 is supported.")
+        return value
+
+
+class RecognitionSettings(BaseModel):
+    model_name: str = "buffalo_sc"
+    provider: str = "CPUExecutionProvider"
+    det_size: tuple[int, int] = (640, 640)
+    similarity_threshold: float = 0.45
+    accept_threshold: float = 0.72
+    review_threshold: float = 0.58
+    top_k: int = 5
+    active_gallery_search_k: int = 96
+    log_cooldown_seconds: int = 5
+    persist_unknown: bool = False
+    persist_review: bool = True
+    robust_matching: bool = True
+    enable_preprocess_fallback: bool = True
+    low_quality_threshold: float = 0.40
+    threshold_relaxation: float = 0.12
+
+
+class PipelineSettings(BaseModel):
+    frame_queue_size: int = 2
+    result_queue_size: int = 2
+    show_hud: bool = True
+
+
+class QualitySettings(BaseModel):
+    min_face_ratio: float = 0.03
+    min_sharpness: float = 55.0
+    min_brightness: float = 45.0
+    max_brightness: float = 220.0
+    min_pose_score: float = 0.28
+    min_quality_score: float = 0.38
+    min_valid_images: int = 6
+    min_embeddings_active: int = 6
+    min_embeddings_ready: int = 2
+
+
+class TemporalSettings(BaseModel):
+    decision_window: int = 6
+    smoothing_alpha: float = 0.6
+    min_accept_votes: int = 2
+    track_ttl_seconds: float = 1.8
+    max_track_distance_px: int = 120
+    min_track_iou: float = 0.08
+    track_reuse_min_score: float = 0.35
+
+
+class StoreSettings(BaseModel):
+    root: str = "data"
+    vectors_dir: str = "data/vectors"
+    screenshots_dir: str = "data/screenshots"
+    exports_dir: str = "data/exports"
+
+
+class LoggingSettings(BaseModel):
+    level: str = "INFO"
+    file_path: str = "data/logs/trace_ml.log"
+    rotation: str = "10 MB"
+    retention: str = "14 days"
+
+
+class LivenessSettings(BaseModel):
+    enabled: bool = False
+    provider: str = "none"
+    threshold: float = 0.6
+    model_path: str = "models/2.7_80x80_MiniFASNetV2.onnx"
+    strict_reject: bool = False
+
+
+class Settings(BaseSettings):
+    model_config = SettingsConfigDict(
+        env_prefix="TRACE_ML_",
+        env_nested_delimiter="__",
+        extra="ignore",
+    )
+
+    app: AppSettings = Field(default_factory=AppSettings)
+    camera: CameraSettings = Field(default_factory=CameraSettings)
+    recognition: RecognitionSettings = Field(default_factory=RecognitionSettings)
+    pipeline: PipelineSettings = Field(default_factory=PipelineSettings)
+    quality: QualitySettings = Field(default_factory=QualitySettings)
+    temporal: TemporalSettings = Field(default_factory=TemporalSettings)
+    store: StoreSettings = Field(default_factory=StoreSettings)
+    logging: LoggingSettings = Field(default_factory=LoggingSettings)
+    liveness: LivenessSettings = Field(default_factory=LivenessSettings)
+    runtime_config_path: str = ""
+
+
+def load_yaml(path: Path) -> dict:
+    if not path.exists():
+        return {}
+    with path.open("r", encoding="utf-8") as f:
+        loaded = yaml.safe_load(f) or {}
+    if not isinstance(loaded, dict):
+        raise ConfigError("Config file must be a YAML object.")
+    return loaded
+
+
+def load_settings(config_path: str | Path | None = None) -> Settings:
+    path = Path(config_path or os.getenv("TRACE_ML_CONFIG", "config.yaml"))
+    raw = load_yaml(path)
+    try:
+        settings = Settings(**raw)
+    except Exception as exc:  # pragma: no cover - pydantic supplies details.
+        raise ConfigError(str(exc)) from exc
+    settings.runtime_config_path = str(path.resolve())
+    return settings

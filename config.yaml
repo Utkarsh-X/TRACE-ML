@@ -1,0 +1,71 @@
+app:
+  name: TRACE-ML
+  environment: demo
+  timezone: UTC
+
+camera:
+  device_index: 0
+  width: 1280
+  height: 720
+  fps: 30
+
+recognition:
+  model_name: buffalo_sc
+  provider: CPUExecutionProvider
+  det_size: [640, 640]
+  similarity_threshold: 0.45
+  accept_threshold: 0.60
+  review_threshold: 0.45
+  top_k: 5
+  active_gallery_search_k: 96
+  log_cooldown_seconds: 2
+  persist_unknown: false
+  persist_review: true
+  robust_matching: true
+  enable_preprocess_fallback: true
+  low_quality_threshold: 0.40
+  threshold_relaxation: 0.12
+
+pipeline:
+  frame_queue_size: 2
+  result_queue_size: 2
+  show_hud: true
+
+quality:
+  min_face_ratio: 0.03
+  min_sharpness: 55.0
+  min_brightness: 45.0
+  max_brightness: 220.0
+  min_pose_score: 0.28
+  min_quality_score: 0.38
+  min_valid_images: 6
+  min_embeddings_active: 6
+  min_embeddings_ready: 2
+
+temporal:
+  decision_window: 6
+  smoothing_alpha: 0.6
+  min_accept_votes: 1
+  track_ttl_seconds: 1.8
+  max_track_distance_px: 120
+  min_track_iou: 0.08
+  track_reuse_min_score: 0.35
+
+store:
+  root: data
+  vectors_dir: data/vectors
+  screenshots_dir: data/screenshots
+  exports_dir: data/exports
+
+logging:
+  level: INFO
+  file_path: data/logs/trace_ml.log
+  rotation: 10 MB
+  retention: 14 days
+
+liveness:
+  enabled: false
+  provider: none
+  threshold: 0.6
+  model_path: models/2.7_80x80_MiniFASNetV2.onnx
+  strict_reject: false
