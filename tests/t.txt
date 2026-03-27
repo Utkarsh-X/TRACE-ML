@@ -1,0 +1,793 @@
+(.venv311) PS D:\github FORK\TRACE-ML> python -V
+Python 3.11.9
+(.venv311) PS D:\github FORK\TRACE-ML> python -m pytest -q
+.............................                                                                   [100%]
+(.venv311) PS D:\github FORK\TRACE-ML> python -m trace_ml --help
+                                                                                                       
+ Usage: python -m trace_ml [OPTIONS] COMMAND [ARGS]...                                                 
+                                                                                                       
+ TRACE-ML v3 tactical CLI
+
+╭─ Options ───────────────────────────────────────────────────────────────────────────────────────────╮
+│ --config              -c      TEXT  Path to config.yaml                                             │
+│ --install-completion                Install completion for the current shell.                       │
+│ --show-completion                   Show completion for the current shell, to copy it or customize  │
+│                                     the installation.                                               │
+│ --help                              Show this message and exit.                                     │
+╰─────────────────────────────────────────────────────────────────────────────────────────────────────╯
+╭─ Commands ──────────────────────────────────────────────────────────────────────────────────────────╮
+│ doctor     Run startup and dependency checks.                                                       │
+│ person     Person registry commands                                                                 │
+│ train      Embedding build commands                                                                 │
+│ recognize  Live recognition commands                                                                │
+│ history    Detection history commands                                                               │
+│ report     Reporting commands                                                                       │
+│ export     Export commands                                                                          │
+│ events     Entity-event stream commands                                                             │
+│ alerts     Alert stream commands                                                                    │
+│ incident   Incident commands                                                                        │
+│ action     Action audit commands                                                                    │
+╰─────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+(.venv311) PS D:\github FORK\TRACE-ML> python -m trace_ml person --help
+                                                                                                       
+ Usage: python -m trace_ml person [OPTIONS] COMMAND [ARGS]...                                          
+                                                                                                       
+ Person registry commands
+
+╭─ Options ───────────────────────────────────────────────────────────────────────────────────────────╮
+│ --help          Show this message and exit.                                                         │
+╰─────────────────────────────────────────────────────────────────────────────────────────────────────╯
+╭─ Commands ──────────────────────────────────────────────────────────────────────────────────────────╮
+│ add      Add a person and ingest images.                                                            │
+│ list     List registered persons with lifecycle state.                                              │
+│ update   Update a person record.                                                                    │
+│ capture  Capture additional images for an existing person.                                          │
+│ audit    Audit person quality states and suggest lifecycle corrections.                             │
+│ delete   Delete person and linked embeddings/detections.                                            │
+╰─────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+(.venv311) PS D:\github FORK\TRACE-ML> python -m trace_ml events --help
+                                                                                                       
+ Usage: python -m trace_ml events [OPTIONS] COMMAND [ARGS]...                                          
+                                                                                                       
+ Entity-event stream commands
+
+╭─ Options ───────────────────────────────────────────────────────────────────────────────────────────╮
+│ --help          Show this message and exit.                                                         │
+╰─────────────────────────────────────────────────────────────────────────────────────────────────────╯
+╭─ Commands ──────────────────────────────────────────────────────────────────────────────────────────╮
+│ tail  Show latest entity-linked event stream.                                                       │
+╰─────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+(.venv311) PS D:\github FORK\TRACE-ML> python -m trace_ml alerts --help
+                                                                                                       
+ Usage: python -m trace_ml alerts [OPTIONS] COMMAND [ARGS]...                                          
+                                                                                                       
+ Alert stream commands
+
+╭─ Options ───────────────────────────────────────────────────────────────────────────────────────────╮
+│ --help          Show this message and exit.                                                         │
+╰─────────────────────────────────────────────────────────────────────────────────────────────────────╯
+╭─ Commands ──────────────────────────────────────────────────────────────────────────────────────────╮
+│ tail  Show latest rule-generated alerts.                                                            │
+╰─────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+(.venv311) PS D:\github FORK\TRACE-ML> python -m trace_ml incident --help
+                                                                                                       
+ Usage: python -m trace_ml incident [OPTIONS] COMMAND [ARGS]...                                        
+
+ Incident commands
+
+╭─ Options ───────────────────────────────────────────────────────────────────────────────────────────╮
+│ --help          Show this message and exit.                                                         │
+╰─────────────────────────────────────────────────────────────────────────────────────────────────────╯
+╭─ Commands ──────────────────────────────────────────────────────────────────────────────────────────╮
+│ list          List incidents for operator review.                                                   │
+│ show          Show details and timeline for one incident.                                           │
+│ close         Close an incident manually.                                                           │
+│ set-severity  Set incident severity manually (operator control).                                    │
+╰─────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+(.venv311) PS D:\github FORK\TRACE-ML> python -m trace_ml action --help
+                                                                                                       
+ Usage: python -m trace_ml action [OPTIONS] COMMAND [ARGS]...                                          
+
+ Action audit commands
+
+╭─ Options ───────────────────────────────────────────────────────────────────────────────────────────╮
+│ --help          Show this message and exit.                                                         │
+╰─────────────────────────────────────────────────────────────────────────────────────────────────────╯
+╭─ Commands ──────────────────────────────────────────────────────────────────────────────────────────╮
+│ list  List action audit records for an incident.                                                    │
+╰─────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+(.venv311) PS D:\github FORK\TRACE-ML> python -m trace_ml person list
+
+  ID       Name          Category   State    Emb   Score   Updated                          
+ ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  PRC001   Demo Person   criminal   draft      0    0.00   2026-03-25T12:32:44.118698+00:00 
+  PRC002   Demo Person   criminal   ready      3    0.63   2026-03-25T12:35:12.213510+00:00 
+  PRC004   arjun_v2      criminal   active    10    0.69   2026-03-25T13:30:11.834234+00:00 
+
+(.venv311) PS D:\github FORK\TRACE-ML> python -m trace_ml person audit
+                                             Person Audit                                              
+
+  Person   Current   Recommended   Emb   Valid/Total   Quality   Issues                                
+ ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 
+  PRC001   draft     draft           0           0/0      0.00   no_images,zero_embeddings,few_valid…  
+  PRC002   ready     ready           3          3/15      0.63   few_valid_images
+  PRC004   active    active         10         10/30      0.69   none
+
+(.venv311) PS D:\github FORK\TRACE-ML> python -m trace_ml report summary
+╭──────────────────── Session Summary ────────────────────╮
+│ Total detections: 254                                   │
+│ Unique persons: 2                                       │
+│ Average confidence: 60.37                               │
+│ Decision distribution: accept:157, reject:33, review:64 │
+│ Blocked persons: 0 | Low-quality persons: 1             │
+╰─────────────────────────────────────────────────────────╯
+                  Top Detections                  
+
+  Name          Category   Hits   Avg confidence 
+ ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  arjun_v2      criminal    221            67.14
+  Unknown       unknown      26             0.36
+  Demo Person   criminal      7            69.24
+
+(.venv311) PS D:\github FORK\TRACE-ML> python -m trace_ml report quality
+                      Low-quality / Non-active Enrollments                       
+
+  Person   Name          State   Score   Emb   Valid/Total   Reason             
+ ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  PRC001   Demo Person   draft    0.00     0           0/0   no_images_uploaded
+
+╭────────────────────────╮
+│ Threshold impact bands │
+│ accept_band: 160       │
+│ review_band: 56        │
+│ reject_band: 38        │
+╰────────────────────────╯
+(.venv311) PS D:\github FORK\TRACE-ML> python -m trace_ml --config config.demo.yaml recognize live
+╭───────────────────────────────────────╮
+│ TRACE-ML v3                           │
+│ Tactical CLI | Quality Core Hardening │
+╰───────────────────────────────────────╯
+Press q on the OpenCV window to stop.
+Applied providers: ['CPUExecutionProvider'], with options: {'CPUExecutionProvider': {}}
+find model: C:\Users\Utkarsh/.insightface\models\buffalo_sc\det_500m.onnx detection [1, 3, '?', '?'] 127.5 128.0
+Applied providers: ['CPUExecutionProvider'], with options: {'CPUExecutionProvider': {}}
+find model: C:\Users\Utkarsh/.insightface\models\buffalo_sc\w600k_mbf.onnx recognition ['None', 3, 112, 112] 127.5 127.5
+set det-size: (640, 640)
+D:\github FORK\TRACE-ML\.venv311\Lib\site-packages\insightface\utils\face_align.py:23: FutureWarning: `estimate` is deprecated since version 0.26 and will be removed in version 2.2. Please use `SimilarityTransform.from_estimate` class constructor instead.
+  tform.estimate(lmk, dst)
+(.venv311) PS D:\github FORK\TRACE-ML> python -m trace_ml history query --limit 30
+                                     Detection History                                      
+
+  Timestamp                          Name       ID       Decision    Conf   Smooth   Track 
+ ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  2026-03-27T06:58:12.694975+00:00   arjun_v2   PRC004   accept     76.85    73.27   T0002
+  2026-03-27T06:58:10.168965+00:00   arjun_v2   PRC004   accept     79.47    79.25   T0002
+  2026-03-27T06:58:07.280793+00:00   arjun_v2   PRC004   accept     79.28    79.69   T0002
+  2026-03-27T06:58:04.746419+00:00   arjun_v2   PRC004   accept     79.51    79.24   T0002
+  2026-03-27T06:58:02.257972+00:00   arjun_v2   PRC004   accept     74.11    74.82   T0002
+  2026-03-27T06:57:59.942449+00:00   arjun_v2   PRC004   accept     73.45    67.21   T0002
+  2026-03-27T06:57:58.677735+00:00   arjun_v2   PRC004   review     47.09    52.15   T0002
+  2026-03-27T06:57:57.388695+00:00   arjun_v2   PRC004   accept     74.07    75.49   T0002
+  2026-03-27T06:57:55.286512+00:00   arjun_v2   PRC004   accept     83.10    75.81   T0002
+  2026-03-27T06:57:52.956055+00:00   arjun_v2   PRC004   accept     74.32    74.29   T0002
+  2026-03-27T06:57:50.395864+00:00   arjun_v2   PRC004   accept     71.10    71.30   T0002
+  2026-03-27T06:57:48.135410+00:00   arjun_v2   PRC004   accept     73.78    65.51   T0002
+  2026-03-27T06:57:47.437095+00:00   arjun_v2   PRC004   review     61.87    53.11   T0002
+  2026-03-27T06:57:45.846281+00:00   arjun_v2   PRC004   accept     72.52    69.71   T0002
+  2026-03-27T06:57:43.561948+00:00   arjun_v2   PRC004   accept     70.11    68.85   T0002
+  2026-03-27T06:57:41.323003+00:00   arjun_v2   PRC004   accept     71.69    72.60   T0002
+  2026-03-27T06:57:39.016457+00:00   arjun_v2   PRC004   accept     67.35    69.63   T0002
+  2026-03-27T06:57:36.731481+00:00   arjun_v2   PRC004   accept     72.63    74.17   T0002
+  2026-03-27T06:57:34.686488+00:00   arjun_v2   PRC004   accept     76.98    77.11   T0002
+  2026-03-27T06:57:32.526144+00:00   arjun_v2   PRC004   accept     73.48    73.92   T0002
+  2026-03-27T06:57:30.067843+00:00   arjun_v2   PRC004   accept     71.01    70.10   T0002
+  2026-03-27T06:57:27.855426+00:00   arjun_v2   PRC004   accept     75.01    75.01   T0002
+  2026-03-27T06:57:24.590270+00:00   arjun_v2   PRC004   accept     76.07    76.36   T0001
+  2026-03-27T06:57:22.131332+00:00   arjun_v2   PRC004   accept     75.24    74.00   T0001
+  2026-03-27T06:57:19.915088+00:00   arjun_v2   PRC004   accept     71.06    71.94   T0001
+  2026-03-27T06:57:17.900458+00:00   arjun_v2   PRC004   accept     78.70    75.86   T0001
+  2026-03-27T06:57:15.573918+00:00   arjun_v2   PRC004   accept     71.57    72.23   T0001
+  2026-03-27T06:57:13.128430+00:00   arjun_v2   PRC004   accept     65.12    65.12   T0001
+  2026-03-27T06:02:01.333706+00:00   arjun_v2   PRC004   accept     79.82    79.90   T0007
+  2026-03-27T06:01:59.120471+00:00   arjun_v2   PRC004   accept     78.87    77.84   T0007
+
+(.venv311) PS D:\github FORK\TRACE-ML> python -m trace_ml events tail --limit 30
+                                Entity Event Stream                                
+
+  Time                               Entity   Decision    Conf   Track   Source   
+ ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  2026-03-27T06:58:13.410586+00:00   PRC004   accept     75.88   T0002   webcam:0 
+  2026-03-27T06:58:12.820486+00:00   PRC004   accept     76.85   T0002   webcam:0 
+  2026-03-27T06:58:12.112652+00:00   PRC004   accept     63.06   T0002   webcam:0 
+  2026-03-27T06:58:11.494016+00:00   PRC004   accept     72.97   T0002   webcam:0 
+  2026-03-27T06:58:10.906125+00:00   PRC004   accept     77.79   T0002   webcam:0 
+  2026-03-27T06:58:10.293158+00:00   PRC004   accept     79.47   T0002   webcam:0 
+  2026-03-27T06:58:09.255602+00:00   PRC004   accept     78.79   T0002   webcam:0 
+  2026-03-27T06:58:08.701204+00:00   PRC004   accept     79.21   T0002   webcam:0 
+  2026-03-27T06:58:08.051013+00:00   PRC004   accept     78.57   T0002   webcam:0 
+  2026-03-27T06:58:07.412558+00:00   PRC004   accept     79.28   T0002   webcam:0 
+  2026-03-27T06:58:06.659416+00:00   PRC004   accept     80.60   T0002   webcam:0 
+  2026-03-27T06:58:06.068967+00:00   PRC004   accept     79.90   T0002   webcam:0 
+  2026-03-27T06:58:05.508863+00:00   PRC004   accept     80.08   T0002   webcam:0 
+  2026-03-27T06:58:04.844527+00:00   PRC004   accept     79.51   T0002   webcam:0 
+  2026-03-27T06:58:04.100116+00:00   PRC004   accept     79.37   T0002   webcam:0 
+  2026-03-27T06:58:03.478688+00:00   PRC004   accept     80.21   T0002   webcam:0 
+  2026-03-27T06:58:02.374612+00:00   PRC004   accept     74.11   T0002   webcam:0 
+  2026-03-27T06:58:01.671169+00:00   PRC004   accept     77.89   T0002   webcam:0 
+  2026-03-27T06:58:01.086304+00:00   PRC004   accept     76.61   T0002   webcam:0 
+  2026-03-27T06:58:00.485612+00:00   PRC004   accept     73.45   T0002   webcam:0 
+  2026-03-27T06:57:59.351642+00:00   PRC004   accept     61.63   T0002   webcam:0 
+  2026-03-27T06:57:58.808922+00:00   PRC004   review     47.09   T0002   webcam:0 
+  2026-03-27T06:57:58.132236+00:00   PRC004   accept     49.26   T0002   webcam:0 
+  2026-03-27T06:57:57.508975+00:00   PRC004   accept     74.07   T0002   webcam:0 
+  2026-03-27T06:57:56.806928+00:00   PRC004   accept     77.01   T0002   webcam:0 
+  2026-03-27T06:57:56.133448+00:00   PRC004   accept     80.37   T0002   webcam:0 
+  2026-03-27T06:57:55.395170+00:00   PRC004   accept     83.10   T0002   webcam:0 
+  2026-03-27T06:57:54.747691+00:00   PRC004   accept     60.55   T0002   webcam:0 
+  2026-03-27T06:57:54.198205+00:00   PRC004   accept     69.73   T0002   webcam:0 
+  2026-03-27T06:57:53.613671+00:00   PRC004   accept     73.44   T0002   webcam:0 
+
+(.venv311) PS D:\github FORK\TRACE-ML> python -m trace_ml alerts tail --limit 30
+                                             Alert Stream                                              
+
+  Time                      Severity   Entity   Type                 Events   Reason                   
+ ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 
+  2026-03-27T06:58:04.84…   MEDIUM     PRC004   REAPPEARANCE             14   REAPPEARANCE detected    
+                                                                              with 14 events
+  2026-03-27T06:57:52.30…   MEDIUM     PRC004   REAPPEARANCE             15   REAPPEARANCE detected    
+                                                                              with 15 events
+  2026-03-27T06:57:46.58…   MEDIUM     UNK002   REAPPEARANCE             17   REAPPEARANCE detected    
+                                                                              with 17 events
+  2026-03-27T06:57:46.58…   HIGH       UNK002   UNKNOWN_RECURRENCE       16   UNKNOWN_RECURRENCE       
+                                                                              detected with 16 events  
+  2026-03-27T06:57:40.21…   MEDIUM     PRC004   REAPPEARANCE             17   REAPPEARANCE detected    
+                                                                              with 17 events
+  2026-03-27T06:57:27.95…   MEDIUM     PRC004   REAPPEARANCE             15   REAPPEARANCE detected    
+                                                                              with 15 events
+  2026-03-27T06:57:14.45…   LOW        PRC004   REAPPEARANCE              3   REAPPEARANCE detected    
+                                                                              with 3 events
+  2026-03-27T06:01:52.69…   MEDIUM     PRC004   REAPPEARANCE             17   REAPPEARANCE detected    
+                                                                              with 17 events
+  2026-03-27T06:01:40.52…   MEDIUM     PRC004   REAPPEARANCE             20   REAPPEARANCE detected    
+                                                                              with 20 events
+  2026-03-27T06:01:28.00…   LOW        PRC004   REAPPEARANCE              3   REAPPEARANCE detected    
+                                                                              with 3 events
+  2026-03-27T05:10:35.17…   MEDIUM     PRC004   REAPPEARANCE             22   REAPPEARANCE detected    
+                                                                              with 22 events
+  2026-03-27T05:10:23.06…   MEDIUM     PRC004   REAPPEARANCE             18   REAPPEARANCE detected    
+                                                                              with 18 events
+  2026-03-27T05:10:11.04…   MEDIUM     PRC004   REAPPEARANCE             24   REAPPEARANCE detected    
+                                                                              with 24 events
+  2026-03-27T05:09:58.69…   MEDIUM     PRC004   REAPPEARANCE             14   REAPPEARANCE detected    
+                                                                              with 14 events
+  2026-03-27T05:09:46.39…   LOW        PRC004   REAPPEARANCE              3   REAPPEARANCE detected    
+                                                                              with 3 events
+
+(.venv311) PS D:\github FORK\TRACE-ML> python -m trace_ml incident list --status open --limit 30
+                                               Incidents                                               
+
+  ID               Entity   Status   Severity   Alerts   Start           Last Seen        Last Action  
+ ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 
+  INC-20260327T…   PRC004   open     low             8   2026-03-27T0…   2026-03-27T06…                
+  INC-20260327T…   UNK002   open     low             2   2026-03-27T0…   2026-03-27T06…                
+
+(.venv311) PS D:\github FORK\TRACE-ML> python -m trace_ml --config config.demo.yaml recognize live
+╭───────────────────────────────────────╮
+│ TRACE-ML v3                           │
+│ Tactical CLI | Quality Core Hardening │
+╰───────────────────────────────────────╯
+Press q on the OpenCV window to stop.
+Applied providers: ['CPUExecutionProvider'], with options: {'CPUExecutionProvider': {}}
+find model: C:\Users\Utkarsh/.insightface\models\buffalo_sc\det_500m.onnx detection [1, 3, '?', '?'] 127.5 128.0
+Applied providers: ['CPUExecutionProvider'], with options: {'CPUExecutionProvider': {}}
+find model: C:\Users\Utkarsh/.insightface\models\buffalo_sc\w600k_mbf.onnx recognition ['None', 3, 112, 112] 127.5 127.5
+set det-size: (640, 640)
+D:\github FORK\TRACE-ML\.venv311\Lib\site-packages\insightface\utils\face_align.py:23: FutureWarning: `estimate` is deprecated since version 0.26 and will be removed in version 2.2. Please use `SimilarityTransform.from_estimate` class constructor instead.
+  tform.estimate(lmk, dst)
+(.venv311) PS D:\github FORK\TRACE-ML> python -m trace_ml alerts tail --limit 30
+                                             Alert Stream                                              
+
+  Time                      Severity   Entity   Type                 Events   Reason                   
+ ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 
+  2026-03-27T07:00:03.60…   MEDIUM     PRC004   REAPPEARANCE             12   REAPPEARANCE detected    
+                                                                              with 12 events
+  2026-03-27T07:00:02.15…   MEDIUM     UNK008   REAPPEARANCE             12   REAPPEARANCE detected    
+                                                                              with 12 events
+  2026-03-27T07:00:02.15…   HIGH       UNK008   UNKNOWN_RECURRENCE       12   UNKNOWN_RECURRENCE       
+                                                                              detected with 12 events  
+  2026-03-27T06:59:51.51…   MEDIUM     PRC004   REAPPEARANCE             10   REAPPEARANCE detected    
+                                                                              with 10 events
+  2026-03-27T06:59:47.44…   MEDIUM     UNK004   REAPPEARANCE             10   REAPPEARANCE detected    
+                                                                              with 10 events
+  2026-03-27T06:59:47.44…   HIGH       UNK004   UNKNOWN_RECURRENCE       10   UNKNOWN_RECURRENCE       
+                                                                              detected with 10 events  
+  2026-03-27T06:59:45.03…   MEDIUM     UNK007   REAPPEARANCE             12   REAPPEARANCE detected    
+                                                                              with 12 events
+  2026-03-27T06:59:45.03…   HIGH       UNK007   UNKNOWN_RECURRENCE       12   UNKNOWN_RECURRENCE       
+                                                                              detected with 12 events  
+  2026-03-27T06:59:39.79…   MEDIUM     PRC004   INSTABILITY               9   INSTABILITY detected     
+                                                                              with 9 events
+  2026-03-27T06:59:39.04…   MEDIUM     PRC004   REAPPEARANCE              9   REAPPEARANCE detected    
+                                                                              with 9 events
+  2026-03-27T06:59:34.44…   MEDIUM     UNK006   REAPPEARANCE             10   REAPPEARANCE detected    
+                                                                              with 10 events
+  2026-03-27T06:59:34.44…   HIGH       UNK006   UNKNOWN_RECURRENCE       10   UNKNOWN_RECURRENCE       
+                                                                              detected with 10 events  
+  2026-03-27T06:59:26.93…   MEDIUM     PRC004   REAPPEARANCE              9   REAPPEARANCE detected    
+                                                                              with 9 events
+  2026-03-27T06:59:21.52…   MEDIUM     UNK005   REAPPEARANCE              8   REAPPEARANCE detected    
+                                                                              with 8 events
+  2026-03-27T06:59:21.52…   HIGH       UNK005   UNKNOWN_RECURRENCE        8   UNKNOWN_RECURRENCE       
+                                                                              detected with 8 events   
+  2026-03-27T06:59:14.51…   LOW        PRC004   REAPPEARANCE              4   REAPPEARANCE detected    
+                                                                              with 4 events
+  2026-03-27T06:59:13.42…   LOW        UNK004   REAPPEARANCE              3   REAPPEARANCE detected    
+                                                                              with 3 events
+  2026-03-27T06:59:13.42…   HIGH       UNK004   UNKNOWN_RECURRENCE        3   UNKNOWN_RECURRENCE       
+                                                                              detected with 3 events   
+  2026-03-27T06:58:04.84…   MEDIUM     PRC004   REAPPEARANCE             14   REAPPEARANCE detected    
+                                                                              with 14 events
+  2026-03-27T06:57:52.30…   MEDIUM     PRC004   REAPPEARANCE             15   REAPPEARANCE detected    
+                                                                              with 15 events
+  2026-03-27T06:57:46.58…   MEDIUM     UNK002   REAPPEARANCE             17   REAPPEARANCE detected    
+                                                                              with 17 events
+  2026-03-27T06:57:46.58…   HIGH       UNK002   UNKNOWN_RECURRENCE       16   UNKNOWN_RECURRENCE       
+                                                                              detected with 16 events  
+  2026-03-27T06:57:40.21…   MEDIUM     PRC004   REAPPEARANCE             17   REAPPEARANCE detected    
+                                                                              with 17 events
+  2026-03-27T06:57:27.95…   MEDIUM     PRC004   REAPPEARANCE             15   REAPPEARANCE detected    
+                                                                              with 15 events
+  2026-03-27T06:57:14.45…   LOW        PRC004   REAPPEARANCE              3   REAPPEARANCE detected    
+                                                                              with 3 events
+  2026-03-27T06:01:52.69…   MEDIUM     PRC004   REAPPEARANCE             17   REAPPEARANCE detected    
+                                                                              with 17 events
+  2026-03-27T06:01:40.52…   MEDIUM     PRC004   REAPPEARANCE             20   REAPPEARANCE detected    
+                                                                              with 20 events
+  2026-03-27T06:01:28.00…   LOW        PRC004   REAPPEARANCE              3   REAPPEARANCE detected    
+                                                                              with 3 events
+  2026-03-27T05:10:35.17…   MEDIUM     PRC004   REAPPEARANCE             22   REAPPEARANCE detected    
+                                                                              with 22 events
+  2026-03-27T05:10:23.06…   MEDIUM     PRC004   REAPPEARANCE             18   REAPPEARANCE detected    
+                                                                              with 18 events
+
+(.venv311) PS D:\github FORK\TRACE-ML> python -m trace_ml incident list --status open --limit 30
+                                               Incidents                                               
+
+  ID               Entity   Status   Severity   Alerts   Start           Last Seen        Last Action  
+ ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 
+  INC-20260327T…   PRC004   open     low            14   2026-03-27T0…   2026-03-27T07…                
+  INC-20260327T…   UNK008   open     low             2   2026-03-27T0…   2026-03-27T07…                
+  INC-20260327T…   UNK004   open     low             4   2026-03-27T0…   2026-03-27T06…                
+  INC-20260327T…   UNK007   open     low             2   2026-03-27T0…   2026-03-27T06…                
+  INC-20260327T…   UNK006   open     low             2   2026-03-27T0…   2026-03-27T06…                
+  INC-20260327T…   UNK005   open     low             2   2026-03-27T0…   2026-03-27T06…                
+  INC-20260327T…   UNK002   open     low             2   2026-03-27T0…   2026-03-27T06…                
+
+(.venv311) PS D:\github FORK\TRACE-ML> python -m trace_ml incident show --id REAL_INCIDENT_ID
+╭────────────── Incident Detail ──────────────╮
+│ Incident: INC-20260327T050946Z-1bc7222d     │
+│ Entity: PRC004                              │
+│ Status: closed                              │
+│ Severity: low                               │
+│ Start: 2026-03-27T05:09:46.397942+00:00     │
+│ Last seen: 2026-03-27T05:10:35.178534+00:00 │
+│ Last action:                                │
+│ Alerts linked: 5                            │
+╰─────────────────────────────────────────────╯
+                                           Incident Timeline                                           
+
+  Time                     Alert ID                  Type           Severity   Reason                  
+ ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 
+  2026-03-27T05:09:46.3…   ALT-20260327T050946Z-1…   REAPPEARANCE   low        REAPPEARANCE detected   
+                                                                               with 3 events
+  2026-03-27T05:09:58.6…   ALT-20260327T050958Z-b…   REAPPEARANCE   medium     REAPPEARANCE detected   
+                                                                               with 14 events
+  2026-03-27T05:10:11.0…   ALT-20260327T051011Z-d…   REAPPEARANCE   medium     REAPPEARANCE detected   
+                                                                               with 24 events
+  2026-03-27T05:10:23.0…   ALT-20260327T051023Z-d…   REAPPEARANCE   medium     REAPPEARANCE detected   
+                                                                               with 18 events
+  2026-03-27T05:10:35.1…   ALT-20260327T051035Z-7…   REAPPEARANCE   medium     REAPPEARANCE detected   
+                                                                               with 22 events
+
+(.venv311) PS D:\github FORK\TRACE-ML> python -m trace_ml --config config.demo.yaml recognize live
+╭───────────────────────────────────────╮
+│ TRACE-ML v3                           │
+│ Tactical CLI | Quality Core Hardening │
+╰───────────────────────────────────────╯
+Press q on the OpenCV window to stop.
+Applied providers: ['CPUExecutionProvider'], with options: {'CPUExecutionProvider': {}}
+find model: C:\Users\Utkarsh/.insightface\models\buffalo_sc\det_500m.onnx detection [1, 3, '?', '?'] 127.5 128.0
+Applied providers: ['CPUExecutionProvider'], with options: {'CPUExecutionProvider': {}}
+find model: C:\Users\Utkarsh/.insightface\models\buffalo_sc\w600k_mbf.onnx recognition ['None', 3, 112, 112] 127.5 127.5
+set det-size: (640, 640)
+D:\github FORK\TRACE-ML\.venv311\Lib\site-packages\insightface\utils\face_align.py:23: FutureWarning: `estimate` is deprecated since version 0.26 and will be removed in version 2.2. Please use `SimilarityTransform.from_estimate` class constructor instead.
+  tform.estimate(lmk, dst)
+(.venv311) PS D:\github FORK\TRACE-ML> python -m trace_ml alerts tail --limit 30
+                                             Alert Stream                                              
+
+  Time                      Severity   Entity   Type                 Events   Reason                   
+ ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 
+  2026-03-27T07:00:48.93…   LOW        UNK009   REAPPEARANCE              4   REAPPEARANCE detected    
+                                                                              with 4 events
+  2026-03-27T07:00:48.93…   HIGH       UNK009   UNKNOWN_RECURRENCE        4   UNKNOWN_RECURRENCE       
+                                                                              detected with 4 events   
+  2026-03-27T07:00:44.14…   LOW        PRC004   REAPPEARANCE              3   REAPPEARANCE detected    
+                                                                              with 3 events
+  2026-03-27T07:00:03.60…   MEDIUM     PRC004   REAPPEARANCE             12   REAPPEARANCE detected    
+                                                                              with 12 events
+  2026-03-27T07:00:02.15…   MEDIUM     UNK008   REAPPEARANCE             12   REAPPEARANCE detected    
+                                                                              with 12 events
+  2026-03-27T07:00:02.15…   HIGH       UNK008   UNKNOWN_RECURRENCE       12   UNKNOWN_RECURRENCE       
+                                                                              detected with 12 events  
+  2026-03-27T06:59:51.51…   MEDIUM     PRC004   REAPPEARANCE             10   REAPPEARANCE detected    
+                                                                              with 10 events
+  2026-03-27T06:59:47.44…   MEDIUM     UNK004   REAPPEARANCE             10   REAPPEARANCE detected    
+                                                                              with 10 events
+  2026-03-27T06:59:47.44…   HIGH       UNK004   UNKNOWN_RECURRENCE       10   UNKNOWN_RECURRENCE       
+                                                                              detected with 10 events  
+  2026-03-27T06:59:45.03…   MEDIUM     UNK007   REAPPEARANCE             12   REAPPEARANCE detected    
+                                                                              with 12 events
+  2026-03-27T06:59:45.03…   HIGH       UNK007   UNKNOWN_RECURRENCE       12   UNKNOWN_RECURRENCE       
+                                                                              detected with 12 events  
+  2026-03-27T06:59:39.79…   MEDIUM     PRC004   INSTABILITY               9   INSTABILITY detected     
+                                                                              with 9 events
+  2026-03-27T06:59:39.04…   MEDIUM     PRC004   REAPPEARANCE              9   REAPPEARANCE detected    
+                                                                              with 9 events
+  2026-03-27T06:59:34.44…   MEDIUM     UNK006   REAPPEARANCE             10   REAPPEARANCE detected    
+                                                                              with 10 events
+  2026-03-27T06:59:34.44…   HIGH       UNK006   UNKNOWN_RECURRENCE       10   UNKNOWN_RECURRENCE       
+                                                                              detected with 10 events  
+  2026-03-27T06:59:26.93…   MEDIUM     PRC004   REAPPEARANCE              9   REAPPEARANCE detected    
+                                                                              with 9 events
+  2026-03-27T06:59:21.52…   MEDIUM     UNK005   REAPPEARANCE              8   REAPPEARANCE detected    
+                                                                              with 8 events
+  2026-03-27T06:59:21.52…   HIGH       UNK005   UNKNOWN_RECURRENCE        8   UNKNOWN_RECURRENCE       
+                                                                              detected with 8 events   
+  2026-03-27T06:59:14.51…   LOW        PRC004   REAPPEARANCE              4   REAPPEARANCE detected    
+                                                                              with 4 events
+  2026-03-27T06:59:13.42…   LOW        UNK004   REAPPEARANCE              3   REAPPEARANCE detected    
+                                                                              with 3 events
+  2026-03-27T06:59:13.42…   HIGH       UNK004   UNKNOWN_RECURRENCE        3   UNKNOWN_RECURRENCE       
+                                                                              detected with 3 events   
+  2026-03-27T06:58:04.84…   MEDIUM     PRC004   REAPPEARANCE             14   REAPPEARANCE detected    
+                                                                              with 14 events
+  2026-03-27T06:57:52.30…   MEDIUM     PRC004   REAPPEARANCE             15   REAPPEARANCE detected    
+                                                                              with 15 events
+  2026-03-27T06:57:46.58…   MEDIUM     UNK002   REAPPEARANCE             17   REAPPEARANCE detected    
+                                                                              with 17 events
+  2026-03-27T06:57:46.58…   HIGH       UNK002   UNKNOWN_RECURRENCE       16   UNKNOWN_RECURRENCE       
+                                                                              detected with 16 events  
+  2026-03-27T06:57:40.21…   MEDIUM     PRC004   REAPPEARANCE             17   REAPPEARANCE detected    
+                                                                              with 17 events
+  2026-03-27T06:57:27.95…   MEDIUM     PRC004   REAPPEARANCE             15   REAPPEARANCE detected    
+                                                                              with 15 events
+  2026-03-27T06:57:14.45…   LOW        PRC004   REAPPEARANCE              3   REAPPEARANCE detected    
+                                                                              with 3 events
+  2026-03-27T06:01:52.69…   MEDIUM     PRC004   REAPPEARANCE             17   REAPPEARANCE detected    
+                                                                              with 17 events
+  2026-03-27T06:01:40.52…   MEDIUM     PRC004   REAPPEARANCE             20   REAPPEARANCE detected    
+                                                                              with 20 events
+
+(.venv311) PS D:\github FORK\TRACE-ML> python -m trace_ml incident list --status open --limit 30
+                                               Incidents                                               
+
+  ID               Entity   Status   Severity   Alerts   Start           Last Seen        Last Action  
+ ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 
+  INC-20260327T…   UNK009   open     low             2   2026-03-27T0…   2026-03-27T07…                
+  INC-20260327T…   PRC004   open     low            15   2026-03-27T0…   2026-03-27T07…                
+  INC-20260327T…   UNK008   open     low             2   2026-03-27T0…   2026-03-27T07…                
+  INC-20260327T…   UNK004   open     low             4   2026-03-27T0…   2026-03-27T06…                
+  INC-20260327T…   UNK007   open     low             2   2026-03-27T0…   2026-03-27T06…                
+  INC-20260327T…   UNK006   open     low             2   2026-03-27T0…   2026-03-27T06…                
+  INC-20260327T…   UNK005   open     low             2   2026-03-27T0…   2026-03-27T06…                
+  INC-20260327T…   UNK002   open     low             2   2026-03-27T0…   2026-03-27T06…                
+
+(.venv311) PS D:\github FORK\TRACE-ML> python -m trace_ml incident set-severity --id REAL_INCIDENT_ID --severity hig
+Usage: python -m trace_ml incident set-severity [OPTIONS]
+Try 'python -m trace_ml incident set-severity --help' for help.
+╭─ Error ─────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Invalid value for '--severity': 'hig' is not one of 'low', 'medium', 'high'.                        │
+╰─────────────────────────────────────────────────────────────────────────────────────────────────────╯
+(.venv311) PS D:\github FORK\TRACE-ML> python -m trace_ml incident show --id REAL_INCIDENT_ID
+╭────────────── Incident Detail ──────────────╮
+│ Incident: INC-20260327T050946Z-1bc7222d     │
+│ Entity: PRC004                              │
+│ Status: closed                              │
+│ Severity: low                               │
+│ Start: 2026-03-27T05:09:46.397942+00:00     │
+│ Last seen: 2026-03-27T05:10:35.178534+00:00 │
+│ Last action:                                │
+│ Alerts linked: 5                            │
+╰─────────────────────────────────────────────╯
+                                           Incident Timeline                                           
+
+  Time                     Alert ID                  Type           Severity   Reason                  
+ ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 
+  2026-03-27T05:09:46.3…   ALT-20260327T050946Z-1…   REAPPEARANCE   low        REAPPEARANCE detected   
+                                                                               with 3 events
+  2026-03-27T05:09:58.6…   ALT-20260327T050958Z-b…   REAPPEARANCE   medium     REAPPEARANCE detected   
+                                                                               with 14 events
+  2026-03-27T05:10:11.0…   ALT-20260327T051011Z-d…   REAPPEARANCE   medium     REAPPEARANCE detected   
+                                                                               with 24 events
+  2026-03-27T05:10:23.0…   ALT-20260327T051023Z-d…   REAPPEARANCE   medium     REAPPEARANCE detected   
+                                                                               with 18 events
+  2026-03-27T05:10:35.1…   ALT-20260327T051035Z-7…   REAPPEARANCE   medium     REAPPEARANCE detected   
+                                                                               with 22 events
+
+(.venv311) PS D:\github FORK\TRACE-ML> python -m trace_ml action list --incident-id REAL_INCIDENT_ID
+             Actions for REAL_INCIDENT_ID              
+
+  Time   Action ID   Type   Trigger   Status   Reason 
+ ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+(.venv311) PS D:\github FORK\TRACE-ML> python -m trace_ml incident close --id REAL_INCIDENT_ID
+Closed incident REAL_INCIDENT_ID
+(.venv311) PS D:\github FORK\TRACE-ML> python -m trace_ml incident list --status open --limit 20
+                                               Incidents                                               
+
+  ID               Entity   Status   Severity   Alerts   Start           Last Seen        Last Action  
+ ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 
+  INC-20260327T…   UNK009   open     low             2   2026-03-27T0…   2026-03-27T07…                
+  INC-20260327T…   PRC004   open     low            15   2026-03-27T0…   2026-03-27T07…                
+  INC-20260327T…   UNK008   open     low             2   2026-03-27T0…   2026-03-27T07…                
+  INC-20260327T…   UNK004   open     low             4   2026-03-27T0…   2026-03-27T06…                
+  INC-20260327T…   UNK007   open     low             2   2026-03-27T0…   2026-03-27T06…                
+  INC-20260327T…   UNK006   open     low             2   2026-03-27T0…   2026-03-27T06…                
+  INC-20260327T…   UNK005   open     low             2   2026-03-27T0…   2026-03-27T06…                
+  INC-20260327T…   UNK002   open     low             2   2026-03-27T0…   2026-03-27T06…                
+
+(.venv311) PS D:\github FORK\TRACE-ML> python -m trace_ml incident list --status closed --limit 20
+                                               Incidents                                               
+
+  ID               Entity   Status   Severity   Alerts   Start           Last Seen        Last Action  
+ ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 
+  INC-20260327T…   PRC004   closed   low             5   2026-03-27T0…   2026-03-27T05…                
+
+(.venv311) PS D:\github FORK\TRACE-ML> python -m trace_ml doctor
+╭───────────────────────────────────────╮
+│ TRACE-ML v3                           │
+│ Tactical CLI | Quality Core Hardening │
+╰───────────────────────────────────────╯
+
+  Check                   Status   Detail             
+ ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  numpy                   OK       import succeeded   
+  lancedb                 OK       import succeeded   
+  duckdb                  OK       import succeeded   
+  onnxruntime             OK       import succeeded   
+  rich                    OK       import succeeded   
+  typer                   OK       import succeeded   
+  insightface             OK       import succeeded   
+  path:data               OK       ready              
+  path:data/vectors       OK       ready              
+  path:data/screenshots   OK       ready              
+  path:data/exports       OK       ready              
+  path:data\logs          OK       ready              
+  camera                  OK       device 0 available 
+
+(.venv311) PS D:\github FORK\TRACE-ML> python -m trace_ml person list
+
+  ID       Name          Category   State    Emb   Score   Updated                          
+ ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  PRC001   Demo Person   criminal   draft      0    0.00   2026-03-25T12:32:44.118698+00:00 
+  PRC002   Demo Person   criminal   ready      3    0.63   2026-03-25T12:35:12.213510+00:00 
+  PRC004   arjun_v2      criminal   active    10    0.69   2026-03-25T13:30:11.834234+00:00 
+
+(.venv311) PS D:\github FORK\TRACE-ML> python -m trace_ml person audit
+                                             Person Audit                                              
+
+  Person   Current   Recommended   Emb   Valid/Total   Quality   Issues                                
+ ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 
+  PRC001   draft     draft           0           0/0      0.00   no_images,zero_embeddings,few_valid…  
+  PRC002   ready     ready           3          3/15      0.63   few_valid_images
+  PRC004   active    active         10         10/30      0.69   none
+
+(.venv311) PS D:\github FORK\TRACE-ML> python -m trace_ml train rebuild
+2026-03-27 12:33:03 | WARNING | No embeddings provided for person PRC001
+Applied providers: ['CPUExecutionProvider'], with options: {'CPUExecutionProvider': {}}
+find model: C:\Users\Utkarsh/.insightface\models\buffalo_sc\det_500m.onnx detection [1, 3, '?', '?'] 127.5 128.0
+Applied providers: ['CPUExecutionProvider'], with options: {'CPUExecutionProvider': {}}
+find model: C:\Users\Utkarsh/.insightface\models\buffalo_sc\w600k_mbf.onnx recognition ['None', 3, 112, 112] 127.5 127.5
+set det-size: (640, 640)
+D:\github FORK\TRACE-ML\.venv311\Lib\site-packages\insightface\utils\face_align.py:23: FutureWarning: `estimate` is deprecated since version 0.26 and will be removed in version 2.2. Please use `SimilarityTransform.from_estimate` class constructor instead.
+  tform.estimate(lmk, dst)
+      Embedding Rebuild       
+
+  Metric               Value 
+ ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  Persons total            3
+  Persons processed        2
+  Embeddings created      13
+  Skipped images          32
+  Active persons           1
+  Ready persons            1
+  Blocked persons          0
+
+(.venv311) PS D:\github FORK\TRACE-ML> .python -m trace_ml history query --limit 20
+.python : The term '.python' is not recognized as the name of a cmdlet, function, script file, or 
+operable program. Check the spelling of the name, or if a path was included, verify that the path is   
+correct and try again.
+At line:1 char:1
++ .python -m trace_ml history query --limit 20
++ ~~~~~~~
+    + CategoryInfo          : ObjectNotFound: (.python:String) [], CommandNotFoundException
+    + FullyQualifiedErrorId : CommandNotFoundException
+
+(.venv311) PS D:\github FORK\TRACE-ML> python -m trace_ml history query --limit 20
+                                     Detection History                                      
+
+  Timestamp                          Name       ID       Decision    Conf   Smooth   Track 
+ ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  2026-03-27T07:00:53.738496+00:00   arjun_v2   PRC004   accept     63.79    63.79   T0007
+  2026-03-27T07:00:52.942708+00:00   arjun_v2   PRC004   review     46.50    46.50   T0006
+  2026-03-27T07:00:50.074700+00:00   arjun_v2   PRC004   accept     65.03    65.03   T0004
+  2026-03-27T07:00:43.203557+00:00   arjun_v2   PRC004   accept     61.06    61.06   T0002
+  2026-03-27T07:00:42.055178+00:00   arjun_v2   PRC004   review     41.20    41.20   T0001
+  2026-03-27T07:00:03.459753+00:00   arjun_v2   PRC004   review     51.94    51.94   T0030
+  2026-03-27T07:00:00.658371+00:00   arjun_v2   PRC004   review     45.39    45.39   T0028
+  2026-03-27T06:59:58.404439+00:00   arjun_v2   PRC004   accept     64.95    64.95   T0026
+  2026-03-27T06:59:57.542863+00:00   arjun_v2   PRC004   review     54.56    57.13   T0025
+  2026-03-27T06:59:55.964445+00:00   arjun_v2   PRC004   accept     75.50    75.50   T0024
+  2026-03-27T06:59:53.752773+00:00   arjun_v2   PRC004   accept     61.97    61.97   T0022
+  2026-03-27T06:59:52.926800+00:00   arjun_v2   PRC004   review     49.32    54.33   T0021
+  2026-03-27T06:59:50.714373+00:00   arjun_v2   PRC004   accept     63.45    59.84   T0020
+  2026-03-27T06:59:48.441221+00:00   arjun_v2   PRC004   review     55.32    55.32   T0019
+  2026-03-27T06:59:42.699333+00:00   arjun_v2   PRC004   accept     62.91    65.38   T0016
+  2026-03-27T06:59:40.573384+00:00   arjun_v2   PRC004   accept     71.87    72.84   T0016
+  2026-03-27T06:59:38.187105+00:00   arjun_v2   PRC004   accept     65.86    65.86   T0015
+  2026-03-27T06:59:36.713270+00:00   arjun_v2   PRC004   review     56.10    56.10   T0014
+  2026-03-27T06:59:35.374951+00:00   arjun_v2   PRC004   accept     66.70    66.70   T0013
+  2026-03-27T06:59:31.165871+00:00   arjun_v2   PRC004   review     43.40    51.22   T0011
+
+(.venv311) PS D:\github FORK\TRACE-ML> python -m trace_ml report summary
+╭──────────────────── Session Summary ────────────────────╮
+│ Total detections: 311                                   │
+│ Unique persons: 2                                       │
+│ Average confidence: 61.26                               │
+│ Decision distribution: accept:199, reject:33, review:79 │
+│ Blocked persons: 0 | Low-quality persons: 1             │
+╰─────────────────────────────────────────────────────────╯
+                  Top Detections                  
+
+  Name          Category   Hits   Avg confidence 
+ ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  arjun_v2      criminal    278            66.75
+  Unknown       unknown      26             0.36
+  Demo Person   criminal      7            69.24
+
+(.venv311) PS D:\github FORK\TRACE-ML> python -m trace_ml report quality
+                      Low-quality / Non-active Enrollments                       
+
+  Person   Name          State   Score   Emb   Valid/Total   Reason             
+ ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  PRC001   Demo Person   draft    0.00     0           0/0   no_images_uploaded
+
+╭────────────────────────╮
+│ Threshold impact bands │
+│ accept_band: 199       │
+│ review_band: 72        │
+│ reject_band: 40        │
+╰────────────────────────╯
+(.venv311) PS D:\github FORK\TRACE-ML> python -m trace_ml export csv
+Exported data\exports\detections_20260327T070341Z.csv
+(.venv311) PS D:\github FORK\TRACE-ML> python -m trace_ml events tail --limit 20
+                                Entity Event Stream                                
+
+  Time                               Entity   Decision    Conf   Track   Source   
+ ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  2026-03-27T07:00:54.557321+00:00   PRC004   accept     69.56   T0008   webcam:0 
+  2026-03-27T07:00:53.858904+00:00   PRC004   accept     63.79   T0007   webcam:0 
+  2026-03-27T07:00:53.073112+00:00   PRC004   review     46.50   T0006   webcam:0 
+  2026-03-27T07:00:50.902068+00:00   PRC004   accept     60.90   T0005   webcam:0 
+  2026-03-27T07:00:50.185988+00:00   PRC004   accept     65.03   T0004   webcam:0 
+  2026-03-27T07:00:48.937527+00:00   UNK009   reject     34.86   T0003   webcam:0 
+  2026-03-27T07:00:44.146221+00:00   PRC004   accept     59.53   T0002   webcam:0 
+  2026-03-27T07:00:43.336138+00:00   PRC004   accept     61.06   T0002   webcam:0 
+  2026-03-27T07:00:42.484936+00:00   PRC004   review     41.20   T0001   webcam:0 
+  2026-03-27T07:00:03.600058+00:00   PRC004   review     51.94   T0030   webcam:0 
+  2026-03-27T07:00:02.156098+00:00   UNK008   reject     39.92   T0029   webcam:0 
+  2026-03-27T07:00:01.460058+00:00   PRC004   review     57.85   T0028   webcam:0 
+  2026-03-27T07:00:00.787402+00:00   PRC004   review     45.39   T0028   webcam:0 
+  2026-03-27T06:59:59.943552+00:00   PRC004   accept     63.27   T0027   webcam:0 
+  2026-03-27T06:59:59.231595+00:00   PRC004   accept     63.82   T0027   webcam:0 
+  2026-03-27T06:59:58.533421+00:00   PRC004   accept     64.95   T0026   webcam:0 
+  2026-03-27T06:59:57.691526+00:00   PRC004   review     54.56   T0025   webcam:0 
+  2026-03-27T06:59:56.821935+00:00   PRC004   accept     60.98   T0025   webcam:0 
+  2026-03-27T06:59:56.125665+00:00   PRC004   accept     75.50   T0024   webcam:0 
+  2026-03-27T06:59:55.224675+00:00   PRC004   accept     72.83   T0023   webcam:0 
+
+(.venv311) PS D:\github FORK\TRACE-ML> python -m trace_ml alerts tail --limit 20
+                                             Alert Stream                                              
+
+  Time                      Severity   Entity   Type                 Events   Reason                   
+ ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 
+  2026-03-27T07:00:48.93…   LOW        UNK009   REAPPEARANCE              4   REAPPEARANCE detected    
+                                                                              with 4 events
+  2026-03-27T07:00:48.93…   HIGH       UNK009   UNKNOWN_RECURRENCE        4   UNKNOWN_RECURRENCE       
+                                                                              detected with 4 events   
+  2026-03-27T07:00:44.14…   LOW        PRC004   REAPPEARANCE              3   REAPPEARANCE detected    
+                                                                              with 3 events
+  2026-03-27T07:00:03.60…   MEDIUM     PRC004   REAPPEARANCE             12   REAPPEARANCE detected    
+                                                                              with 12 events
+  2026-03-27T07:00:02.15…   MEDIUM     UNK008   REAPPEARANCE             12   REAPPEARANCE detected    
+                                                                              with 12 events
+  2026-03-27T07:00:02.15…   HIGH       UNK008   UNKNOWN_RECURRENCE       12   UNKNOWN_RECURRENCE       
+                                                                              detected with 12 events  
+  2026-03-27T06:59:51.51…   MEDIUM     PRC004   REAPPEARANCE             10   REAPPEARANCE detected    
+                                                                              with 10 events
+  2026-03-27T06:59:47.44…   MEDIUM     UNK004   REAPPEARANCE             10   REAPPEARANCE detected    
+                                                                              with 10 events
+  2026-03-27T06:59:47.44…   HIGH       UNK004   UNKNOWN_RECURRENCE       10   UNKNOWN_RECURRENCE       
+                                                                              detected with 10 events  
+  2026-03-27T06:59:45.03…   MEDIUM     UNK007   REAPPEARANCE             12   REAPPEARANCE detected    
+                                                                              with 12 events
+  2026-03-27T06:59:45.03…   HIGH       UNK007   UNKNOWN_RECURRENCE       12   UNKNOWN_RECURRENCE       
+                                                                              detected with 12 events  
+  2026-03-27T06:59:39.79…   MEDIUM     PRC004   INSTABILITY               9   INSTABILITY detected     
+                                                                              with 9 events
+  2026-03-27T06:59:39.04…   MEDIUM     PRC004   REAPPEARANCE              9   REAPPEARANCE detected    
+                                                                              with 9 events
+  2026-03-27T06:59:34.44…   MEDIUM     UNK006   REAPPEARANCE             10   REAPPEARANCE detected    
+                                                                              with 10 events
+  2026-03-27T06:59:34.44…   HIGH       UNK006   UNKNOWN_RECURRENCE       10   UNKNOWN_RECURRENCE       
+                                                                              detected with 10 events  
+  2026-03-27T06:59:26.93…   MEDIUM     PRC004   REAPPEARANCE              9   REAPPEARANCE detected    
+                                                                              with 9 events
+  2026-03-27T06:59:21.52…   MEDIUM     UNK005   REAPPEARANCE              8   REAPPEARANCE detected    
+                                                                              with 8 events
+  2026-03-27T06:59:21.52…   HIGH       UNK005   UNKNOWN_RECURRENCE        8   UNKNOWN_RECURRENCE       
+                                                                              detected with 8 events   
+  2026-03-27T06:59:14.51…   LOW        PRC004   REAPPEARANCE              4   REAPPEARANCE detected    
+                                                                              with 4 events
+  2026-03-27T06:59:13.42…   LOW        UNK004   REAPPEARANCE              3   REAPPEARANCE detected    
+                                                                              with 3 events
+
+(.venv311) PS D:\github FORK\TRACE-ML> python -m trace_ml incident list --limit 20
+                                               Incidents                                               
+
+  ID               Entity   Status   Severity   Alerts   Start           Last Seen        Last Action  
+ ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 
+  INC-20260327T…   UNK009   open     low             2   2026-03-27T0…   2026-03-27T07…                
+  INC-20260327T…   PRC004   open     low            15   2026-03-27T0…   2026-03-27T07…                
+  INC-20260327T…   UNK008   open     low             2   2026-03-27T0…   2026-03-27T07…                
+  INC-20260327T…   UNK004   open     low             4   2026-03-27T0…   2026-03-27T06…                
+  INC-20260327T…   UNK007   open     low             2   2026-03-27T0…   2026-03-27T06…                
+  INC-20260327T…   UNK006   open     low             2   2026-03-27T0…   2026-03-27T06…                
+  INC-20260327T…   UNK005   open     low             2   2026-03-27T0…   2026-03-27T06…                
+  INC-20260327T…   UNK002   open     low             2   2026-03-27T0…   2026-03-27T06…                
+  INC-20260327T…   PRC004   closed   low             5   2026-03-27T0…   2026-03-27T05…                
+
+(.venv311) PS D:\github FORK\TRACE-ML> python -m trace_ml incident show --id INC-DOES-NOT-EXIST
+╭────────────── Incident Detail ──────────────╮
+│ Incident: INC-20260327T050946Z-1bc7222d     │
+│ Entity: PRC004                              │
+│ Status: closed                              │
+│ Severity: low                               │
+│ Start: 2026-03-27T05:09:46.397942+00:00     │
+│ Last seen: 2026-03-27T05:10:35.178534+00:00 │
+│ Last action:                                │
+│ Alerts linked: 5                            │
+╰─────────────────────────────────────────────╯
+                                           Incident Timeline                                           
+
+  Time                     Alert ID                  Type           Severity   Reason                  
+ ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 
+  2026-03-27T05:09:46.3…   ALT-20260327T050946Z-1…   REAPPEARANCE   low        REAPPEARANCE detected   
+                                                                               with 3 events
+  2026-03-27T05:09:58.6…   ALT-20260327T050958Z-b…   REAPPEARANCE   medium     REAPPEARANCE detected   
+                                                                               with 14 events
+  2026-03-27T05:10:11.0…   ALT-20260327T051011Z-d…   REAPPEARANCE   medium     REAPPEARANCE detected   
+                                                                               with 24 events
+  2026-03-27T05:10:23.0…   ALT-20260327T051023Z-d…   REAPPEARANCE   medium     REAPPEARANCE detected   
+                                                                               with 18 events
+  2026-03-27T05:10:35.1…   ALT-20260327T051035Z-7…   REAPPEARANCE   medium     REAPPEARANCE detected   
+                                                                               with 22 events
+
+(.venv311) PS D:\github FORK\TRACE-ML> python -m trace_ml incident close --id INC-DOES-NOT-EXIST
+Closed incident INC-DOES-NOT-EXIST

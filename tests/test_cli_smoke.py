@@ -4,7 +4,22 @@ from typer.testing import CliRunner
 
 from trace_ml.cli import app
 from trace_ml.core.config import load_settings
-from trace_ml.core.models import PersonCategory, PersonLifecycleStatus, PersonRecord
+from trace_ml.core.models import (
+    ActionRecord,
+    ActionStatus,
+    ActionTrigger,
+    ActionType,
+    AlertRecord,
+    AlertSeverity,
+    AlertType,
+    DecisionState,
+    EventRecord,
+    IncidentRecord,
+    IncidentStatus,
+    PersonCategory,
+    PersonLifecycleStatus,
+    PersonRecord,
+)
 from trace_ml.store.vector_store import VectorStore
 
 
@@ -90,3 +105,143 @@ def test_cli_person_audit_apply_and_quality_report(tmp_path: Path) -> None:
     quality = runner.invoke(app, ["--config", str(cfg), "report", "quality"])
     assert quality.exit_code == 0
     assert "Threshold impact bands" in quality.stdout
+
+
+def test_cli_events_tail(tmp_path: Path) -> None:
+    cfg = _write_config(tmp_path)
+    settings = load_settings(cfg)
+    store = VectorStore(settings)
+    store.add_event(
+        EventRecord(
+            event_id="EVT-1",
+            entity_id="UNK001",
+            confidence=42.0,
+            decision=DecisionState.review,
+            track_id="T0001",
+            is_unknown=True,
+            source="webcam:0",
+        )
+    )
+
+    runner = CliRunner()
+    result = runner.invoke(app, ["--config", str(cfg), "events", "tail", "--limit", "10"])
+    assert result.exit_code == 0
+    assert "UNK001" in result.stdout
+
+
+def test_cli_alerts_tail(tmp_path: Path) -> None:
+    cfg = _write_config(tmp_path)
+    settings = load_settings(cfg)
+    store = VectorStore(settings)
+    store.add_alert(
+        AlertRecord(
+            alert_id="ALT-1",
+            entity_id="UNK001",
+            type=AlertType.unknown_recurrence,
+            severity=AlertSeverity.high,
+            reason="UNKNOWN_RECURRENCE detected with 3 events",
+            event_count=3,
+        )
+    )
+
+    runner = CliRunner()
+    result = runner.invoke(app, ["--config", str(cfg), "alerts", "tail", "--limit", "10"])
+    assert result.exit_code == 0
+    assert "UNK001" in result.stdout
+    assert "HIGH" in result.stdout
+    assert "3 events" in result.stdout
+
+
+def test_cli_incident_list_show_close(tmp_path: Path) -> None:
+    cfg = _write_config(tmp_path)
+    settings = load_settings(cfg)
+    store = VectorStore(settings)
+    store.add_alert(
+        AlertRecord(
+            alert_id="ALT-9",
+            entity_id="UNK009",
+            type=AlertType.unknown_recurrence,
+            severity=AlertSeverity.high,
+            reason="UNKNOWN_RECURRENCE detected with 5 events",
+            event_count=5,
+        )
+    )
+    store.create_incident(
+        IncidentRecord(
+            incident_id="INC-9",
+            entity_id="UNK009",
+            status=IncidentStatus.open,
+            start_time="2026-03-27T00:00:00+00:00",
+            last_seen_time="2026-03-27T00:00:10+00:00",
+            alert_ids=["ALT-9"],
+            alert_count=1,
+        )
+    )
+
+    runner = CliRunner()
+    listing = runner.invoke(app, ["--config", str(cfg), "incident", "list"])
+    assert listing.exit_code == 0
+    assert "INC-9" in listing.stdout
+
+    detail = runner.invoke(app, ["--config", str(cfg), "incident", "show", "--id", "INC-9"])
+    assert detail.exit_code == 0
+    assert "ALT-9" in detail.stdout
+
+    close = runner.invoke(app, ["--config", str(cfg), "incident", "close", "--id", "INC-9"])
+    assert close.exit_code == 0
+
+    closed = runner.invoke(app, ["--config", str(cfg), "incident", "list", "--status", "closed"])
+    assert closed.exit_code == 0
+    assert "INC-9" in closed.stdout
+
+
+def test_cli_incident_set_severity_and_action_list(tmp_path: Path) -> None:
+    cfg = _write_config(tmp_path)
+    settings = load_settings(cfg)
+    store = VectorStore(settings)
+    store.create_incident(
+        IncidentRecord(
+            incident_id="INC-7",
+            entity_id="PRC007",
+            status=IncidentStatus.open,
+            alert_ids=[],
+            alert_count=0,
+        )
+    )
+    store.insert_action(
+        ActionRecord(
+            action_id="ACT-1",
+            incident_id="INC-7",
+            action_type=ActionType.log,
+            trigger=ActionTrigger.on_create,
+            status=ActionStatus.success,
+            reason="logged",
+        )
+    )
+
+    runner = CliRunner()
+    sev = runner.invoke(
+        app,
+        ["--config", str(cfg), "incident", "set-severity", "--id", "INC-7", "--severity", "high"],
+    )
+    assert sev.exit_code == 0
+    assert "high" in sev.stdout
+
+    listed = runner.invoke(app, ["--config", str(cfg), "incident", "list", "--status", "open"])
+    assert listed.exit_code == 0
+    assert "high" in listed.stdout
+
+    actions = runner.invoke(app, ["--config", str(cfg), "action", "list", "--incident-id", "INC-7"])
+    assert actions.exit_code == 0
+    assert "ACT-1" in actions.stdout
+
+
+def test_cli_incident_invalid_id_errors(tmp_path: Path) -> None:
+    cfg = _write_config(tmp_path)
+    runner = CliRunner()
+
+    show = runner.invoke(app, ["--config", str(cfg), "incident", "show", "--id", "INC-DOES-NOT-EXIST"])
+    assert show.exit_code != 0
+
+    close = runner.invoke(app, ["--config", str(cfg), "incident", "close", "--id", "INC-DOES-NOT-EXIST"])
+    assert close.exit_code != 0

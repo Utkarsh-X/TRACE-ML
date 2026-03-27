@@ -31,6 +31,49 @@ class DecisionState(StrEnum):
     reject = "reject"
 
 
+class EntityType(StrEnum):
+    known = "known"
+    unknown = "unknown"
+
+
+class EntityStatus(StrEnum):
+    active = "active"
+    inactive = "inactive"
+
+
+class AlertSeverity(StrEnum):
+    low = "low"
+    medium = "medium"
+    high = "high"
+
+
+class AlertType(StrEnum):
+    reappearance = "REAPPEARANCE"
+    unknown_recurrence = "UNKNOWN_RECURRENCE"
+    instability = "INSTABILITY"
+
+
+class IncidentStatus(StrEnum):
+    open = "open"
+    closed = "closed"
+
+
+class ActionType(StrEnum):
+    log = "log"
+    email = "email"
+    alarm = "alarm"
+
+
+class ActionTrigger(StrEnum):
+    on_create = "on_create"
+    on_update = "on_update"
+
+
+class ActionStatus(StrEnum):
+    success = "success"
+    failed = "failed"
+
+
 class PersonRecord(BaseModel):
     person_id: str
     name: str
@@ -121,6 +164,61 @@ class DetectionEvent(BaseModel):
     liveness_score: float = 0.0
     screenshot_path: str = ""
     metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class EntityRecord(BaseModel):
+    entity_id: str
+    type: EntityType
+    status: EntityStatus = EntityStatus.active
+    source_person_id: str | None = None
+    created_at: str = Field(default_factory=utc_now_iso)
+    last_seen_at: str = Field(default_factory=utc_now_iso)
+
+
+class EventRecord(BaseModel):
+    event_id: str
+    entity_id: str
+    timestamp_utc: str = Field(default_factory=utc_now_iso)
+    confidence: float = 0.0
+    decision: DecisionState = DecisionState.reject
+    track_id: str = ""
+    is_unknown: bool = True
+    detection_id: str = ""
+    source: str = "webcam:0"
+
+
+class AlertRecord(BaseModel):
+    alert_id: str
+    entity_id: str
+    type: AlertType
+    severity: AlertSeverity
+    reason: str
+    timestamp_utc: str = Field(default_factory=utc_now_iso)
+    first_seen_at: str = Field(default_factory=utc_now_iso)
+    last_seen_at: str = Field(default_factory=utc_now_iso)
+    event_count: int = 1
+
+
+class IncidentRecord(BaseModel):
+    incident_id: str
+    entity_id: str
+    status: IncidentStatus = IncidentStatus.open
+    start_time: str = Field(default_factory=utc_now_iso)
+    last_seen_time: str = Field(default_factory=utc_now_iso)
+    alert_ids: list[str] = Field(default_factory=list)
+    alert_count: int = 0
+    severity: AlertSeverity = AlertSeverity.low
+    last_action_at: str = ""
+
+
+class ActionRecord(BaseModel):
+    action_id: str
+    incident_id: str
+    action_type: ActionType
+    trigger: ActionTrigger
+    status: ActionStatus
+    reason: str
+    timestamp_utc: str = Field(default_factory=utc_now_iso)
 
 
 class HistoryQuery(BaseModel):

@@ -48,6 +48,7 @@ class RecognitionSettings(BaseModel):
     enable_preprocess_fallback: bool = True
     low_quality_threshold: float = 0.40
     threshold_relaxation: float = 0.12
+    unknown_reuse_threshold: float = 0.55
 
 
 class PipelineSettings(BaseModel):
@@ -76,6 +77,42 @@ class TemporalSettings(BaseModel):
     max_track_distance_px: int = 120
     min_track_iou: float = 0.08
     track_reuse_min_score: float = 0.35
+
+
+class RuleWindowSettings(BaseModel):
+    window_sec: int = 10
+    min_events: int = 3
+
+
+class RuleInstabilitySettings(BaseModel):
+    window_sec: int = 10
+    std_threshold: float = 0.15
+
+
+class RulesSettings(BaseModel):
+    cooldown_sec: int = 15
+    reappearance: RuleWindowSettings = Field(default_factory=RuleWindowSettings)
+    unknown: RuleWindowSettings = Field(default_factory=RuleWindowSettings)
+    instability: RuleInstabilitySettings = Field(default_factory=RuleInstabilitySettings)
+
+
+class ActionPolicyBySeverity(BaseModel):
+    low: list[str] = Field(default_factory=list)
+    medium: list[str] = Field(default_factory=lambda: ["log"])
+    high: list[str] = Field(default_factory=lambda: ["log", "email", "alarm"])
+
+
+class ActionsSettings(BaseModel):
+    enabled: bool = True
+    on_create: ActionPolicyBySeverity = Field(default_factory=ActionPolicyBySeverity)
+    on_update: ActionPolicyBySeverity = Field(
+        default_factory=lambda: ActionPolicyBySeverity(
+            low=[],
+            medium=["log"],
+            high=["log"],
+        )
+    )
+    cooldown_sec: int = 20
 
 
 class StoreSettings(BaseModel):
@@ -113,6 +150,8 @@ class Settings(BaseSettings):
     pipeline: PipelineSettings = Field(default_factory=PipelineSettings)
     quality: QualitySettings = Field(default_factory=QualitySettings)
     temporal: TemporalSettings = Field(default_factory=TemporalSettings)
+    rules: RulesSettings = Field(default_factory=RulesSettings)
+    actions: ActionsSettings = Field(default_factory=ActionsSettings)
     store: StoreSettings = Field(default_factory=StoreSettings)
     logging: LoggingSettings = Field(default_factory=LoggingSettings)
     liveness: LivenessSettings = Field(default_factory=LivenessSettings)

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 import warnings
 from datetime import datetime, timezone
 from pathlib import Path
@@ -15,9 +16,18 @@ from loguru import logger
 
 from trace_ml.core.config import Settings
 from trace_ml.core.errors import StorageError
+from trace_ml.core.ids import next_unknown_entity_id
 from trace_ml.core.models import (
+    ActionRecord,
+    AlertRecord,
     DetectionEvent,
     EmbeddingRecord,
+    EntityRecord,
+    EntityStatus,
+    EntityType,
+    EventRecord,
+    IncidentRecord,
+    IncidentStatus,
     PersonLifecycleStatus,
     PersonRecord,
     QualityAssessment,
@@ -29,6 +39,12 @@ EMBEDDINGS_TABLE = "person_embeddings"
 IMAGE_QUALITY_TABLE = "image_quality"
 DETECTIONS_TABLE = "detections"
 DETECTION_DECISIONS_TABLE = "detection_decisions"
+ENTITIES_TABLE = "entities"
+EVENTS_TABLE = "events"
+UNKNOWN_PROFILES_TABLE = "unknown_profiles"
+ALERTS_TABLE = "alerts"
+INCIDENTS_TABLE = "incidents"
+ACTIONS_TABLE = "actions"
 EMBEDDING_DIM = 512
 
 
@@ -164,7 +180,155 @@ class VectorStore:
             ),
         )
 
-    def _open_or_create(self, name: str, schema: pa.Schema):
+        self.entities = self._open_or_create(
+            ENTITIES_TABLE,
+            pa.schema(
+                [
+                    pa.field("entity_id", pa.string()),
+                    pa.field("type", pa.string()),
+                    pa.field("status", pa.string()),
+                    pa.field("source_person_id", pa.string()),
+                    pa.field("created_at", pa.string()),
+                    pa.field("last_seen_at", pa.string()),
+                ]
+            ),
+        )
+
+        self.events = self._open_or_create(
+            EVENTS_TABLE,
+            pa.schema(
+                [
+                    pa.field("event_id", pa.string()),
+                    pa.field("entity_id", pa.string()),
+                    pa.field("timestamp_utc", pa.string()),
+                    pa.field("confidence", pa.float32()),
+                    pa.field("decision", pa.string()),
+                    pa.field("track_id", pa.string()),
+                    pa.field("is_unknown", pa.bool_()),
+                    pa.field("detection_id", pa.string()),
+                    pa.field("source", pa.string()),
+                ]
+            ),
+        )
+
+        self.alerts = self._open_or_create(
+            ALERTS_TABLE,
+            pa.schema(
+                [
+                    pa.field("alert_id", pa.string()),
+                    pa.field("entity_id", pa.string()),
+                    pa.field("type", pa.string()),
+                    pa.field("severity", pa.string()),
+                    pa.field("reason", pa.string()),
+                    pa.field("timestamp_utc", pa.string()),
+                    pa.field("first_seen_at", pa.string()),
+                    pa.field("last_seen_at", pa.string()),
+                    pa.field("event_count", pa.int32()),
+                ]
+            ),
+        )
+
+        self.unknown_profiles = self._open_or_create(
+            UNKNOWN_PROFILES_TABLE,
+            pa.schema(
+                [
+                    pa.field("entity_id", pa.string()),
+                    pa.field("embedding", pa.list_(pa.float32(), list_size=EMBEDDING_DIM)),
+                    pa.field("sample_count", pa.int32()),
+                    pa.field("created_at", pa.string()),
+                    pa.field("last_seen_at", pa.string()),
+                ]
+            ),
+        )
+
+        self.incidents = self._open_or_create(
+            INCIDENTS_TABLE,
+            pa.schema(
+                [
+                    pa.field("incident_id", pa.string()),
+                    pa.field("entity_id", pa.string()),
+                    pa.field("status", pa.string()),
+                    pa.field("start_time", pa.string()),
+                    pa.field("last_seen_time", pa.string()),
+                    pa.field("alert_ids", pa.string()),
+                    pa.field("alert_count", pa.int32()),
+                    pa.field("severity", pa.string()),
+                    pa.field("last_action_at", pa.string()),
+                ]
+            ),
+            migration_defaults={
+                "severity": "low",
+                "last_action_at": "",
+            },
+        )
+
+        self.actions = self._open_or_create(
+            ACTIONS_TABLE,
+            pa.schema(
+                [
+                    pa.field("action_id", pa.string()),
+                    pa.field("incident_id", pa.string()),
+                    pa.field("action_type", pa.string()),
+                    pa.field("trigger", pa.string()),
+                    pa.field("status", pa.string()),
+                    pa.field("reason", pa.string()),
+                    pa.field("timestamp_utc", pa.string()),
+                ]
+            ),
+        )
+
+    @staticmethod
+    def _default_for_arrow_type(field_type: pa.DataType) -> Any:
+        if pa.types.is_string(field_type):
+            return ""
+        if pa.types.is_boolean(field_type):
+            return False
+        if pa.types.is_integer(field_type):
+            return 0
+        if pa.types.is_floating(field_type):
+            return 0.0
+        if pa.types.is_list(field_type):
+            return []
+        return None
+
+    def _migrate_table_if_needed(
+        self,
+        name: str,
+        table,
+        schema: pa.Schema,
+        migration_defaults: dict[str, Any],
+    ):
+        existing_cols = self._table_columns(table)
+        target_cols = set(schema.names)
+        missing = [field.name for field in schema if field.name not in existing_cols]
+        if not missing:
+            return table
+
+        old_rows = table.to_arrow().to_pylist()
+        migrated_rows: list[dict[str, Any]] = []
+        for row in old_rows:
+            payload: dict[str, Any] = {}
+            for field in schema:
+                if field.name in row:
+                    payload[field.name] = row[field.name]
+                elif field.name in migration_defaults:
+                    payload[field.name] = migration_defaults[field.name]
+                else:
+                    payload[field.name] = self._default_for_arrow_type(field.type)
+            # Ignore any unknown/legacy columns.
+            payload = {k: v for k, v in payload.items() if k in target_cols}
+            migrated_rows.append(payload)
+
+        self.db.drop_table(name)
+        self.db.create_table(name, data=migrated_rows, schema=schema)
+        return self.db.open_table(name)
+
+    def _open_or_create(
+        self,
+        name: str,
+        schema: pa.Schema,
+        migration_defaults: dict[str, Any] | None = None,
+    ):
         list_tables = getattr(self.db, "list_tables", None)
         if callable(list_tables):
             raw = list_tables()
@@ -182,7 +346,15 @@ class VectorStore:
                 warnings.simplefilter("ignore", DeprecationWarning)
                 names = set(self.db.table_names())
         if name in names:
-            return self.db.open_table(name)
+            table = self.db.open_table(name)
+            if migration_defaults:
+                table = self._migrate_table_if_needed(
+                    name=name,
+                    table=table,
+                    schema=schema,
+                    migration_defaults=migration_defaults,
+                )
+            return table
         return self.db.create_table(name, data=[], schema=schema)
 
     @staticmethod
@@ -198,9 +370,12 @@ class VectorStore:
             return query.to_list()
         except Exception:
             rows = table.to_arrow().to_pylist()
-            if where and "person_id = '" in where:
-                value = where.split("person_id = '", 1)[1].rsplit("'", 1)[0]
-                rows = [row for row in rows if row.get("person_id") == value]
+            if where:
+                # Fallback parser for simple equality filters like: field = 'value'
+                match = re.fullmatch(r"\s*([a-zA-Z0-9_]+)\s*=\s*'([^']*)'\s*", where)
+                if match:
+                    field, value = match.group(1), match.group(2)
+                    rows = [row for row in rows if str(row.get(field, "")) == value]
             return rows[:limit]
 
     def _table_columns(self, table) -> set[str]:
@@ -212,6 +387,31 @@ class VectorStore:
     def _filtered_row(self, table, row: dict[str, Any]) -> dict[str, Any]:
         columns = self._table_columns(table)
         return {k: v for k, v in row.items() if k in columns}
+
+    @staticmethod
+    def _parse_iso_ts(value: str) -> datetime | None:
+        if not value:
+            return None
+        text = str(value).strip()
+        if text.endswith("Z"):
+            text = text[:-1] + "+00:00"
+        try:
+            return datetime.fromisoformat(text)
+        except ValueError:
+            return None
+
+    @staticmethod
+    def _parse_json_list(value: Any) -> list[str]:
+        if isinstance(value, list):
+            return [str(v) for v in value]
+        if isinstance(value, str):
+            try:
+                parsed = json.loads(value)
+            except Exception:
+                parsed = []
+            if isinstance(parsed, list):
+                return [str(v) for v in parsed]
+        return []
 
     def add_or_update_person(self, person: PersonRecord) -> None:
         self.delete_person(person.person_id, delete_detections=False)
@@ -308,10 +508,22 @@ class VectorStore:
     def delete_person(self, person_id: str, delete_detections: bool = True) -> None:
         escaped = self._escape(person_id)
         try:
+            related_incidents = [
+                row
+                for row in self.list_incidents(limit=100_000)
+                if str(row.get("entity_id", "")) == person_id
+            ]
             self.persons.delete(f"person_id = '{escaped}'")
             self.person_states.delete(f"person_id = '{escaped}'")
             self.embeddings.delete(f"person_id = '{escaped}'")
             self.image_quality.delete(f"person_id = '{escaped}'")
+            self.entities.delete(f"entity_id = '{escaped}'")
+            self.events.delete(f"entity_id = '{escaped}'")
+            self.alerts.delete(f"entity_id = '{escaped}'")
+            self.incidents.delete(f"entity_id = '{escaped}'")
+            for incident in related_incidents:
+                incident_id = self._escape(str(incident.get("incident_id", "")))
+                self.actions.delete(f"incident_id = '{incident_id}'")
             if delete_detections:
                 self.detections.delete(f"person_id = '{escaped}'")
         except Exception as exc:
@@ -431,6 +643,282 @@ class VectorStore:
         payload["person_id"] = payload["person_id"] or ""
         payload["embedding"] = [float(v) for v in emb]
         self.detections.add([self._filtered_row(self.detections, payload)])
+
+    def get_entity(self, entity_id: str) -> dict[str, Any] | None:
+        escaped = self._escape(entity_id)
+        rows = self._query_rows(self.entities, where=f"entity_id = '{escaped}'", limit=1)
+        return rows[0] if rows else None
+
+    def list_entities(self, limit: int = 10_000, type_filter: str | None = None) -> list[dict[str, Any]]:
+        rows = self._query_rows(self.entities, limit=limit)
+        if type_filter:
+            rows = [row for row in rows if str(row.get("type", "")) == type_filter]
+        return rows
+
+    def ensure_entity(
+        self,
+        entity_id: str,
+        entity_type: EntityType,
+        status: EntityStatus = EntityStatus.active,
+        source_person_id: str | None = None,
+        last_seen_at: str | None = None,
+    ) -> dict[str, Any]:
+        now = utc_now_iso()
+        existing = self.get_entity(entity_id)
+        payload = EntityRecord(
+            entity_id=entity_id,
+            type=entity_type,
+            status=status,
+            source_person_id=source_person_id,
+            created_at=existing.get("created_at", now) if existing else now,
+            last_seen_at=last_seen_at or now,
+        ).model_dump()
+        escaped = self._escape(entity_id)
+        self.entities.delete(f"entity_id = '{escaped}'")
+        self.entities.add([self._filtered_row(self.entities, payload)])
+        return payload
+
+    def add_event(self, event: EventRecord) -> None:
+        payload = event.model_dump()
+        payload["confidence"] = float(payload["confidence"])
+        self.events.add([self._filtered_row(self.events, payload)])
+
+    def get_events(self, entity_id: str, window_sec: int) -> list[dict[str, Any]]:
+        rows = self.list_events(limit=20_000, entity_id=entity_id)
+        cutoff = datetime.now(timezone.utc).timestamp() - float(window_sec)
+        kept: list[dict[str, Any]] = []
+        for row in rows:
+            ts = self._parse_iso_ts(str(row.get("timestamp_utc", "")))
+            if ts is None:
+                continue
+            if ts.timestamp() >= cutoff:
+                kept.append(row)
+        kept.sort(key=lambda r: str(r.get("timestamp_utc", "")))
+        return kept
+
+    def list_events(self, limit: int = 100, entity_id: str | None = None) -> list[dict[str, Any]]:
+        if entity_id:
+            escaped = self._escape(entity_id)
+            rows = self._query_rows(self.events, where=f"entity_id = '{escaped}'", limit=max(10_000, limit))
+        else:
+            rows = self._query_rows(self.events, limit=max(10_000, limit))
+        rows.sort(key=lambda r: str(r.get("timestamp_utc", "")), reverse=True)
+        return rows[:limit]
+
+    def add_alert(self, alert: AlertRecord) -> None:
+        payload = alert.model_dump()
+        payload["type"] = str(payload["type"])
+        payload["severity"] = str(payload["severity"])
+        payload["event_count"] = int(payload.get("event_count", 1))
+        self.alerts.add([self._filtered_row(self.alerts, payload)])
+
+    def list_alerts(
+        self,
+        limit: int = 100,
+        entity_id: str | None = None,
+        severity: str | None = None,
+    ) -> list[dict[str, Any]]:
+        rows = self._query_rows(self.alerts, limit=max(limit, 10_000))
+        if entity_id:
+            rows = [row for row in rows if str(row.get("entity_id", "")) == entity_id]
+        if severity:
+            rows = [row for row in rows if str(row.get("severity", "")).lower() == severity.lower()]
+        rows.sort(key=lambda r: str(r.get("timestamp_utc", "")), reverse=True)
+        return rows[:limit]
+
+    def create_incident(self, incident: IncidentRecord) -> None:
+        payload = incident.model_dump()
+        payload["status"] = str(payload["status"])
+        payload["severity"] = str(payload["severity"])
+        payload["alert_ids"] = json.dumps(payload.get("alert_ids", []))
+        payload["alert_count"] = int(payload.get("alert_count", len(incident.alert_ids)))
+        payload["last_action_at"] = str(payload.get("last_action_at", ""))
+        escaped = self._escape(incident.incident_id)
+        self.incidents.delete(f"incident_id = '{escaped}'")
+        self.incidents.add([self._filtered_row(self.incidents, payload)])
+
+    def update_incident(self, incident: IncidentRecord) -> None:
+        self.create_incident(incident)
+
+    def get_incident(self, incident_id: str) -> dict[str, Any] | None:
+        escaped = self._escape(incident_id)
+        rows = self._query_rows(self.incidents, where=f"incident_id = '{escaped}'", limit=1)
+        if not rows:
+            return None
+        row = rows[0]
+        row["alert_ids"] = self._parse_json_list(row.get("alert_ids", "[]"))
+        row["alert_count"] = int(row.get("alert_count", len(row["alert_ids"])))
+        row["status"] = str(row.get("status", IncidentStatus.open.value))
+        row["severity"] = str(row.get("severity", "low"))
+        row["last_action_at"] = str(row.get("last_action_at", ""))
+        return row
+
+    def list_incidents(self, limit: int = 100, status: str | None = None) -> list[dict[str, Any]]:
+        rows = self._query_rows(self.incidents, limit=max(limit, 10_000))
+        if status:
+            rows = [row for row in rows if str(row.get("status", "")).lower() == status.lower()]
+        for row in rows:
+            row["alert_ids"] = self._parse_json_list(row.get("alert_ids", "[]"))
+            row["alert_count"] = int(row.get("alert_count", len(row["alert_ids"])))
+            row["status"] = str(row.get("status", IncidentStatus.open.value))
+            row["severity"] = str(row.get("severity", "low"))
+            row["last_action_at"] = str(row.get("last_action_at", ""))
+        rows.sort(key=lambda r: str(r.get("last_seen_time", "")), reverse=True)
+        return rows[:limit]
+
+    def get_active_incident(self, entity_id: str) -> dict[str, Any] | None:
+        incidents = self.list_incidents(limit=10_000, status=IncidentStatus.open.value)
+        for row in incidents:
+            if str(row.get("entity_id", "")) == entity_id:
+                return row
+        return None
+
+    def close_incident(self, incident_id: str) -> bool:
+        incident = self.get_incident(incident_id)
+        if not incident:
+            return False
+        if str(incident.get("status", "")) == IncidentStatus.closed.value:
+            return True
+        model = IncidentRecord(
+            incident_id=str(incident.get("incident_id", "")),
+            entity_id=str(incident.get("entity_id", "")),
+            status=IncidentStatus.closed,
+            start_time=str(incident.get("start_time", utc_now_iso())),
+            last_seen_time=str(incident.get("last_seen_time", utc_now_iso())),
+            alert_ids=self._parse_json_list(incident.get("alert_ids", [])),
+            alert_count=int(incident.get("alert_count", 0)),
+            severity=str(incident.get("severity", "low")),
+            last_action_at=str(incident.get("last_action_at", "")),
+        )
+        self.update_incident(model)
+        return True
+
+    def set_incident_severity(self, incident_id: str, severity: str) -> bool:
+        incident = self.get_incident(incident_id)
+        if not incident:
+            return False
+        model = IncidentRecord(
+            incident_id=str(incident.get("incident_id", "")),
+            entity_id=str(incident.get("entity_id", "")),
+            status=str(incident.get("status", IncidentStatus.open.value)),
+            start_time=str(incident.get("start_time", utc_now_iso())),
+            last_seen_time=str(incident.get("last_seen_time", utc_now_iso())),
+            alert_ids=self._parse_json_list(incident.get("alert_ids", [])),
+            alert_count=int(incident.get("alert_count", 0)),
+            severity=severity,
+            last_action_at=str(incident.get("last_action_at", "")),
+        )
+        self.update_incident(model)
+        return True
+
+    def set_incident_last_action(self, incident_id: str, timestamp_utc: str) -> bool:
+        incident = self.get_incident(incident_id)
+        if not incident:
+            return False
+        model = IncidentRecord(
+            incident_id=str(incident.get("incident_id", "")),
+            entity_id=str(incident.get("entity_id", "")),
+            status=str(incident.get("status", IncidentStatus.open.value)),
+            start_time=str(incident.get("start_time", utc_now_iso())),
+            last_seen_time=str(incident.get("last_seen_time", utc_now_iso())),
+            alert_ids=self._parse_json_list(incident.get("alert_ids", [])),
+            alert_count=int(incident.get("alert_count", 0)),
+            severity=str(incident.get("severity", "low")),
+            last_action_at=timestamp_utc,
+        )
+        self.update_incident(model)
+        return True
+
+    def insert_action(self, action: ActionRecord) -> None:
+        payload = action.model_dump()
+        payload["action_type"] = str(payload["action_type"])
+        payload["trigger"] = str(payload["trigger"])
+        payload["status"] = str(payload["status"])
+        self.actions.add([self._filtered_row(self.actions, payload)])
+
+    def get_actions(self, incident_id: str, limit: int = 500) -> list[dict[str, Any]]:
+        escaped = self._escape(incident_id)
+        rows = self._query_rows(self.actions, where=f"incident_id = '{escaped}'", limit=max(limit, 10_000))
+        rows.sort(key=lambda r: str(r.get("timestamp_utc", "")), reverse=True)
+        return rows[:limit]
+
+    @staticmethod
+    def _normalize_vector(vector: np.ndarray) -> np.ndarray:
+        norm = float(np.linalg.norm(vector) + 1e-9)
+        return (vector / norm).astype(np.float32)
+
+    def resolve_or_create_unknown_entity(self, embedding: list[float], similarity_threshold: float) -> str:
+        query = self._normalize_vector(np.asarray(embedding, dtype=np.float32).reshape(-1))
+        profiles = self._query_rows(self.unknown_profiles, limit=100_000)
+        best_entity = ""
+        best_similarity = -1.0
+        best_profile: dict[str, Any] | None = None
+
+        for row in profiles:
+            vector = np.asarray(row.get("embedding", []), dtype=np.float32).reshape(-1)
+            if vector.shape[0] != EMBEDDING_DIM:
+                continue
+            vector = self._normalize_vector(vector)
+            similarity = float(np.dot(query, vector))
+            if similarity > best_similarity:
+                best_similarity = similarity
+                best_entity = str(row.get("entity_id", ""))
+                best_profile = row
+
+        now = utc_now_iso()
+        if best_entity and best_similarity >= similarity_threshold and best_profile is not None:
+            count = int(best_profile.get("sample_count", 1))
+            prev = self._normalize_vector(np.asarray(best_profile.get("embedding", []), dtype=np.float32).reshape(-1))
+            merged = self._normalize_vector(((prev * count) + query) / max(1, count + 1))
+            escaped = self._escape(best_entity)
+            self.unknown_profiles.delete(f"entity_id = '{escaped}'")
+            self.unknown_profiles.add(
+                [
+                    self._filtered_row(
+                        self.unknown_profiles,
+                        {
+                            "entity_id": best_entity,
+                            "embedding": [float(v) for v in merged.tolist()],
+                            "sample_count": count + 1,
+                            "created_at": best_profile.get("created_at", now),
+                            "last_seen_at": now,
+                        },
+                    )
+                ]
+            )
+            self.ensure_entity(
+                entity_id=best_entity,
+                entity_type=EntityType.unknown,
+                status=EntityStatus.active,
+                source_person_id=None,
+                last_seen_at=now,
+            )
+            return best_entity
+
+        existing_unknowns = [row.get("entity_id", "") for row in self.list_entities(type_filter=EntityType.unknown.value)]
+        new_entity_id = next_unknown_entity_id(existing_unknowns)
+        self.unknown_profiles.add(
+            [
+                self._filtered_row(
+                    self.unknown_profiles,
+                    {
+                        "entity_id": new_entity_id,
+                        "embedding": [float(v) for v in query.tolist()],
+                        "sample_count": 1,
+                        "created_at": now,
+                        "last_seen_at": now,
+                    },
+                )
+            ]
+        )
+        self.ensure_entity(
+            entity_id=new_entity_id,
+            entity_type=EntityType.unknown,
+            status=EntityStatus.active,
+            source_person_id=None,
+            last_seen_at=now,
+        )
+        return new_entity_id
 
     def add_detection_decision(
         self,

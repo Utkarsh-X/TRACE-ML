@@ -17,7 +17,7 @@ from trace_ml.core.config import Settings, load_settings
 from trace_ml.core.health import run_health_checks
 from trace_ml.core.ids import next_person_id
 from trace_ml.core.logger import configure_logger
-from trace_ml.core.models import HistoryQuery, PersonCategory, PersonLifecycleStatus, PersonRecord
+from trace_ml.core.models import AlertSeverity, HistoryQuery, PersonCategory, PersonLifecycleStatus, PersonRecord
 from trace_ml.liveness.base import MiniFASNetStub
 from trace_ml.pipeline.collect import capture_from_webcam, import_from_directory, person_image_dir
 from trace_ml.pipeline.session import RecognitionSession
@@ -34,6 +34,10 @@ recognize_app = typer.Typer(help="Live recognition commands", no_args_is_help=Tr
 history_app = typer.Typer(help="Detection history commands", no_args_is_help=True)
 report_app = typer.Typer(help="Reporting commands", no_args_is_help=True)
 export_app = typer.Typer(help="Export commands", no_args_is_help=True)
+events_app = typer.Typer(help="Entity-event stream commands", no_args_is_help=True)
+alerts_app = typer.Typer(help="Alert stream commands", no_args_is_help=True)
+incident_app = typer.Typer(help="Incident commands", no_args_is_help=True)
+action_app = typer.Typer(help="Action audit commands", no_args_is_help=True)
 
 app.add_typer(person_app, name="person")
 app.add_typer(train_app, name="train")
@@ -41,6 +45,10 @@ app.add_typer(recognize_app, name="recognize")
 app.add_typer(history_app, name="history")
 app.add_typer(report_app, name="report")
 app.add_typer(export_app, name="export")
+app.add_typer(events_app, name="events")
+app.add_typer(alerts_app, name="alerts")
+app.add_typer(incident_app, name="incident")
+app.add_typer(action_app, name="action")
 
 console = Console()
 
@@ -575,6 +583,209 @@ def export_csv(
     )
     saved = runtime.analytics.export_csv(query, output_path)
     console.print(f"[green]Exported[/green] {saved}")
+
+
+@events_app.command("tail")
+def events_tail(
+    ctx: typer.Context,
+    limit: int = typer.Option(30, help="Number of latest events"),
+    entity_id: str = typer.Option("", help="Filter by entity id"),
+) -> None:
+    """Show latest entity-linked event stream."""
+    runtime = _runtime(ctx)
+    rows = runtime.store.list_events(limit=limit, entity_id=entity_id or None)
+    table = Table(title="Entity Event Stream", box=box.SIMPLE_HEAVY)
+    table.add_column("Time", style="dim")
+    table.add_column("Entity", style="cyan")
+    table.add_column("Decision")
+    table.add_column("Conf", justify="right")
+    table.add_column("Track")
+    table.add_column("Source", style="dim")
+    for row in rows:
+        table.add_row(
+            str(row.get("timestamp_utc", "")),
+            str(row.get("entity_id", "")),
+            str(row.get("decision", "")),
+            f"{float(row.get('confidence', 0.0)):.2f}",
+            str(row.get("track_id", "")),
+            str(row.get("source", "")),
+        )
+    console.print(table)
+
+
+@alerts_app.command("tail")
+def alerts_tail(
+    ctx: typer.Context,
+    limit: int = typer.Option(30, help="Number of latest alerts"),
+    entity_id: str = typer.Option("", help="Filter by entity id"),
+    severity: str = typer.Option("", help="Filter by severity low|medium|high"),
+) -> None:
+    """Show latest rule-generated alerts."""
+    runtime = _runtime(ctx)
+    rows = runtime.store.list_alerts(
+        limit=limit,
+        entity_id=entity_id or None,
+        severity=severity or None,
+    )
+    table = Table(title="Alert Stream", box=box.SIMPLE_HEAVY)
+    table.add_column("Time", style="dim")
+    table.add_column("Severity")
+    table.add_column("Entity", style="cyan")
+    table.add_column("Type")
+    table.add_column("Events", justify="right")
+    table.add_column("Reason")
+    for row in rows:
+        level = str(row.get("severity", "")).upper()
+        if level == "HIGH":
+            sev = f"[red]{level}[/red]"
+        elif level == "MEDIUM":
+            sev = f"[yellow]{level}[/yellow]"
+        else:
+            sev = f"[green]{level}[/green]"
+        table.add_row(
+            str(row.get("timestamp_utc", "")),
+            sev,
+            str(row.get("entity_id", "")),
+            str(row.get("type", "")),
+            str(int(row.get("event_count", 1))),
+            str(row.get("reason", "")),
+        )
+    console.print(table)
+
+
+@incident_app.command("list")
+def incident_list(
+    ctx: typer.Context,
+    status: str = typer.Option("", help="Filter by open|closed"),
+    limit: int = typer.Option(50, help="Maximum incidents"),
+) -> None:
+    """List incidents for operator review."""
+    runtime = _runtime(ctx)
+    rows = runtime.store.list_incidents(limit=limit, status=status or None)
+    table = Table(title="Incidents", box=box.SIMPLE_HEAVY)
+    table.add_column("ID", style="cyan")
+    table.add_column("Entity")
+    table.add_column("Status")
+    table.add_column("Severity")
+    table.add_column("Alerts", justify="right")
+    table.add_column("Start", style="dim")
+    table.add_column("Last Seen", style="dim")
+    table.add_column("Last Action", style="dim")
+    for row in rows:
+        table.add_row(
+            str(row.get("incident_id", "")),
+            str(row.get("entity_id", "")),
+            str(row.get("status", "")),
+            str(row.get("severity", "low")),
+            str(int(row.get("alert_count", 0))),
+            str(row.get("start_time", "")),
+            str(row.get("last_seen_time", "")),
+            str(row.get("last_action_at", "")),
+        )
+    console.print(table)
+
+
+@incident_app.command("show")
+def incident_show(
+    ctx: typer.Context,
+    id: str = typer.Option(..., "--id", help="Incident id"),
+) -> None:
+    """Show details and timeline for one incident."""
+    runtime = _runtime(ctx)
+    incident = runtime.store.get_incident(id)
+    if not incident:
+        raise typer.BadParameter(f"Incident not found: {id}")
+
+    incident_alert_ids = set(str(v) for v in incident.get("alert_ids", []))
+    alerts = runtime.store.list_alerts(limit=10_000, entity_id=str(incident.get("entity_id", "")))
+    timeline = [row for row in alerts if str(row.get("alert_id", "")) in incident_alert_ids]
+    timeline.sort(key=lambda r: str(r.get("timestamp_utc", "")))
+
+    console.print(
+        Panel.fit(
+            f"Incident: [bold]{incident.get('incident_id','')}[/bold]\n"
+            f"Entity: [bold]{incident.get('entity_id','')}[/bold]\n"
+            f"Status: [bold]{incident.get('status','')}[/bold]\n"
+            f"Severity: [bold]{incident.get('severity','low')}[/bold]\n"
+            f"Start: {incident.get('start_time','')}\n"
+            f"Last seen: {incident.get('last_seen_time','')}\n"
+            f"Last action: {incident.get('last_action_at','')}\n"
+            f"Alerts linked: {incident.get('alert_count', 0)}",
+            title="Incident Detail",
+            border_style="cyan",
+        )
+    )
+
+    table = Table(title="Incident Timeline", box=box.SIMPLE_HEAVY)
+    table.add_column("Time", style="dim")
+    table.add_column("Alert ID", style="cyan")
+    table.add_column("Type")
+    table.add_column("Severity")
+    table.add_column("Reason")
+    for row in timeline:
+        table.add_row(
+            str(row.get("timestamp_utc", "")),
+            str(row.get("alert_id", "")),
+            str(row.get("type", "")),
+            str(row.get("severity", "")),
+            str(row.get("reason", "")),
+        )
+    console.print(table)
+
+
+@incident_app.command("close")
+def incident_close(
+    ctx: typer.Context,
+    id: str = typer.Option(..., "--id", help="Incident id"),
+) -> None:
+    """Close an incident manually."""
+    runtime = _runtime(ctx)
+    ok = runtime.store.close_incident(id)
+    if not ok:
+        raise typer.BadParameter(f"Incident not found: {id}")
+    console.print(f"[green]Closed incident[/green] {id}")
+
+
+@incident_app.command("set-severity")
+def incident_set_severity(
+    ctx: typer.Context,
+    id: str = typer.Option(..., "--id", help="Incident id"),
+    severity: AlertSeverity = typer.Option(..., "--severity", help="low|medium|high"),
+) -> None:
+    """Set incident severity manually (operator control)."""
+    runtime = _runtime(ctx)
+    ok = runtime.store.set_incident_severity(id, severity.value)
+    if not ok:
+        raise typer.BadParameter(f"Incident not found: {id}")
+    console.print(f"[green]Updated severity[/green] {id} -> {severity.value}")
+
+
+@action_app.command("list")
+def action_list(
+    ctx: typer.Context,
+    incident_id: str = typer.Option(..., "--incident-id", help="Incident id"),
+    limit: int = typer.Option(50, help="Maximum actions"),
+) -> None:
+    """List action audit records for an incident."""
+    runtime = _runtime(ctx)
+    rows = runtime.store.get_actions(incident_id, limit=limit)
+    table = Table(title=f"Actions for {incident_id}", box=box.SIMPLE_HEAVY)
+    table.add_column("Time", style="dim")
+    table.add_column("Action ID", style="cyan")
+    table.add_column("Type")
+    table.add_column("Trigger")
+    table.add_column("Status")
+    table.add_column("Reason")
+    for row in rows:
+        table.add_row(
+            str(row.get("timestamp_utc", "")),
+            str(row.get("action_id", "")),
+            str(row.get("action_type", "")),
+            str(row.get("trigger", "")),
+            str(row.get("status", "")),
+            str(row.get("reason", "")),
+        )
+    console.print(table)
 
 
 if __name__ == "__main__":

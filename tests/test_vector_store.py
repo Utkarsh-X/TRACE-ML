@@ -1,5 +1,8 @@
 from pathlib import Path
 
+import lancedb
+import pyarrow as pa
+
 from trace_ml.core.config import load_settings
 from trace_ml.core.models import EmbeddingRecord, PersonCategory, PersonLifecycleStatus, PersonRecord, QualityAssessment
 from trace_ml.store.vector_store import VectorStore
@@ -87,3 +90,66 @@ def test_person_and_embedding_crud(tmp_path: Path) -> None:
     store.delete_person("PRC001", delete_detections=True)
     assert store.get_person("PRC001") is None
     assert store.count_embeddings("PRC001") == 0
+
+
+def test_query_rows_fallback_filters_generic_equality(tmp_path: Path) -> None:
+    settings = _settings(tmp_path)
+    store = VectorStore(settings)
+
+    class _QueryFailTable:
+        def query(self):
+            raise RuntimeError("force fallback path")
+
+        @staticmethod
+        def to_arrow():
+            return pa.Table.from_pylist(
+                [
+                    {"incident_id": "INC-1", "entity_id": "PRC001"},
+                    {"incident_id": "INC-2", "entity_id": "UNK001"},
+                ]
+            )
+
+    rows = store._query_rows(_QueryFailTable(), where="incident_id = 'INC-2'", limit=10)
+    assert len(rows) == 1
+    assert rows[0]["incident_id"] == "INC-2"
+
+
+def test_incident_schema_migrates_and_persists_severity(tmp_path: Path) -> None:
+    settings = _settings(tmp_path)
+    db = lancedb.connect(settings.store.vectors_dir)
+    db.create_table(
+        "incidents",
+        data=[
+            {
+                "incident_id": "INC-OLD-1",
+                "entity_id": "PRC001",
+                "status": "open",
+                "start_time": "2026-03-27T00:00:00+00:00",
+                "last_seen_time": "2026-03-27T00:00:05+00:00",
+                "alert_ids": "[]",
+                "alert_count": 0,
+            }
+        ],
+        schema=pa.schema(
+            [
+                pa.field("incident_id", pa.string()),
+                pa.field("entity_id", pa.string()),
+                pa.field("status", pa.string()),
+                pa.field("start_time", pa.string()),
+                pa.field("last_seen_time", pa.string()),
+                pa.field("alert_ids", pa.string()),
+                pa.field("alert_count", pa.int32()),
+            ]
+        ),
+    )
+
+    store = VectorStore(settings)
+    migrated = store.get_incident("INC-OLD-1")
+    assert migrated is not None
+    assert migrated["severity"] == "low"
+    assert migrated["last_action_at"] == ""
+
+    assert store.set_incident_severity("INC-OLD-1", "high") is True
+    updated = store.get_incident("INC-OLD-1")
+    assert updated is not None
+    assert updated["severity"] == "high"

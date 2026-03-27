@@ -13,10 +13,15 @@ import cv2
 
 from trace_ml.core.config import Settings
 from trace_ml.core.ids import new_detection_id
-from trace_ml.core.models import DecisionState, DetectionEvent, RecognitionMatch
+from trace_ml.core.models import ActionTrigger, DecisionState, DetectionEvent, RecognitionMatch
 from trace_ml.liveness.base import LivenessResult
+from trace_ml.pipeline.action_engine import ActionEngine
 from trace_ml.pipeline.capture import CameraCapture
+from trace_ml.pipeline.entity_resolver import EntityResolver
+from trace_ml.pipeline.incident_manager import IncidentManager
 from trace_ml.pipeline.inference import InferencePacket, InferenceWorker
+from trace_ml.pipeline.policy_engine import PolicyEngine
+from trace_ml.pipeline.rules_engine import RulesEngine
 from trace_ml.pipeline.temporal import TemporalDecisionEngine
 from trace_ml.recognizers.arcface import ArcFaceRecognizer
 from trace_ml.store.vector_store import VectorStore
@@ -54,6 +59,11 @@ class RecognitionSession:
         self.settings = settings
         self.store = store
         self.recognizer = recognizer
+        self.entity_resolver = EntityResolver(settings, store)
+        self.rules_engine = RulesEngine(settings, store)
+        self.incident_manager = IncidentManager(store)
+        self.policy_engine = PolicyEngine(settings)
+        self.action_engine = ActionEngine(store, settings)
         self.temporal = TemporalDecisionEngine(settings)
         self.last_logged_at: dict[str, float] = {}
         self.screenshot_dir = Path(settings.store.screenshots_dir)
@@ -86,56 +96,85 @@ class RecognitionSession:
         source: str = "webcam:0",
     ) -> None:
         decision = match.decision_state
+        resolution = self.entity_resolver.resolve(match, embedding)
+        persist_detection = True
         if decision == DecisionState.reject and not self.settings.recognition.persist_unknown:
-            return
+            persist_detection = False
         if decision == DecisionState.review and not self.settings.recognition.persist_review:
-            return
+            persist_detection = False
 
-        if match.person_id:
-            person_key = f"pid:{match.person_id}:{decision.value}"
-        else:
-            person_key = f"trk:{match.track_id or 'unknown'}:{decision.value}"
-        if not self._should_log(person_key):
-            return
+        detection_id = ""
+        if persist_detection:
+            if match.person_id:
+                person_key = f"pid:{match.person_id}:{decision.value}"
+            else:
+                person_key = f"trk:{match.track_id or 'unknown'}:{decision.value}"
+            if self._should_log(person_key):
+                detection_id = new_detection_id()
+                screenshot_path = self.screenshot_dir / f"{detection_id}.jpg"
+                cv2.imwrite(str(screenshot_path), frame)
 
-        det_id = new_detection_id()
-        screenshot_path = self.screenshot_dir / f"{det_id}.jpg"
-        cv2.imwrite(str(screenshot_path), frame)
+                event = DetectionEvent(
+                    detection_id=detection_id,
+                    source=source,
+                    person_id=match.person_id,
+                    name=match.name if decision != DecisionState.reject else "Unknown",
+                    category=match.category if decision != DecisionState.reject else "unknown",
+                    confidence=match.confidence,
+                    similarity=match.similarity,
+                    smoothed_confidence=match.smoothed_confidence,
+                    bbox=match.bbox,
+                    track_id=match.track_id,
+                    decision_state=decision,
+                    decision_reason=match.decision_reason,
+                    quality_flags=match.quality_flags,
+                    liveness_provider=liveness.provider,
+                    liveness_score=liveness.score,
+                    screenshot_path=str(screenshot_path),
+                    metadata=match.metadata,
+                )
+                self.store.add_detection(event, embedding=embedding)
+                self.store.add_detection_decision(
+                    detection_id=detection_id,
+                    track_id=match.track_id,
+                    decision_state=decision.value,
+                    decision_reason=match.decision_reason,
+                    smoothed_confidence=match.smoothed_confidence,
+                    quality_flags=match.quality_flags,
+                    top_candidates=match.candidate_scores,
+                    liveness_provider=liveness.provider,
+                    liveness_score=liveness.score,
+                )
+                self._track_event(
+                    f"{decision.value.upper()} {event.name} {event.smoothed_confidence:.1f}% [{match.track_id}]"
+                )
 
-        event = DetectionEvent(
-            detection_id=det_id,
+        core_event = self.entity_resolver.create_event_record(
+            resolution=resolution,
+            match=match,
+            detection_id=detection_id,
             source=source,
-            person_id=match.person_id,
-            name=match.name if decision != DecisionState.reject else "Unknown",
-            category=match.category if decision != DecisionState.reject else "unknown",
-            confidence=match.confidence,
-            similarity=match.similarity,
-            smoothed_confidence=match.smoothed_confidence,
-            bbox=match.bbox,
-            track_id=match.track_id,
-            decision_state=decision,
-            decision_reason=match.decision_reason,
-            quality_flags=match.quality_flags,
-            liveness_provider=liveness.provider,
-            liveness_score=liveness.score,
-            screenshot_path=str(screenshot_path),
-            metadata=match.metadata,
         )
-        self.store.add_detection(event, embedding=embedding)
-        self.store.add_detection_decision(
-            detection_id=det_id,
-            track_id=match.track_id,
-            decision_state=decision.value,
-            decision_reason=match.decision_reason,
-            smoothed_confidence=match.smoothed_confidence,
-            quality_flags=match.quality_flags,
-            top_candidates=match.candidate_scores,
-            liveness_provider=liveness.provider,
-            liveness_score=liveness.score,
-        )
-        self._track_event(
-            f"{decision.value.upper()} {event.name} {event.smoothed_confidence:.1f}% [{match.track_id}]"
-        )
+        self.store.add_event(core_event)
+        alerts = self.rules_engine.process_event(core_event)
+        for alert in alerts:
+            self.store.add_alert(alert)
+            incident, trigger_label = self.incident_manager.handle_alert(alert)
+            trigger = ActionTrigger(trigger_label)
+            planned_actions = self.policy_engine.evaluate(incident, trigger)
+            executed = self.action_engine.execute(incident, planned_actions, trigger)
+            self._track_event(
+                f"ALERT {alert.severity.value.upper()} {alert.type.value} {alert.entity_id} -> {incident.incident_id}"
+            )
+            if planned_actions:
+                action_names = ",".join([a.value for a in planned_actions])
+                self._track_event(
+                    f"POLICY {incident.incident_id} {trigger.value} sev={incident.severity.value} -> [{action_names}]"
+                )
+            for action in executed:
+                self._track_event(
+                    f"ACTION {action.action_type.value.upper()} {incident.incident_id} ({action.status.value})"
+                )
 
     def _apply_temporal_decision(self, match: RecognitionMatch, now: float) -> RecognitionMatch:
         temporal = self.temporal.evaluate(match, now_ts=now)

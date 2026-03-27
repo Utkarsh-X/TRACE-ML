@@ -15,6 +15,7 @@ recognition:
   enable_preprocess_fallback: true
   low_quality_threshold: 0.45
   threshold_relaxation: 0.08
+  unknown_reuse_threshold: 0.60
 
 temporal:
   decision_window: 8
@@ -24,3 +25,27 @@ temporal:
   max_track_distance_px: 110
   min_track_iou: 0.10
   track_reuse_min_score: 0.40
+
+rules:
+  cooldown_sec: 18
+  reappearance:
+    window_sec: 10
+    min_events: 4
+  unknown:
+    window_sec: 8
+    min_events: 3
+  instability:
+    window_sec: 10
+    std_threshold: 0.14
+
+actions:
+  enabled: true
+  on_create:
+    low: []
+    medium: [log]
+    high: [log, email, alarm]
+  on_update:
+    low: []
+    medium: [log]
+    high: [log]
+  cooldown_sec: 25
