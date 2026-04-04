@@ -50,6 +50,19 @@ class ActionEngine:
             return True, "alarm_triggered"
         return False, "unsupported_action_type"
 
+    @staticmethod
+    def _context_for(incident: IncidentRecord, trigger: ActionTrigger, action_type: ActionType, reason: str) -> dict[str, str]:
+        return {
+            "incident_id": incident.incident_id,
+            "entity_id": incident.entity_id,
+            "incident_status": str(incident.status),
+            "incident_severity": str(incident.severity),
+            "incident_summary": str(incident.summary),
+            "trigger": trigger.value,
+            "action_type": action_type.value,
+            "explanation": reason,
+        }
+
     def execute(
         self,
         incident: IncidentRecord,
@@ -73,6 +86,7 @@ class ActionEngine:
                 trigger=trigger_value,
                 status=ActionStatus.success if ok else ActionStatus.failed,
                 reason=reason,
+                context=self._context_for(incident, trigger_value, action_type, reason),
             )
             self.store.insert_action(record)
             emitted.append(record)

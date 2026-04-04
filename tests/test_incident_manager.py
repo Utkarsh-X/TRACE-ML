@@ -39,6 +39,7 @@ def test_incident_manager_creates_and_updates_single_active_incident(tmp_path: P
     assert trigger1 == "on_create"
     assert inc1.entity_id == "UNK001"
     assert inc1.alert_count == 1
+    assert "unknown recurrence" in inc1.summary.lower()
 
     a2 = AlertRecord(
         alert_id="ALT-2",
@@ -52,6 +53,7 @@ def test_incident_manager_creates_and_updates_single_active_incident(tmp_path: P
     assert inc2.incident_id == inc1.incident_id
     assert inc2.alert_count == 2
     assert set(inc2.alert_ids) == {"ALT-1", "ALT-2"}
+    assert "reappearance" in inc2.summary.lower()
 
     open_rows = store.list_incidents(status="open")
     assert len([row for row in open_rows if row.get("entity_id") == "UNK001"]) == 1

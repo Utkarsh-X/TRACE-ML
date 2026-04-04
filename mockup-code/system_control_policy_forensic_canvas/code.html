@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>TRACE-AML | SYSTEM CONTROL &amp; POLICY</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "tertiary": "#e4e2e1",
+                        "surface-variant": "#353535",
+                        "on-tertiary": "#1b1c1c",
+                        "error": "#ffb4ab",
+                        "on-error-container": "#ffdad6",
+                        "secondary-container": "#45464e",
+                        "on-tertiary-fixed": "#ffffff",
+                        "on-secondary-fixed": "#1a1b22",
+                        "on-background": "#e2e2e2",
+                        "inverse-primary": "#5d5f5f",
+                        "on-surface-variant": "#c6c6c6",
+                        "on-primary-fixed": "#ffffff",
+                        "outline-variant": "#474747",
+                        "primary": "#ffffff",
+                        "surface-dim": "#131313",
+                        "on-secondary-container": "#e2e1eb",
+                        "surface-container": "#1f1f1f",
+                        "surface-tint": "#c6c6c7",
+                        "on-primary": "#1a1c1c",
+                        "on-secondary": "#1a1b22",
+                        "surface-container-high": "#2a2a2a",
+                        "on-primary-fixed-variant": "#e2e2e2",
+                        "inverse-on-surface": "#303030",
+                        "tertiary-fixed": "#5f5e5e",
+                        "primary-container": "#d4d4d4",
+                        "background": "#131313",
+                        "on-tertiary-container": "#000000",
+                        "inverse-surface": "#e2e2e2",
+                        "outline": "#919191",
+                        "error-container": "#93000a",
+                        "on-surface": "#e2e2e2",
+                        "tertiary-container": "#929090",
+                        "primary-fixed-dim": "#454747",
+                        "surface": "#131313",
+                        "on-primary-container": "#000000",
+                        "surface-container-low": "#1b1b1b",
+                        "on-tertiary-fixed-variant": "#e4e2e1",
+                        "surface-container-lowest": "#0e0e0e",
+                        "primary-fixed": "#5d5f5f",
+                        "on-error": "#690005",
+                        "tertiary-fixed-dim": "#474746",
+                        "surface-bright": "#393939",
+                        "secondary": "#c6c6cf",
+                        "on-secondary-fixed-variant": "#3a3b42",
+                        "surface-container-highest": "#353535",
+                        "secondary-fixed-dim": "#aaaab3",
+                        "secondary-fixed": "#c6c6cf"
+                    },
+                    fontFamily: {
+                        "headline": ["Inter"],
+                        "body": ["Inter"],
+                        "label": ["Inter"],
+                        "mono": ["JetBrains Mono"]
+                    },
+                    borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body {
+            background-color: #0e0e0e;
+            color: #e2e2e2;
+            font-family: 'Inter', sans-serif;
+        }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="flex flex-col min-h-screen">
+<!-- TopNavBar -->
+<header class="bg-[#0e0e0e] text-[#ffffff] font-['Inter'] font-medium text-[0.875rem] tracking-tight docked full-width top-0 z-50 flex items-center justify-between px-6 h-14 w-full bg-[#1b1b1b] border-none flat no shadows">
+<div class="flex items-center gap-8">
+<span class="font-['Inter'] font-black text-xl tracking-tighter text-[#ffffff]">TRACE-AML</span>
+<nav class="hidden md:flex gap-6 items-center h-full">
+<a class="text-[#c6c6c6] hover:text-[#ffffff] transition-colors" href="#">Live Ops</a>
+<a class="text-[#c6c6c6] hover:text-[#ffffff] transition-colors" href="#">Incidents</a>
+<a class="text-[#c6c6c6] hover:text-[#ffffff] transition-colors" href="#">Entities</a>
+<a class="text-[#c6c6c6] hover:text-[#ffffff] transition-colors" href="#">History</a>
+<a class="text-[#c6c6c6] hover:text-[#ffffff] transition-colors" href="#">Database</a>
+<a class="text-[#ffffff] border-b border-[#ffffff] pb-1" href="#">Settings</a>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<div class="relative flex items-center bg-[#0e0e0e] px-3 py-1 rounded">
+<span class="material-symbols-outlined text-[18px] text-[#c6c6c6]">search</span>
+<input class="bg-transparent border-none text-xs focus:ring-0 placeholder-[#474747] w-40" placeholder="Search parameters..." type="text"/>
+</div>
+<button class="hover:bg-[#1f1f1f] transition-all duration-200 p-1.5 rounded"><span class="material-symbols-outlined" data-icon="notifications">notifications</span></button>
+<div class="w-8 h-8 rounded bg-[#2a2a2a] flex items-center justify-center overflow-hidden">
+<img alt="Investigator Profile" class="w-full h-full object-cover" data-alt="professional investigator profile headshot with neutral lighting and dark background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCgX-DSE9EAKJMYH1FVaXg-ViOow1auLg3VWKgjV5ShLF18cITD8mw7HxJswBL7hE_-sQCtWBJa6Wnjy33ztRqNOlmiEiLHVHjYExENwHXbQKVh6WqK5oI1Fsw9PFq5rkMmhCIx48nnoRxvL6z_4NODgDdi6JOj0SHNweVAZZ4VUKnTuZmd6XGxtxS2KmqKaeEArdxMOMYz7HeS7GbdaBLb8HQmtz5DvwhQi6WkV2VoV6OkWAkUUINGF3n7bK2Z5qGqRvchqkDRVsA"/>
+</div>
+</div>
+</header>
+<div class="flex flex-1 overflow-hidden">
+<!-- SideNavBar -->
+<aside class="bg-[#1b1b1b] text-[#ffffff] font-['JetBrains_Mono'] text-[0.6875rem] uppercase tracking-widest fixed left-0 top-14 h-[calc(100vh-3.5rem)] w-20 flex flex-col items-center py-6 gap-8 bg-[#0e0e0e] border-none flat no shadows z-40">
+<div class="flex flex-col items-center gap-1 mb-4 opacity-40">
+<span class="material-symbols-outlined text-xl">security</span>
+<span class="text-[8px] tracking-[0.2em]">OPS-CORE</span>
+</div>
+<button class="text-[#c6c6c6] opacity-60 hover:bg-[#2a2a2a] hover:opacity-100 transition-all flex flex-col items-center gap-1 w-full py-2">
+<span class="material-symbols-outlined" data-icon="monitoring">monitoring</span>
+<span>Monitor</span>
+</button>
+<button class="text-[#c6c6c6] opacity-60 hover:bg-[#2a2a2a] hover:opacity-100 transition-all flex flex-col items-center gap-1 w-full py-2">
+<span class="material-symbols-outlined" data-icon="folder_managed">folder_managed</span>
+<span>Cases</span>
+</button>
+<button class="text-[#c6c6c6] opacity-60 hover:bg-[#2a2a2a] hover:opacity-100 transition-all flex flex-col items-center gap-1 w-full py-2">
+<span class="material-symbols-outlined" data-icon="database">database</span>
+<span>Database</span>
+</button>
+<button class="text-[#c6c6c6] opacity-60 hover:bg-[#2a2a2a] hover:opacity-100 transition-all flex flex-col items-center gap-1 w-full py-2">
+<span class="material-symbols-outlined" data-icon="terminal">terminal</span>
+<span>Logs</span>
+</button>
+<button class="bg-[#393939] text-[#ffffff] shadow-[inset_2px_0_0_0_#ffffff] flex flex-col items-center gap-1 w-full py-2">
+<span class="material-symbols-outlined" data-icon="settings_accessibility">settings_accessibility</span>
+<span>Config</span>
+</button>
+</aside>
+<!-- Main Forensic Canvas -->
+<main class="ml-20 flex-1 overflow-y-auto p-8 bg-surface-container-lowest">
+<div class="flex flex-col gap-10">
+<!-- Page Header: Editorial Style -->
+<header class="max-w-4xl">
+<div class="flex items-center gap-3 mb-2">
+<span class="font-mono text-[0.6875rem] text-primary tracking-widest bg-surface-container px-2 py-0.5">AUTH_LVL_04</span>
+<span class="text-on-surface-variant font-mono text-[0.6875rem]">REF_ID: CFG-SYS-9902</span>
+</div>
+<h1 class="text-headline-sm font-bold text-primary tracking-tight text-3xl mb-1">SYSTEM CONTROL &amp; POLICY</h1>
+<p class="text-on-surface-variant text-sm max-w-2xl leading-relaxed">Forensic engine configuration and response logic. Adjust sensitivity weights and cooldown thresholds. Changes propagate across the neural surveillance matrix in <span class="font-mono text-primary">0.02ms</span>.</p>
+</header>
+<!-- Top Layout: Action Matrix & Engine Weights (Asymmetric) -->
+<div class="grid grid-cols-12 gap-1 bg-transparent">
+<!-- Action Policy Matrix (Severity vs Response) - Bleeds Left -->
+<section class="col-span-12 lg:col-span-8 bg-surface-container-low p-6">
+<div class="flex justify-between items-end mb-8">
+<div>
+<h3 class="font-bold text-primary text-sm tracking-widest uppercase mb-1">Action Policy Matrix</h3>
+<p class="text-[0.6875rem] text-on-surface-variant font-mono">SEVERITY_MAPPING_V4.2</p>
+</div>
+<div class="flex gap-4">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 bg-primary"></span>
+<span class="text-[10px] uppercase tracking-tighter text-on-surface-variant">Active</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 border border-outline-variant"></span>
+<span class="text-[10px] uppercase tracking-tighter text-on-surface-variant">Null</span>
+</div>
+</div>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="text-[10px] uppercase tracking-widest text-on-surface-variant">
+<th class="pb-4 font-normal">Trigger Group</th>
+<th class="pb-4 font-normal">Low (0-3)</th>
+<th class="pb-4 font-normal">Mid (4-7)</th>
+<th class="pb-4 font-normal">High (8-9)</th>
+<th class="pb-4 font-normal">Critical (10)</th>
+</tr>
+</thead>
+<tbody class="font-mono text-[0.75rem]">
+<tr class="bg-surface-container-lowest">
+<td class="p-4 text-on-surface-variant">Cross-Border Hash</td>
+<td class="p-4"><span class="px-2 py-0.5 bg-surface-container-high text-on-surface-variant">LOG_ONLY</span></td>
+<td class="p-4"><span class="px-2 py-0.5 bg-surface-container-high text-on-surface-variant">LOG_ONLY</span></td>
+<td class="p-4"><span class="px-2 py-0.5 bg-primary text-on-primary">FLAG_ENTRY</span></td>
+<td class="p-4"><span class="px-2 py-0.5 bg-primary text-on-primary">AUTO_FREEZE</span></td>
+</tr>
+<tr class="bg-transparent h-1"></tr>
+<tr class="bg-surface-container-lowest">
+<td class="p-4 text-on-surface-variant">Velocity Spikes</td>
+<td class="p-4"><span class="px-2 py-0.5 bg-surface-container-high text-on-surface-variant">NULL</span></td>
+<td class="p-4"><span class="px-2 py-0.5 bg-primary text-on-primary">THROTTLE</span></td>
+<td class="p-4"><span class="px-2 py-0.5 bg-primary text-on-primary">MANDATORY_KYC</span></td>
+<td class="p-4"><span class="px-2 py-0.5 bg-primary text-on-primary">SUSPEND_ACC</span></td>
+</tr>
+<tr class="bg-transparent h-1"></tr>
+<tr class="bg-surface-container-lowest">
+<td class="p-4 text-on-surface-variant">Entity Linkage</td>
+<td class="p-4"><span class="px-2 py-0.5 bg-surface-container-high text-on-surface-variant">TRACE</span></td>
+<td class="p-4"><span class="px-2 py-0.5 bg-surface-container-high text-on-surface-variant">TRACE</span></td>
+<td class="p-4"><span class="px-2 py-0.5 bg-primary text-on-primary">SHADOW_BAN</span></td>
+<td class="p-4"><span class="px-2 py-0.5 bg-primary text-on-primary">LEO_NOTIFY</span></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<!-- Engine Weights - Sits higher -->
+<section class="col-span-12 lg:col-span-4 bg-surface-container p-6 flex flex-col justify-between">
+<div>
+<h3 class="font-bold text-primary text-sm tracking-widest uppercase mb-4">Engine Weights</h3>
+<div class="space-y-6">
+<div>
+<div class="flex justify-between text-[10px] uppercase tracking-widest mb-2">
+<span class="text-on-surface-variant">Signal Sensitivity</span>
+<span class="text-primary font-mono">88%</span>
+</div>
+<div class="h-1 bg-surface-container-high w-full relative">
+<div class="h-full bg-primary w-[88%]"></div>
+</div>
+</div>
+<div>
+<div class="flex justify-between text-[10px] uppercase tracking-widest mb-2">
+<span class="text-on-surface-variant">Process Latency</span>
+<span class="text-primary font-mono">12ms</span>
+</div>
+<div class="h-1 bg-surface-container-high w-full relative">
+<div class="h-full bg-primary w-[30%]"></div>
+</div>
+</div>
+<div>
+<div class="flex justify-between text-[10px] uppercase tracking-widest mb-2">
+<span class="text-on-surface-variant">False Positive Tol.</span>
+<span class="text-primary font-mono">0.04%</span>
+</div>
+<div class="h-1 bg-surface-container-high w-full relative">
+<div class="h-full bg-primary w-[5%]"></div>
+</div>
+</div>
+</div>
+</div>
+<div class="mt-8 pt-6 border-t border-outline-variant border-opacity-20">
+<button class="w-full bg-primary text-on-primary py-3 font-bold text-xs uppercase tracking-widest hover:opacity-90 transition-opacity">Recalibrate Neural Engine</button>
+</div>
+</section>
+</div>
+<!-- Mid Layout: Cooldown Timers & Node Topology -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-1">
+<div class="bg-surface-container-low p-6">
+<h4 class="text-[10px] uppercase tracking-widest text-on-surface-variant mb-4">Active Cooldowns</h4>
+<div class="space-y-4 font-mono">
+<div class="flex justify-between items-center border-b border-outline-variant border-opacity-10 pb-2">
+<span class="text-[0.75rem]">HIGH_FREQ_BURST</span>
+<span class="text-primary text-[0.75rem]">04:12:12</span>
+</div>
+<div class="flex justify-between items-center border-b border-outline-variant border-opacity-10 pb-2">
+<span class="text-[0.75rem]">SWIFT_AUTH_RETRY</span>
+<span class="text-primary text-[0.75rem]">00:00:19</span>
+</div>
+<div class="flex justify-between items-center border-b border-outline-variant border-opacity-10 pb-2">
+<span class="text-[0.75rem]">API_KEY_ROTATION</span>
+<span class="text-primary text-[0.75rem]">72:55:01</span>
+</div>
+</div>
+</div>
+<div class="bg-surface-container p-6 relative overflow-hidden group">
+<div class="relative z-10">
+<h4 class="text-[10px] uppercase tracking-widest text-on-surface-variant mb-1">Global Node Status</h4>
+<div class="text-2xl font-bold text-primary mb-4">99.98% <span class="text-[10px] font-normal uppercase text-on-surface-variant tracking-tighter">Operational</span></div>
+<div class="flex gap-1 h-8 items-end">
+<div class="w-1 bg-primary h-4"></div>
+<div class="w-1 bg-primary h-6"></div>
+<div class="w-1 bg-primary h-5"></div>
+<div class="w-1 bg-primary h-8"></div>
+<div class="w-1 bg-primary h-4"></div>
+<div class="w-1 bg-primary h-7"></div>
+<div class="w-1 bg-primary h-5"></div>
+<div class="w-1 bg-primary h-6"></div>
+<div class="w-1 bg-primary h-4"></div>
+<div class="w-1 bg-primary h-8"></div>
+<div class="w-1 bg-primary h-3"></div>
+<div class="w-1 bg-primary h-7"></div>
+</div>
+</div>
+<div class="absolute right-0 bottom-0 opacity-10 pointer-events-none group-hover:opacity-20 transition-opacity">
+<span class="material-symbols-outlined text-[120px]" style="font-variation-settings: 'FILL' 1;">hub</span>
+</div>
+</div>
+<div class="bg-surface-container-high p-6 flex flex-col justify-between">
+<div>
+<h4 class="text-[10px] uppercase tracking-widest text-on-surface-variant mb-4">Manual Override</h4>
+<div class="flex items-center gap-4">
+<div class="w-10 h-5 bg-surface-container-highest rounded-full p-1 relative cursor-pointer">
+<div class="w-3 h-3 bg-primary rounded-full translate-x-5 transition-transform"></div>
+</div>
+<span class="text-xs uppercase tracking-tighter text-on-surface-variant">Bypass Neural Shield</span>
+</div>
+</div>
+<p class="text-[0.6875rem] text-on-surface-variant leading-tight mt-4 italic">Note: Overriding core shields requires L4 biometric verification.</p>
+</div>
+</div>
+<!-- Bottom Panel: Forensic Engine Log (Terminal Style) -->
+<section class="bg-surface-container-lowest p-6 min-h-[300px] flex flex-col">
+<div class="flex justify-between items-center mb-4 border-b border-outline-variant border-opacity-30 pb-4">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 bg-primary animate-pulse"></span>
+<h3 class="font-mono text-[0.75rem] uppercase tracking-[0.3em] text-primary">Live Forensic Engine Log</h3>
+</div>
+<div class="flex gap-4 font-mono text-[0.6875rem] text-on-surface-variant uppercase">
+<span>Buffer: 1024kb</span>
+<span>Stream: Active</span>
+<span class="text-primary">[CLEAR_CONSOLE]</span>
+</div>
+</div>
+<div class="flex-1 font-mono text-[0.6875rem] leading-loose text-on-surface-variant overflow-y-auto hide-scrollbar">
+<p><span class="text-primary">[14:02:11.002]</span> INIT_KERNEL_MAPPING: Successfully mapped memory space 0x0021A11</p>
+<p><span class="text-primary">[14:02:11.045]</span> SIGNAL_PROC: Loading sensitivity weights for Region_EU_01...</p>
+<p><span class="text-primary">[14:02:11.192]</span> POLICY_LOAD: Policy 'ENTITY_LINKAGE_V4' injected with <span class="bg-primary text-on-primary px-1">SEVERITY_HIGH</span></p>
+<p><span class="text-primary">[14:02:12.441]</span> ENGINE_STATUS: Neural processing node [NODE-9] heartbeat synchronized at 12ms.</p>
+<p><span class="text-primary">[14:02:13.001]</span> SCAN_TRIGGER: Suspicious velocity detected in <span class="underline">TX_HASH_88291A</span></p>
+<p><span class="text-primary">[14:02:13.002]</span> ACTION: AUTO_FLAG initiated. Destination: Forensic_Vault_B.</p>
+<p class="opacity-50">[14:02:13.005] TRACE_ID: 99x-11-203-aa-019</p>
+<p><span class="text-primary">[14:02:14.212]</span> ENGINE_IDLE: Waiting for next batch...</p>
+<p><span class="text-primary">[14:02:15.551]</span> INBOUND: New transaction block 8,112,001 received. Parsing...</p>
+<p><span class="text-primary">[14:02:15.890]</span> SIGNAL_PROC: Confidence score 99.4% achieved for transaction subset A1.</p>
+<p><span class="text-primary">[14:02:16.002]</span> ALERT: Pattern 'SMURFING_CHAIN' identified in entity group <span class="bg-surface-variant text-primary px-1">ALPHA_09</span></p>
+</div>
+</section>
+</div>
+</main>
+</div>
+<!-- Background Decoration (Glassmorphism effect) -->
+<div class="fixed top-0 right-0 w-[40vw] h-full bg-gradient-to-l from-surface-container-low to-transparent pointer-events-none -z-10 opacity-30"></div>
+<div class="fixed -bottom-40 -left-40 w-96 h-96 bg-primary opacity-[0.02] blur-[100px] rounded-full pointer-events-none"></div>
+</body></html>

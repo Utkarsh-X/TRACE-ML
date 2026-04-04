@@ -68,7 +68,10 @@ def test_action_engine_executes_and_respects_cooldown(tmp_path: Path) -> None:
         trigger=ActionTrigger.on_create,
     )
     assert len(first) == 2
-    assert len(store.get_actions("INC-2")) == 2
+    stored_actions = store.get_actions("INC-2")
+    assert len(stored_actions) == 2
+    assert stored_actions[0]["context"]["trigger"] == "on_create"
+    assert stored_actions[0]["context"]["incident_severity"] == "high"
 
     refreshed = IncidentRecord(**(store.get_incident("INC-2") or {}))
     second = engine.execute(

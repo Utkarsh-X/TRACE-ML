@@ -245,3 +245,11 @@ def test_cli_incident_invalid_id_errors(tmp_path: Path) -> None:
 
     close = runner.invoke(app, ["--config", str(cfg), "incident", "close", "--id", "INC-DOES-NOT-EXIST"])
     assert close.exit_code != 0
+
+
+def test_cli_service_help_lists_run(tmp_path: Path) -> None:
+    cfg = _write_config(tmp_path)
+    runner = CliRunner()
+    result = runner.invoke(app, ["--config", str(cfg), "service", "--help"])
+    assert result.exit_code == 0
+    assert "run" in result.stdout

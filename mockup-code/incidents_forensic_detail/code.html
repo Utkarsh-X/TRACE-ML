@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>TRACE-AML | Forensic Investigation</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800&amp;family=Space+Grotesk:wght@300;400;500;700&amp;family=JetBrains+Mono:wght@400;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "on-secondary-fixed": "#1b1c1c",
+                        "on-secondary-container": "#e5e2e1",
+                        "on-secondary": "#1b1c1c",
+                        "inverse-surface": "#e2e2e2",
+                        "primary": "#ffffff",
+                        "surface-variant": "#353535",
+                        "tertiary": "#e2e2e2",
+                        "on-tertiary-fixed-variant": "#e2e2e2",
+                        "surface-container-lowest": "#0e0e0e",
+                        "on-secondary-fixed-variant": "#3c3b3b",
+                        "on-surface-variant": "#c6c6c6",
+                        "on-tertiary-fixed": "#ffffff",
+                        "primary-container": "#d4d4d4",
+                        "on-primary-fixed": "#ffffff",
+                        "tertiary-fixed-dim": "#454747",
+                        "tertiary-container": "#909191",
+                        "surface-container-high": "#2a2a2a",
+                        "on-primary-container": "#000000",
+                        "background": "#131313",
+                        "on-primary-fixed-variant": "#e2e2e2",
+                        "surface-container": "#1f1f1f",
+                        "error": "#ffb4ab",
+                        "on-error": "#690005",
+                        "inverse-on-surface": "#303030",
+                        "inverse-primary": "#5d5f5f",
+                        "surface-dim": "#131313",
+                        "surface-bright": "#393939",
+                        "on-tertiary-container": "#000000",
+                        "surface-container-highest": "#353535",
+                        "on-tertiary": "#1a1c1c",
+                        "primary-fixed": "#5d5f5f",
+                        "outline": "#919191",
+                        "tertiary-fixed": "#5d5f5f",
+                        "secondary-container": "#474746",
+                        "on-background": "#e2e2e2",
+                        "secondary-fixed-dim": "#adabaa",
+                        "primary-fixed-dim": "#454747",
+                        "surface-tint": "#c6c6c7",
+                        "error-container": "#93000a",
+                        "secondary-fixed": "#c8c6c5",
+                        "on-primary": "#1a1c1c",
+                        "outline-variant": "#474747",
+                        "surface-container-low": "#1b1b1b",
+                        "on-error-container": "#ffdad6",
+                        "secondary": "#c8c6c5",
+                        "surface": "#131313",
+                        "on-surface": "#e2e2e2"
+                    },
+                    fontFamily: {
+                        "headline": ["Inter"],
+                        "body": ["Space Grotesk"],
+                        "label": ["Space Grotesk"],
+                        "mono": ["JetBrains Mono"]
+                    },
+                    borderRadius: {"DEFAULT": "0px", "lg": "0px", "xl": "0px", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+        body {
+            background-color: #131313;
+            color: #e2e2e2;
+            overflow-x: hidden;
+        }
+        .forensic-canvas {
+            display: grid;
+            grid-template-columns: 80px 1fr 380px;
+            grid-template-rows: 56px 1fr 320px;
+            height: 100vh;
+        }
+        .timeline-connector {
+            width: 2px;
+            background: linear-gradient(180deg, #1f1f1f 0%, #2a2a2a 50%, #1f1f1f 100%);
+        }
+    </style>
+</head>
+<body class="font-body">
+<!-- TopNavBar (Shared Component) -->
+<header class="fixed top-0 w-full z-50 bg-[#1b1b1b] text-white flex items-center justify-between px-6 h-14 w-full top-nav-panel">
+<div class="flex items-center gap-8">
+<span class="text-lg font-bold tracking-tighter text-white uppercase font-['Inter']">TRACE-AML</span>
+<nav class="hidden md:flex items-center space-x-6 font-['Inter'] font-medium text-[0.875rem] tracking-tight">
+<a class="text-neutral-400 hover:text-white transition-colors" href="#">Dashboard</a>
+<a class="text-white border-b-2 border-white pb-1" href="#">Investigations</a>
+<a class="text-neutral-400 hover:text-white transition-colors" href="#">Audit Log</a>
+<a class="text-neutral-400 hover:text-white transition-colors" href="#">Reports</a>
+</nav>
+</div>
+<div class="flex items-center space-x-4">
+<button class="material-symbols-outlined text-neutral-400 hover:text-white transition-all duration-200 scale-95 active:opacity-80">notifications</button>
+<button class="material-symbols-outlined text-neutral-400 hover:text-white transition-all duration-200 scale-95 active:opacity-80">settings</button>
+<div class="w-8 h-8 bg-surface-container-high overflow-hidden">
+<img alt="Investigator Profile" class="w-full h-full object-cover grayscale" data-alt="Professional headshot of a focused forensic investigator in low light cinematic environment" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA7KKyeu8Wos-s-0M_XvFLtSx-LMKQm3kEGxes3sLAmYxq3PmljOQecgUSEZEPNTq0A5f27TaIivqxo4iFT9RUJEw1USX-uwvvmqCjhF_9iqkCpNqfnYdIvz6ff-6IHjfMRvm9Stdt-yQ7eSLYiBNIKpgcGLsC6yZoLzEdwpqXbUyaOIynX0PENNeHDju_HkBZfpSOwThFyFHQpyqom4F16ubRpT156kF85SiU8pw7GxgPhxo2etTsOkUydvRuX5QzEq1iN5MuPal4"/>
+</div>
+</div>
+</header>
+<!-- SideNavBar (Shared Component) -->
+<aside class="fixed left-0 top-14 h-[calc(100vh-3.5rem)] w-20 bg-[#1b1b1b] text-white flex flex-col items-center py-4 space-y-8 side-nav-tactical z-40">
+<div class="flex flex-col items-center gap-1 mb-4">
+<div class="w-2 h-2 bg-primary"></div>
+<span class="font-['JetBrains_Mono'] text-[0.5rem] uppercase tracking-widest text-neutral-500">Active</span>
+</div>
+<div class="flex flex-col space-y-6 w-full items-center">
+<div class="w-full flex justify-center py-3 text-neutral-500 hover:text-neutral-200 cursor-pointer transition-transform duration-150">
+<span class="material-symbols-outlined">search</span>
+</div>
+<div class="w-full flex justify-center py-3 text-neutral-500 hover:text-neutral-200 cursor-pointer transition-transform duration-150">
+<span class="material-symbols-outlined">hub</span>
+</div>
+<div class="w-full flex justify-center py-3 bg-[#2a2a2a] text-white border-l-2 border-white cursor-pointer transition-transform duration-150">
+<span class="material-symbols-outlined">timeline</span>
+</div>
+<div class="w-full flex justify-center py-3 text-neutral-500 hover:text-neutral-200 cursor-pointer transition-transform duration-150">
+<span class="material-symbols-outlined">folder_open</span>
+</div>
+<div class="w-full flex justify-center py-3 text-neutral-500 hover:text-neutral-200 cursor-pointer transition-transform duration-150">
+<span class="material-symbols-outlined">lock</span>
+</div>
+</div>
+<div class="mt-auto flex flex-col space-y-6 w-full items-center pb-4">
+<div class="w-full flex justify-center py-3 text-neutral-500 hover:text-neutral-200 cursor-pointer transition-transform duration-150">
+<span class="material-symbols-outlined">help_outline</span>
+</div>
+<div class="w-full flex justify-center py-3 text-neutral-500 hover:text-neutral-200 cursor-pointer transition-transform duration-150">
+<span class="material-symbols-outlined">logout</span>
+</div>
+</div>
+</aside>
+<!-- Forensic Canvas Main Content -->
+<main class="pl-20 pt-14 flex flex-col min-h-screen bg-surface">
+<!-- Investigation Header -->
+<section class="p-10 pb-4 flex justify-between items-end border-b border-transparent">
+<div>
+<div class="flex items-center gap-2 mb-2">
+<span class="w-1 h-4 bg-primary"></span>
+<span class="font-label text-[0.6875rem] uppercase tracking-[0.2em] text-outline">Incident ID: 0992-TX-ALPHA</span>
+</div>
+<h1 class="font-headline text-4xl font-bold tracking-tight text-white">Cross-Border Shell Velocity</h1>
+</div>
+<div class="text-right">
+<span class="font-label text-[0.6875rem] uppercase tracking-[0.2em] text-outline block mb-1">Status</span>
+<span class="font-mono text-xl text-primary">IN_PROGRESS // P6</span>
+</div>
+</section>
+<div class="flex-grow grid grid-cols-12 overflow-hidden">
+<!-- Left Side: Incident Intelligence (Spilling Layout) -->
+<div class="col-span-3 bg-surface-container p-8 space-y-10 overflow-y-auto">
+<div class="canvas-item space-y-4">
+<h3 class="font-label text-[0.6875rem] uppercase tracking-widest text-primary border-b border-outline-variant pb-2">Entity Profile</h3>
+<div class="space-y-4">
+<div class="bg-surface-container-lowest p-4">
+<span class="block text-outline font-label text-[0.6rem] uppercase mb-1">Subject Name</span>
+<span class="block font-mono text-sm">VANDELAY IMPORT/EXPORT LTD</span>
+</div>
+<div class="bg-surface-container-lowest p-4">
+<span class="block text-outline font-label text-[0.6rem] uppercase mb-1">Jurisdiction</span>
+<span class="block font-mono text-sm">CAYMAN ISLANDS [KY]</span>
+</div>
+<div class="bg-surface-container-lowest p-4">
+<span class="block text-outline font-label text-[0.6rem] uppercase mb-1">Risk Weighting</span>
+<div class="flex items-center gap-2 mt-2">
+<div class="flex-grow h-1 bg-surface-variant">
+<div class="h-full bg-primary w-[88%]"></div>
+</div>
+<span class="font-mono text-xs">88%</span>
+</div>
+</div>
+</div>
+</div>
+<div class="canvas-item space-y-4">
+<h3 class="font-label text-[0.6875rem] uppercase tracking-widest text-primary border-b border-outline-variant pb-2">Trigger Logs</h3>
+<div class="space-y-3">
+<div class="flex justify-between items-center text-[0.6875rem] font-mono p-2 hover:bg-surface-container-high transition-colors cursor-pointer">
+<span class="text-outline">14:22:01</span>
+<span class="text-white">AUTH_FAILURE_RETRY</span>
+</div>
+<div class="flex justify-between items-center text-[0.6875rem] font-mono p-2 hover:bg-surface-container-high transition-colors cursor-pointer">
+<span class="text-outline">14:23:45</span>
+<span class="text-primary font-bold">LARGE_V_TRANSFER</span>
+</div>
+<div class="flex justify-between items-center text-[0.6875rem] font-mono p-2 hover:bg-surface-container-high transition-colors cursor-pointer">
+<span class="text-outline">14:25:12</span>
+<span class="text-outline">GEO_MISMATCH</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Center: Explainability Chain Timeline -->
+<div class="col-span-6 bg-surface p-10 relative overflow-y-auto scrollbar-hide">
+<div class="absolute left-1/2 top-0 bottom-0 timeline-connector -translate-x-1/2 opacity-20"></div>
+<div class="relative space-y-16">
+<!-- EVENT -->
+<div class="flex flex-col items-center">
+<div class="z-10 bg-surface border border-outline-variant p-2 mb-4">
+<span class="material-symbols-outlined text-outline">database</span>
+</div>
+<div class="text-center max-w-xs">
+<span class="intel-label font-label text-[0.6875rem] uppercase tracking-[0.2em] text-primary block mb-2">[ EVENT ]</span>
+<p class="font-mono text-sm text-on-surface-variant">Multiple wire transfers initiated from segregated account AC-8821 within 300ms window.</p>
+</div>
+</div>
+<!-- ALERT -->
+<div class="flex flex-col items-center">
+<div class="z-10 bg-surface border border-primary p-2 mb-4">
+<span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">warning</span>
+</div>
+<div class="text-center max-w-xs">
+<span class="intel-label font-label text-[0.6875rem] uppercase tracking-[0.2em] text-primary block mb-2">[ ALERT ]</span>
+<p class="font-mono text-sm text-on-surface-variant">Structural Velocity Violation: Cumulative threshold exceeded by 402%. Heuristic: 'Smurfing Pattern'.</p>
+</div>
+</div>
+<!-- INCIDENT -->
+<div class="flex flex-col items-center">
+<div class="z-10 bg-surface border border-outline-variant p-2 mb-4">
+<span class="material-symbols-outlined text-outline">fingerprint</span>
+</div>
+<div class="text-center max-w-xs">
+<span class="intel-label font-label text-[0.6875rem] uppercase tracking-[0.2em] text-primary block mb-2">[ INCIDENT ]</span>
+<p class="font-mono text-sm text-on-surface-variant">Investigation #0992 opened. Link established to high-risk PEP cluster in Eastern Europe.</p>
+</div>
+</div>
+<!-- ACTION -->
+<div class="flex flex-col items-center">
+<div class="z-10 bg-primary p-2 mb-4">
+<span class="material-symbols-outlined text-on-primary">gavel</span>
+</div>
+<div class="text-center max-w-xs">
+<span class="intel-label font-label text-[0.6875rem] uppercase tracking-[0.2em] text-primary block mb-2">[ ACTION ]</span>
+<p class="font-mono text-sm text-on-surface-variant">Asset Freeze Protocol 09 initiated. Financial Intelligence Unit (FIU) notified via secure relay.</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Right Side: Action Trigger Logs & Controls -->
+<div class="col-span-3 bg-surface-container-low p-8 border-l border-transparent">
+<div class="space-y-8">
+<div>
+<h3 class="font-label text-[0.6875rem] uppercase tracking-widest text-outline mb-4">Decision Engine</h3>
+<div class="space-y-2">
+<button class="w-full bg-primary text-on-primary py-4 px-6 font-label font-bold uppercase tracking-widest text-xs flex justify-between items-center group transition-all">
+<span>Escalate Case</span>
+<span class="material-symbols-outlined group-hover:translate-x-1 transition-transform">arrow_forward</span>
+</button>
+<button class="w-full bg-secondary-container text-white py-4 px-6 font-label font-bold uppercase tracking-widest text-xs flex justify-between items-center hover:bg-surface-bright transition-all">
+<span>False Positive</span>
+<span class="material-symbols-outlined">close</span>
+</button>
+</div>
+</div>
+<div class="pt-8">
+<h3 class="font-label text-[0.6875rem] uppercase tracking-widest text-outline mb-4">System Telemetry</h3>
+<div class="grid grid-cols-2 gap-4">
+<div class="bg-surface-container-lowest p-4">
+<span class="block font-mono text-lg text-white">0.4ms</span>
+<span class="block text-outline font-label text-[0.5rem] uppercase">Latency</span>
+</div>
+<div class="bg-surface-container-lowest p-4">
+<span class="block font-mono text-lg text-white">99.2%</span>
+<span class="block text-outline font-label text-[0.5rem] uppercase">Confidence</span>
+</div>
+</div>
+</div>
+<div class="pt-8 opacity-50">
+<span class="block text-outline font-mono text-[0.6rem] uppercase mb-2">Neural Pathway Visualization</span>
+<div class="h-32 bg-surface-container-lowest relative overflow-hidden">
+<div class="absolute inset-0 bg-gradient-to-t from-primary/10 to-transparent"></div>
+<!-- Mock Waveform -->
+<div class="flex items-end justify-center gap-1 h-full px-4 pb-4">
+<div class="w-1 bg-outline-variant h-1/4"></div>
+<div class="w-1 bg-outline-variant h-1/2"></div>
+<div class="w-1 bg-primary h-3/4"></div>
+<div class="w-1 bg-outline-variant h-2/3"></div>
+<div class="w-1 bg-outline-variant h-1/3"></div>
+<div class="w-1 bg-primary h-full"></div>
+<div class="w-1 bg-outline-variant h-1/2"></div>
+<div class="w-1 bg-outline-variant h-1/4"></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Expanded Bottom Map Section -->
+<section class="h-80 bg-surface-container-lowest relative border-t border-outline-variant/10">
+<div class="absolute inset-0 grayscale opacity-40 mix-blend-luminosity">
+<img alt="Topographic data map" class="w-full h-full object-cover" data-alt="Abstract dark topographic map with thin vector lines and data points representing global financial hubs" data-location="London" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAO_1uOtQSNhbcMbtGsTmo3XiXOkmyzZt7QrPfBVXf4UQt_Bi3I4M29_Llib0i9qqlVM5YwjLWbMhrHPI36eS4i6RQmk4YKSbMoSkoFVxC-t8ULcH2TJDpuKQXGk5L0Flj4mbv5uZtYejcJI0CsPjklcul_6LM3RF7Cj01Mjo1x2gsRAjtux-sSkzOBO52tz18TRZdTAbfnt2W16iXPh4WD9AKl4kZE6u2cHtU2D1QGfOGBaoQuizht7PMzrWxkDpLHsCUpkF44bxs"/>
+</div>
+<!-- Map Overlay UI -->
+<div class="absolute inset-0 p-8 flex flex-col justify-between pointer-events-none">
+<div class="flex justify-between items-start">
+<div class="bg-surface-container/90 backdrop-blur-md p-4 pointer-events-auto">
+<span class="font-label text-[0.6875rem] uppercase tracking-widest text-primary block mb-2">Geo-Clustering</span>
+<div class="flex items-center gap-4 font-mono text-xs">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 bg-primary"></span>
+<span>High Velocity</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 bg-outline-variant"></span>
+<span>Inactive Nodes</span>
+</div>
+</div>
+</div>
+<div class="flex gap-2 pointer-events-auto">
+<button class="bg-surface-container p-2 hover:bg-surface-container-high transition-colors text-white">
+<span class="material-symbols-outlined">zoom_in</span>
+</button>
+<button class="bg-surface-container p-2 hover:bg-surface-container-high transition-colors text-white">
+<span class="material-symbols-outlined">zoom_out</span>
+</button>
+</div>
+</div>
+<div class="flex justify-between items-end">
+<div class="font-mono text-[0.6rem] text-outline tracking-wider pointer-events-auto">
+                        LAT: 51.5074° N<br/>
+                        LNG: 0.1278° W
+                    </div>
+<div class="bg-primary text-on-primary p-4 pointer-events-auto">
+<span class="font-label text-[0.6875rem] font-bold uppercase tracking-widest">Active Path: HKG -&gt; LND -&gt; CYM</span>
+</div>
+</div>
+</div>
+<!-- Cluster Path Overlay (SVG) -->
+<svg class="absolute inset-0 w-full h-full pointer-events-none" viewbox="0 0 1000 300">
+<path class="opacity-40" d="M100,200 Q300,50 500,180 T900,120" fill="none" stroke="white" stroke-dasharray="4,4" stroke-width="0.5"></path>
+<circle cx="100" cy="200" fill="white" r="3"></circle>
+<circle cx="500" cy="180" fill="white" r="3"></circle>
+<circle cx="900" cy="120" fill="white" r="3"></circle>
+</svg>
+</section>
+</main>
+</body></html>

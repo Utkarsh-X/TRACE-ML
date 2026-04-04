@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "surface-container-highest": "#353535",
+              "primary-fixed": "#5d5f5f",
+              "on-tertiary-container": "#000000",
+              "surface-tint": "#c6c6c7",
+              "tertiary-fixed-dim": "#474746",
+              "on-tertiary": "#1b1c1c",
+              "on-surface-variant": "#c6c6c6",
+              "surface-container-low": "#1b1b1b",
+              "surface": "#131313",
+              "surface-container-lowest": "#0e0e0e",
+              "secondary-container": "#45464e",
+              "on-primary-fixed": "#ffffff",
+              "on-secondary-fixed-variant": "#3a3b42",
+              "primary-fixed-dim": "#454747",
+              "error-container": "#93000a",
+              "on-secondary-container": "#e2e1eb",
+              "on-surface": "#e2e2e2",
+              "tertiary-container": "#929090",
+              "on-secondary": "#1a1b22",
+              "tertiary-fixed": "#5f5e5e",
+              "on-primary-fixed-variant": "#e2e2e2",
+              "error": "#ffb4ab",
+              "on-primary-container": "#000000",
+              "surface-container": "#1f1f1f",
+              "outline": "#919191",
+              "on-secondary-fixed": "#1a1b22",
+              "inverse-primary": "#5d5f5f",
+              "secondary-fixed-dim": "#aaaab3",
+              "on-primary": "#1a1c1c",
+              "on-error-container": "#ffdad6",
+              "on-tertiary-fixed": "#ffffff",
+              "secondary-fixed": "#c6c6cf",
+              "on-background": "#e2e2e2",
+              "surface-container-high": "#2a2a2a",
+              "surface-dim": "#131313",
+              "inverse-on-surface": "#303030",
+              "secondary": "#c6c6cf",
+              "outline-variant": "#474747",
+              "inverse-surface": "#e2e2e2",
+              "tertiary": "#e4e2e1",
+              "surface-variant": "#353535",
+              "on-tertiary-fixed-variant": "#e4e2e1",
+              "surface-bright": "#393939",
+              "background": "#131313",
+              "primary-container": "#d4d4d4",
+              "primary": "#ffffff",
+              "on-error": "#690005"
+            },
+            fontFamily: {
+              "headline": ["Inter"],
+              "body": ["Inter"],
+              "label": ["JetBrains Mono"]
+            },
+            borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            font-size: 20px;
+        }
+        body {
+            background-color: #0e0e0e;
+            color: #e2e2e2;
+            font-family: 'Inter', sans-serif;
+        }
+        .mono-data {
+            font-family: 'JetBrains Mono', monospace;
+        }
+        /* Custom scrollbar for logs */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #1b1b1b;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #353535;
+        }
+    </style>
+</head>
+<body class="antialiased">
+<!-- Top Navigation Bar -->
+<header class="bg-neutral-950 text-white font-sans antialiased text-sm font-medium tracking-tight docked full-width top-0 border-b border-neutral-800 flex items-center px-6 h-16 w-full fixed z-50">
+<div class="text-lg font-bold tracking-tighter text-white">TRACE-AML</div>
+<nav class="hidden md:flex items-center gap-8 h-full ml-12">
+<a class="text-neutral-400 hover:text-white transition-colors h-full flex items-center" href="#">Live Ops</a>
+<a class="text-neutral-400 hover:text-white transition-colors h-full flex items-center" href="#">Incidents</a>
+<a class="text-neutral-400 hover:text-white transition-colors h-full flex items-center" href="#">Entities</a>
+<a class="text-neutral-400 hover:text-white transition-colors h-full flex items-center" href="#">History</a>
+<a class="text-white border-b-2 border-white pb-4 -mb-[17px] h-full flex items-center" href="#">Settings</a>
+</nav>
+<div class="flex items-center gap-4 ml-auto">
+<div class="relative">
+<span class="material-symbols-outlined text-neutral-400 hover:text-white cursor-pointer">notifications</span>
+<span class="absolute top-0 right-0 w-2 h-2 bg-primary rounded-full"></span>
+</div>
+<span class="material-symbols-outlined text-neutral-400 hover:text-white cursor-pointer">account_circle</span>
+</div>
+</header>
+<!-- Side Navigation Bar -->
+<aside class="bg-neutral-900 fixed left-0 top-16 h-[calc(100vh-64px)] w-20 flex flex-col items-center py-4 gap-6 border-r border-neutral-800 z-40">
+<div class="flex flex-col items-center gap-1 mb-4 opacity-50">
+<div class="w-8 h-8 rounded-full bg-neutral-800 flex items-center justify-center">
+<span class="material-symbols-outlined text-xs">analytics</span>
+</div>
+<span class="font-mono text-[10px] uppercase tracking-widest text-neutral-500">System</span>
+</div>
+<button class="flex flex-col items-center gap-1 group text-neutral-500 hover:text-neutral-200 transition-transform scale-95 active:scale-90">
+<span class="material-symbols-outlined">monitoring</span>
+<span class="font-mono text-[10px] uppercase tracking-widest">Monitor</span>
+</button>
+<button class="flex flex-col items-center gap-1 group text-neutral-500 hover:text-neutral-200 transition-transform scale-95 active:scale-90">
+<span class="material-symbols-outlined">assignment_late</span>
+<span class="font-mono text-[10px] uppercase tracking-widest">Cases</span>
+</button>
+<button class="flex flex-col items-center gap-1 group text-neutral-500 hover:text-neutral-200 transition-transform scale-95 active:scale-90">
+<span class="material-symbols-outlined">hub</span>
+<span class="font-mono text-[10px] uppercase tracking-widest">Database</span>
+</button>
+<button class="flex flex-col items-center gap-1 group text-neutral-500 hover:text-neutral-200 transition-transform scale-95 active:scale-90">
+<span class="material-symbols-outlined">history</span>
+<span class="font-mono text-[10px] uppercase tracking-widest">Logs</span>
+</button>
+<button class="bg-neutral-800 text-white border-l-2 border-white flex flex-col items-center gap-1 group transition-transform scale-95 active:scale-90 w-full py-2">
+<span class="material-symbols-outlined">settings_input_component</span>
+<span class="font-mono text-[10px] uppercase tracking-widest">Config</span>
+</button>
+</aside>
+<!-- Main Content Canvas -->
+<main class="ml-20 mt-16 p-8 min-h-screen">
+<!-- Header Section -->
+<div class="mb-10 flex justify-between items-end">
+<div>
+<h1 class="text-headline-sm font-semibold tracking-tight text-primary">System Control &amp; Policy</h1>
+<p class="text-on-surface-variant text-sm mt-1">Configure automated response logic and forensic engine thresholds.</p>
+</div>
+<div class="flex gap-3">
+<button class="px-4 py-2 bg-surface-container-high text-primary text-sm font-medium hover:bg-surface-bright transition-colors">Revert Changes</button>
+<button class="px-4 py-2 bg-primary text-on-primary text-sm font-bold shadow-lg shadow-black/50">Apply Configuration</button>
+</div>
+</div>
+<!-- Dashboard Layout: Bento Grid -->
+<div class="grid grid-cols-12 gap-1">
+<!-- Policy Matrix (Primary Focus) -->
+<section class="col-span-12 lg:col-span-8 bg-surface-container-low p-6">
+<div class="flex items-center gap-2 mb-6">
+<span class="material-symbols-outlined text-primary">gavel</span>
+<h2 class="text-title-sm font-medium uppercase tracking-widest text-on-surface-variant">Action Policy Matrix</h2>
+</div>
+<div class="overflow-hidden border border-outline-variant/20">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-surface-container">
+<th class="p-4 text-label-sm font-mono text-on-surface-variant border-b border-outline-variant/30">SEVERITY / RESPONSE</th>
+<th class="p-4 text-label-sm font-mono text-on-surface-variant border-b border-outline-variant/30">LOG ONLY</th>
+<th class="p-4 text-label-sm font-mono text-on-surface-variant border-b border-outline-variant/30">EMAIL ALERT</th>
+<th class="p-4 text-label-sm font-mono text-on-surface-variant border-b border-outline-variant/30">CRITICAL ALARM</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant/10">
+<!-- Low Severity -->
+<tr class="hover:bg-surface-bright transition-colors">
+<td class="p-4 bg-surface-container-lowest/50">
+<div class="flex items-center gap-2">
+<div class="w-2 h-2 rounded-full bg-neutral-500"></div>
+<span class="text-sm font-medium">Low Severity</span>
+</div>
+</td>
+<td class="p-4">
+<input checked="" class="w-4 h-4 rounded-none bg-surface-container-lowest border-outline-variant text-primary focus:ring-0" type="checkbox"/>
+</td>
+<td class="p-4">
+<input class="w-4 h-4 rounded-none bg-surface-container-lowest border-outline-variant text-primary focus:ring-0" type="checkbox"/>
+</td>
+<td class="p-4">
+<input class="w-4 h-4 rounded-none bg-surface-container-lowest border-outline-variant opacity-20 cursor-not-allowed" disabled="" type="checkbox"/>
+</td>
+</tr>
+<!-- Medium Severity -->
+<tr class="hover:bg-surface-bright transition-colors">
+<td class="p-4 bg-surface-container-lowest/50">
+<div class="flex items-center gap-2">
+<div class="w-2 h-2 rounded-full bg-neutral-300"></div>
+<span class="text-sm font-medium">Medium Severity</span>
+</div>
+</td>
+<td class="p-4">
+<input checked="" class="w-4 h-4 rounded-none bg-surface-container-lowest border-outline-variant text-primary focus:ring-0" type="checkbox"/>
+</td>
+<td class="p-4">
+<input checked="" class="w-4 h-4 rounded-none bg-surface-container-lowest border-outline-variant text-primary focus:ring-0" type="checkbox"/>
+</td>
+<td class="p-4">
+<input class="w-4 h-4 rounded-none bg-surface-container-lowest border-outline-variant text-primary focus:ring-0" type="checkbox"/>
+</td>
+</tr>
+<!-- High Severity -->
+<tr class="hover:bg-surface-bright transition-colors">
+<td class="p-4 bg-surface-container-lowest/50">
+<div class="flex items-center gap-2">
+<div class="w-2 h-2 rounded-full bg-primary animate-pulse"></div>
+<span class="text-sm font-bold">High Severity</span>
+</div>
+</td>
+<td class="p-4">
+<input checked="" class="w-4 h-4 rounded-none bg-surface-container-lowest border-outline-variant text-primary focus:ring-0" type="checkbox"/>
+</td>
+<td class="p-4">
+<input checked="" class="w-4 h-4 rounded-none bg-surface-container-lowest border-outline-variant text-primary focus:ring-0" type="checkbox"/>
+</td>
+<td class="p-4">
+<input checked="" class="w-4 h-4 rounded-none bg-surface-container-lowest border-outline-variant text-primary focus:ring-0" type="checkbox"/>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- Forensic Chips (Editorial Strategy) -->
+<div class="mt-6 flex flex-wrap gap-2">
+<span class="px-2 py-1 bg-surface-container-high border border-outline-variant/30 text-label-sm font-mono text-on-surface-variant">AUTO_LOG: TRUE</span>
+<span class="px-2 py-1 bg-surface-container-high border border-outline-variant/30 text-label-sm font-mono text-on-surface-variant">THROTTLE: 50/SEC</span>
+<span class="px-2 py-1 bg-primary text-on-primary text-label-sm font-mono font-bold">FORCE_ALARM: ACTIVE</span>
+</div>
+</section>
+<!-- Cooldown & Thresholds -->
+<section class="col-span-12 lg:col-span-4 flex flex-col gap-1">
+<!-- Cooldown Panel -->
+<div class="bg-surface-container p-6 flex-1">
+<div class="flex items-center gap-2 mb-6">
+<span class="material-symbols-outlined text-on-surface-variant">timer</span>
+<h2 class="text-title-sm font-medium uppercase tracking-widest text-on-surface-variant">Cooldown Timers</h2>
+</div>
+<div class="space-y-6">
+<div>
+<label class="block text-label-sm font-mono uppercase text-on-surface-variant mb-2">Alarm Suppression (sec)</label>
+<input class="w-full bg-surface-container-lowest border-none text-primary font-mono focus:ring-1 focus:ring-primary p-3" type="number" value="300"/>
+</div>
+<div>
+<label class="block text-label-sm font-mono uppercase text-on-surface-variant mb-2">Entity Lockout Period (min)</label>
+<input class="w-full bg-surface-container-lowest border-none text-primary font-mono focus:ring-1 focus:ring-primary p-3" type="number" value="60"/>
+</div>
+</div>
+</div>
+<!-- Engine Config -->
+<div class="bg-surface-container-high p-6 flex-1">
+<div class="flex items-center gap-2 mb-6">
+<span class="material-symbols-outlined text-on-surface-variant">memory</span>
+<h2 class="text-title-sm font-medium uppercase tracking-widest text-on-surface-variant">Engine Weights</h2>
+</div>
+<div class="space-y-4">
+<div class="flex justify-between items-center">
+<span class="text-sm font-medium">Graph Pattern Sensitivity</span>
+<span class="mono-data text-primary">0.82</span>
+</div>
+<div class="w-full bg-surface-container-lowest h-1">
+<div class="bg-primary h-full w-[82%]"></div>
+</div>
+<div class="flex justify-between items-center mt-4">
+<span class="text-sm font-medium">Latency Tolerance</span>
+<span class="mono-data text-primary">120ms</span>
+</div>
+<div class="w-full bg-surface-container-lowest h-1">
+<div class="bg-primary h-full w-[45%]"></div>
+</div>
+</div>
+</div>
+</section>
+<!-- System Thresholds Columnar Section -->
+<section class="col-span-12 bg-surface-container-low p-6 mt-1">
+<div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+<div class="space-y-4">
+<h3 class="text-xs font-bold uppercase tracking-tighter text-on-surface-variant">Inbound Pipeline</h3>
+<div class="p-4 bg-surface-container-lowest border-l-2 border-primary">
+<div class="text-label-sm font-mono text-on-surface-variant mb-1">MAX_OPS_CONCURRENCY</div>
+<div class="text-headline-sm font-bold text-primary">4,096</div>
+</div>
+</div>
+<div class="space-y-4">
+<h3 class="text-xs font-bold uppercase tracking-tighter text-on-surface-variant">Risk Scoring</h3>
+<div class="p-4 bg-surface-container-lowest border-l-2 border-neutral-600">
+<div class="text-label-sm font-mono text-on-surface-variant mb-1">AUTO_FLAG_THRESHOLD</div>
+<div class="text-headline-sm font-bold text-primary">0.941</div>
+</div>
+</div>
+<div class="space-y-4">
+<h3 class="text-xs font-bold uppercase tracking-tighter text-on-surface-variant">Database Sync</h3>
+<div class="p-4 bg-surface-container-lowest border-l-2 border-neutral-600">
+<div class="text-label-sm font-mono text-on-surface-variant mb-1">HEARTBEAT_INTERVAL</div>
+<div class="text-headline-sm font-bold text-primary">500ms</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Technical Log Output (Monospace) -->
+<section class="col-span-12 bg-black border-t border-neutral-800 p-0 overflow-hidden mt-1 h-64 flex flex-col">
+<div class="bg-surface-container p-2 px-4 flex justify-between items-center border-b border-neutral-800">
+<div class="flex gap-4">
+<span class="text-label-sm font-mono uppercase text-on-surface-variant">Forensic_Engine_01.log</span>
+<span class="text-label-sm font-mono text-primary animate-pulse">● LIVE</span>
+</div>
+<div class="flex gap-2">
+<span class="material-symbols-outlined text-sm cursor-pointer hover:text-white">content_copy</span>
+<span class="material-symbols-outlined text-sm cursor-pointer hover:text-white">delete</span>
+</div>
+</div>
+<div class="p-4 overflow-y-auto custom-scrollbar font-mono text-[11px] leading-relaxed text-neutral-400 bg-black/50">
+<p><span class="text-neutral-600">[2023-10-24 14:22:01.004]</span> <span class="text-white">INFO:</span> Initializing Forensic Scraper module...</p>
+<p><span class="text-neutral-600">[2023-10-24 14:22:01.045]</span> <span class="text-white">INFO:</span> Connecting to primary graph database 'TRACER_DB_01'...</p>
+<p><span class="text-neutral-600">[2023-10-24 14:22:01.890]</span> <span class="text-white">SUCCESS:</span> Node consensus achieved (9 nodes connected).</p>
+<p><span class="text-neutral-600">[2023-10-24 14:22:02.112]</span> <span class="text-neutral-500">WARN:</span> Node 'LAT-04' reporting 14ms drift. Auto-correction in progress.</p>
+<p><span class="text-neutral-600">[2023-10-24 14:22:05.450]</span> <span class="text-white">INFO:</span> Policy matrix 'PROD_V4' loaded successfully into cache.</p>
+<p><span class="text-neutral-600">[2023-10-24 14:23:10.009]</span> <span class="text-white">MONITOR:</span> Ingesting batch TX_7741_AFZ...</p>
+<p><span class="text-neutral-600">[2023-10-24 14:23:10.432]</span> <span class="text-primary font-bold">ALARM:</span> High-Risk Pattern detected [ENTITY_ID: 88921]. Triggering Policy -&gt; Log, Email.</p>
+<p><span class="text-neutral-600">[2023-10-24 14:23:11.001]</span> <span class="text-white">INFO:</span> Notification dispatched to [compliance-lead@trace-aml.internal].</p>
+<p><span class="text-neutral-600">[2023-10-24 14:23:45.122]</span> <span class="text-neutral-500">DEBUG:</span> Memory usage stabilized at 4.2GB / 16.0GB.</p>
+<p><span class="text-neutral-600">[2023-10-24 14:24:00.000]</span> <span class="text-white">INFO:</span> System heartbeat pulse OK.</p>
+</div>
+</section>
+</div>
+</main>
+<!-- Visual Accents (Investigation Thread) -->
+<div class="fixed right-8 top-24 bottom-24 w-[1px] bg-outline-variant/20 hidden xl:block">
+<div class="absolute top-1/4 -left-1 w-2 h-2 rounded-full bg-neutral-800"></div>
+<div class="absolute top-1/2 -left-1 w-2 h-2 rounded-full bg-primary"></div>
+<div class="absolute top-3/4 -left-1 w-2 h-2 rounded-full bg-neutral-800"></div>
+</div>
+</body></html>

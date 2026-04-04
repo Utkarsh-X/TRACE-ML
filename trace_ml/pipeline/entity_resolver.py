@@ -9,6 +9,7 @@ from trace_ml.core.ids import new_event_id
 from trace_ml.core.models import (
     EntityStatus,
     EntityType,
+    EventLocation,
     EventRecord,
     RecognitionMatch,
 )
@@ -67,4 +68,5 @@ class EntityResolver:
             is_unknown=resolution.is_unknown,
             detection_id=detection_id,
             source=source,
+            location=EventLocation(source=source),
         )

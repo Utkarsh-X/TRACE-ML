@@ -207,8 +207,12 @@ class VectorStore:
                     pa.field("is_unknown", pa.bool_()),
                     pa.field("detection_id", pa.string()),
                     pa.field("source", pa.string()),
+                    pa.field("location", pa.string()),
                 ]
             ),
+            migration_defaults={
+                "location": "{}",
+            },
         )
 
         self.alerts = self._open_or_create(
@@ -253,11 +257,13 @@ class VectorStore:
                     pa.field("alert_ids", pa.string()),
                     pa.field("alert_count", pa.int32()),
                     pa.field("severity", pa.string()),
+                    pa.field("summary", pa.string()),
                     pa.field("last_action_at", pa.string()),
                 ]
             ),
             migration_defaults={
                 "severity": "low",
+                "summary": "",
                 "last_action_at": "",
             },
         )
@@ -272,9 +278,13 @@ class VectorStore:
                     pa.field("trigger", pa.string()),
                     pa.field("status", pa.string()),
                     pa.field("reason", pa.string()),
+                    pa.field("context", pa.string()),
                     pa.field("timestamp_utc", pa.string()),
                 ]
             ),
+            migration_defaults={
+                "context": "{}",
+            },
         )
 
     @staticmethod
@@ -412,6 +422,19 @@ class VectorStore:
             if isinstance(parsed, list):
                 return [str(v) for v in parsed]
         return []
+
+    @staticmethod
+    def _parse_json_object(value: Any) -> dict[str, Any]:
+        if isinstance(value, dict):
+            return value
+        if isinstance(value, str):
+            try:
+                parsed = json.loads(value)
+            except Exception:
+                parsed = {}
+            if isinstance(parsed, dict):
+                return parsed
+        return {}
 
     def add_or_update_person(self, person: PersonRecord) -> None:
         self.delete_person(person.person_id, delete_detections=False)
@@ -681,6 +704,7 @@ class VectorStore:
     def add_event(self, event: EventRecord) -> None:
         payload = event.model_dump()
         payload["confidence"] = float(payload["confidence"])
+        payload["location"] = json.dumps(payload.get("location", {}))
         self.events.add([self._filtered_row(self.events, payload)])
 
     def get_events(self, entity_id: str, window_sec: int) -> list[dict[str, Any]]:
@@ -702,6 +726,8 @@ class VectorStore:
             rows = self._query_rows(self.events, where=f"entity_id = '{escaped}'", limit=max(10_000, limit))
         else:
             rows = self._query_rows(self.events, limit=max(10_000, limit))
+        for row in rows:
+            row["location"] = self._parse_json_object(row.get("location", "{}"))
         rows.sort(key=lambda r: str(r.get("timestamp_utc", "")), reverse=True)
         return rows[:limit]
 
@@ -732,6 +758,7 @@ class VectorStore:
         payload["severity"] = str(payload["severity"])
         payload["alert_ids"] = json.dumps(payload.get("alert_ids", []))
         payload["alert_count"] = int(payload.get("alert_count", len(incident.alert_ids)))
+        payload["summary"] = str(payload.get("summary", ""))
         payload["last_action_at"] = str(payload.get("last_action_at", ""))
         escaped = self._escape(incident.incident_id)
         self.incidents.delete(f"incident_id = '{escaped}'")
@@ -750,6 +777,7 @@ class VectorStore:
         row["alert_count"] = int(row.get("alert_count", len(row["alert_ids"])))
         row["status"] = str(row.get("status", IncidentStatus.open.value))
         row["severity"] = str(row.get("severity", "low"))
+        row["summary"] = str(row.get("summary", ""))
         row["last_action_at"] = str(row.get("last_action_at", ""))
         return row
 
@@ -762,6 +790,7 @@ class VectorStore:
             row["alert_count"] = int(row.get("alert_count", len(row["alert_ids"])))
             row["status"] = str(row.get("status", IncidentStatus.open.value))
             row["severity"] = str(row.get("severity", "low"))
+            row["summary"] = str(row.get("summary", ""))
             row["last_action_at"] = str(row.get("last_action_at", ""))
         rows.sort(key=lambda r: str(r.get("last_seen_time", "")), reverse=True)
         return rows[:limit]
@@ -788,6 +817,7 @@ class VectorStore:
             alert_ids=self._parse_json_list(incident.get("alert_ids", [])),
             alert_count=int(incident.get("alert_count", 0)),
             severity=str(incident.get("severity", "low")),
+            summary=str(incident.get("summary", "")),
             last_action_at=str(incident.get("last_action_at", "")),
         )
         self.update_incident(model)
@@ -806,6 +836,7 @@ class VectorStore:
             alert_ids=self._parse_json_list(incident.get("alert_ids", [])),
             alert_count=int(incident.get("alert_count", 0)),
             severity=severity,
+            summary=str(incident.get("summary", "")),
             last_action_at=str(incident.get("last_action_at", "")),
         )
         self.update_incident(model)
@@ -824,6 +855,7 @@ class VectorStore:
             alert_ids=self._parse_json_list(incident.get("alert_ids", [])),
             alert_count=int(incident.get("alert_count", 0)),
             severity=str(incident.get("severity", "low")),
+            summary=str(incident.get("summary", "")),
             last_action_at=timestamp_utc,
         )
         self.update_incident(model)
@@ -834,11 +866,20 @@ class VectorStore:
         payload["action_type"] = str(payload["action_type"])
         payload["trigger"] = str(payload["trigger"])
         payload["status"] = str(payload["status"])
+        payload["context"] = json.dumps(payload.get("context", {}))
         self.actions.add([self._filtered_row(self.actions, payload)])
 
     def get_actions(self, incident_id: str, limit: int = 500) -> list[dict[str, Any]]:
-        escaped = self._escape(incident_id)
-        rows = self._query_rows(self.actions, where=f"incident_id = '{escaped}'", limit=max(limit, 10_000))
+        return self.list_actions(limit=limit, incident_id=incident_id)
+
+    def list_actions(self, limit: int = 500, incident_id: str | None = None) -> list[dict[str, Any]]:
+        if incident_id:
+            escaped = self._escape(incident_id)
+            rows = self._query_rows(self.actions, where=f"incident_id = '{escaped}'", limit=max(limit, 10_000))
+        else:
+            rows = self._query_rows(self.actions, limit=max(limit, 10_000))
+        for row in rows:
+            row["context"] = self._parse_json_object(row.get("context", "{}"))
         rows.sort(key=lambda r: str(r.get("timestamp_utc", "")), reverse=True)
         return rows[:limit]
 
@@ -969,5 +1010,6 @@ class VectorStore:
                 row["quality_flags"] = []
             row["liveness_provider"] = row.get("liveness_provider") or decision.get("liveness_provider", "none")
             row["liveness_score"] = float(row.get("liveness_score", decision.get("liveness_score", 0.0)))
-            row["bbox"] = row.get("bbox", "[]")
+            row["bbox"] = self._parse_json_list(row.get("bbox", "[]"))
+            row["metadata"] = self._parse_json_object(row.get("metadata", "{}"))
         return detections

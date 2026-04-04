@@ -74,6 +74,13 @@ class ActionStatus(StrEnum):
     failed = "failed"
 
 
+class TimelineItemKind(StrEnum):
+    event = "event"
+    alert = "alert"
+    incident = "incident"
+    action = "action"
+
+
 class PersonRecord(BaseModel):
     person_id: str
     name: str
@@ -175,6 +182,12 @@ class EntityRecord(BaseModel):
     last_seen_at: str = Field(default_factory=utc_now_iso)
 
 
+class EventLocation(BaseModel):
+    lat: float | None = None
+    lon: float | None = None
+    source: str = ""
+
+
 class EventRecord(BaseModel):
     event_id: str
     entity_id: str
@@ -185,6 +198,7 @@ class EventRecord(BaseModel):
     is_unknown: bool = True
     detection_id: str = ""
     source: str = "webcam:0"
+    location: EventLocation = Field(default_factory=EventLocation)
 
 
 class AlertRecord(BaseModel):
@@ -208,6 +222,7 @@ class IncidentRecord(BaseModel):
     alert_ids: list[str] = Field(default_factory=list)
     alert_count: int = 0
     severity: AlertSeverity = AlertSeverity.low
+    summary: str = ""
     last_action_at: str = ""
 
 
@@ -218,6 +233,7 @@ class ActionRecord(BaseModel):
     trigger: ActionTrigger
     status: ActionStatus
     reason: str
+    context: dict[str, Any] = Field(default_factory=dict)
     timestamp_utc: str = Field(default_factory=utc_now_iso)
 
 
@@ -239,3 +255,83 @@ class SummaryReport(BaseModel):
     blocked_persons: int = 0
     low_quality_persons: int = 0
     top_persons: list[dict[str, Any]]
+
+
+class EntitySummary(BaseModel):
+    entity_id: str
+    type: EntityType
+    status: EntityStatus = EntityStatus.active
+    name: str = "Unknown"
+    category: str = "unknown"
+    person_id: str = ""
+    created_at: str = ""
+    last_seen_at: str = ""
+    open_incident_count: int = 0
+    recent_alert_count: int = 0
+
+
+class IncidentSummary(BaseModel):
+    incident_id: str
+    entity_id: str
+    status: IncidentStatus = IncidentStatus.open
+    severity: AlertSeverity = AlertSeverity.low
+    summary: str = ""
+    start_time: str = ""
+    last_seen_time: str = ""
+    alert_count: int = 0
+    last_action_at: str = ""
+
+
+class TimelineItem(BaseModel):
+    item_id: str
+    kind: TimelineItemKind
+    timestamp_utc: str = Field(default_factory=utc_now_iso)
+    entity_id: str = ""
+    incident_id: str = ""
+    severity: str = ""
+    title: str
+    summary: str = ""
+    source: str = ""
+    screenshot_path: str = ""
+    location: EventLocation = Field(default_factory=EventLocation)
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class EntityProfile(BaseModel):
+    entity: EntitySummary
+    linked_person: dict[str, Any] | None = None
+    incidents: list[IncidentSummary] = Field(default_factory=list)
+    recent_alerts: list[AlertRecord] = Field(default_factory=list)
+    recent_detections: list[dict[str, Any]] = Field(default_factory=list)
+    timeline: list[TimelineItem] = Field(default_factory=list)
+    screenshot_paths: list[str] = Field(default_factory=list)
+    stats: dict[str, Any] = Field(default_factory=dict)
+
+
+class IncidentDetail(BaseModel):
+    incident: IncidentSummary
+    entity: EntitySummary
+    alerts: list[AlertRecord] = Field(default_factory=list)
+    actions: list[ActionRecord] = Field(default_factory=list)
+    recent_detections: list[dict[str, Any]] = Field(default_factory=list)
+    timeline: list[TimelineItem] = Field(default_factory=list)
+
+
+class SystemHealthSnapshot(BaseModel):
+    status: str = "ok"
+    active_entity_count: int = 0
+    open_incident_count: int = 0
+    recent_alert_count: int = 0
+    total_detection_count: int = 0
+    latest_event_at: str = ""
+    latest_alert_at: str = ""
+    publisher_subscribers: int = 0
+    last_published_at: str = ""
+    runtime: dict[str, Any] = Field(default_factory=dict)
+
+
+class LiveOpsSnapshot(BaseModel):
+    active_entities: list[EntitySummary] = Field(default_factory=list)
+    active_incidents: list[IncidentSummary] = Field(default_factory=list)
+    recent_alerts: list[AlertRecord] = Field(default_factory=list)
+    system_health: SystemHealthSnapshot = Field(default_factory=SystemHealthSnapshot)

@@ -18,6 +18,7 @@ from trace_ml.core.health import run_health_checks
 from trace_ml.core.ids import next_person_id
 from trace_ml.core.logger import configure_logger
 from trace_ml.core.models import AlertSeverity, HistoryQuery, PersonCategory, PersonLifecycleStatus, PersonRecord
+from trace_ml.core.streaming import EventStreamPublisher, InMemoryEventStreamPublisher
 from trace_ml.liveness.base import MiniFASNetStub
 from trace_ml.pipeline.collect import capture_from_webcam, import_from_directory, person_image_dir
 from trace_ml.pipeline.session import RecognitionSession
@@ -38,6 +39,7 @@ events_app = typer.Typer(help="Entity-event stream commands", no_args_is_help=Tr
 alerts_app = typer.Typer(help="Alert stream commands", no_args_is_help=True)
 incident_app = typer.Typer(help="Incident commands", no_args_is_help=True)
 action_app = typer.Typer(help="Action audit commands", no_args_is_help=True)
+service_app = typer.Typer(help="Service layer commands", no_args_is_help=True)
 
 app.add_typer(person_app, name="person")
 app.add_typer(train_app, name="train")
@@ -49,6 +51,7 @@ app.add_typer(events_app, name="events")
 app.add_typer(alerts_app, name="alerts")
 app.add_typer(incident_app, name="incident")
 app.add_typer(action_app, name="action")
+app.add_typer(service_app, name="service")
 
 console = Console()
 
@@ -58,6 +61,7 @@ class Runtime:
     settings: Settings
     store: VectorStore
     analytics: AnalyticsStore
+    stream_publisher: EventStreamPublisher
 
 
 def _init_runtime(config: str | None) -> Runtime:
@@ -65,7 +69,13 @@ def _init_runtime(config: str | None) -> Runtime:
     configure_logger(settings)
     store = VectorStore(settings)
     analytics = AnalyticsStore(store)
-    return Runtime(settings=settings, store=store, analytics=analytics)
+    stream_publisher = InMemoryEventStreamPublisher()
+    return Runtime(
+        settings=settings,
+        store=store,
+        analytics=analytics,
+        stream_publisher=stream_publisher,
+    )
 
 
 def _runtime(ctx: typer.Context) -> Runtime:
@@ -429,7 +439,12 @@ def recognize_live(ctx: typer.Context) -> None:
     """Run live recognition from laptop webcam."""
     runtime = _runtime(ctx)
     recognizer = _recognizer(runtime)
-    session = RecognitionSession(runtime.settings, runtime.store, recognizer)
+    session = RecognitionSession(
+        runtime.settings,
+        runtime.store,
+        recognizer,
+        stream_publisher=runtime.stream_publisher,
+    )
     console.print(_banner())
     console.print("[dim]Press q on the OpenCV window to stop.[/dim]")
     session.run()
@@ -786,6 +801,39 @@ def action_list(
             str(row.get("reason", "")),
         )
     console.print(table)
+
+
+@service_app.command("run")
+def service_run(
+    ctx: typer.Context,
+    host: str = typer.Option("127.0.0.1", help="Bind host"),
+    port: int = typer.Option(8080, help="Bind port"),
+) -> None:
+    """Run TRACE-ML service API for UI integration."""
+    runtime = _runtime(ctx)
+    try:
+        import uvicorn
+    except ImportError as exc:
+        raise typer.BadParameter(
+            "uvicorn is not installed. Install service deps: pip install fastapi uvicorn"
+        ) from exc
+
+    from trace_ml.service.app import create_service_app
+
+    api = create_service_app(
+        settings=runtime.settings,
+        store=runtime.store,
+        stream_publisher=runtime.stream_publisher,
+    )
+    console.print(
+        Panel.fit(
+            f"[cyan]Service starting[/cyan]\n"
+            f"http://{host}:{port}",
+            title="service run",
+            border_style="cyan",
+        )
+    )
+    uvicorn.run(api, host=host, port=port, log_level="info")
 
 
 if __name__ == "__main__":

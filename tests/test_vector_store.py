@@ -147,6 +147,7 @@ def test_incident_schema_migrates_and_persists_severity(tmp_path: Path) -> None:
     migrated = store.get_incident("INC-OLD-1")
     assert migrated is not None
     assert migrated["severity"] == "low"
+    assert migrated["summary"] == ""
     assert migrated["last_action_at"] == ""
 
     assert store.set_incident_severity("INC-OLD-1", "high") is True

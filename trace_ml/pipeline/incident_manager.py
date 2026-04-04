@@ -11,6 +11,10 @@ class IncidentManager:
     def __init__(self, store: VectorStore) -> None:
         self.store = store
 
+    @staticmethod
+    def _build_summary(alert: AlertRecord) -> str:
+        return f"{alert.type.value}: {alert.reason}"
+
     def handle_alert(self, alert: AlertRecord) -> tuple[IncidentRecord, str]:
         active = self.store.get_active_incident(alert.entity_id)
         if active:
@@ -26,6 +30,7 @@ class IncidentManager:
                 alert_ids=alert_ids,
                 alert_count=len(alert_ids),
                 severity=str(active.get("severity", "low")),
+                summary=self._build_summary(alert),
                 last_action_at=str(active.get("last_action_at", "")),
             )
             self.store.update_incident(updated)
@@ -39,6 +44,8 @@ class IncidentManager:
             last_seen_time=alert.timestamp_utc,
             alert_ids=[alert.alert_id],
             alert_count=1,
+            severity=alert.severity,
+            summary=self._build_summary(alert),
         )
         self.store.create_incident(created)
         return created, "on_create"

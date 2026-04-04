@@ -72,6 +72,17 @@ trace-ml report quality
 trace-ml export csv
 ```
 
+8. Run Service Layer (for UI integration):
+```powershell
+trace-ml service run --host 127.0.0.1 --port 8080
+```
+Key endpoints:
+- `GET /api/v1/live/snapshot`
+- `GET /api/v1/entities`
+- `GET /api/v1/incidents`
+- `GET /api/v1/timeline`
+- `GET /api/v1/events/stream` (SSE)
+
 ## Demo Script (Examiner Flow)
 1. `trace-ml doctor`
 2. `trace-ml person list`

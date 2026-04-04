@@ -14,6 +14,7 @@ import cv2
 from trace_ml.core.config import Settings
 from trace_ml.core.ids import new_detection_id
 from trace_ml.core.models import ActionTrigger, DecisionState, DetectionEvent, RecognitionMatch
+from trace_ml.core.streaming import EventStreamPublisher, NullEventStreamPublisher
 from trace_ml.liveness.base import LivenessResult
 from trace_ml.pipeline.action_engine import ActionEngine
 from trace_ml.pipeline.capture import CameraCapture
@@ -55,10 +56,17 @@ def _decision_color(decision: DecisionState) -> tuple[int, int, int]:
 
 
 class RecognitionSession:
-    def __init__(self, settings: Settings, store: VectorStore, recognizer: ArcFaceRecognizer) -> None:
+    def __init__(
+        self,
+        settings: Settings,
+        store: VectorStore,
+        recognizer: ArcFaceRecognizer,
+        stream_publisher: EventStreamPublisher | None = None,
+    ) -> None:
         self.settings = settings
         self.store = store
         self.recognizer = recognizer
+        self.stream_publisher = stream_publisher or NullEventStreamPublisher()
         self.entity_resolver = EntityResolver(settings, store)
         self.rules_engine = RulesEngine(settings, store)
         self.incident_manager = IncidentManager(store)
@@ -86,6 +94,25 @@ class RecognitionSession:
 
     def _track_event(self, text: str) -> None:
         self.event_feed.appendleft(text)
+
+    def _publish(self, topic: str, payload: dict) -> None:
+        self.stream_publisher.publish(topic, payload)
+
+    def _publish_live_state(self, fps: float) -> None:
+        self._publish(
+            "session.state",
+            {
+                "fps": round(float(fps), 2),
+                "active_tracks": int(self.temporal.active_track_count()),
+                "latency_ms": round(float(self.last_latency_ms), 2),
+                "frame_queue_depth": int(self.last_frame_queue_depth),
+                "result_queue_depth": int(self.last_result_queue_depth),
+                "decision_counters": dict(self.decision_counters),
+                "current_focus": self.current_focus,
+                "confidence_trend": [float(v) for v in list(self.recent_confidences)],
+                "event_feed": list(self.event_feed),
+            },
+        )
 
     def _save_detection(
         self,
@@ -134,6 +161,7 @@ class RecognitionSession:
                     metadata=match.metadata,
                 )
                 self.store.add_detection(event, embedding=embedding)
+                self._publish("detection", event.model_dump(mode="json"))
                 self.store.add_detection_decision(
                     detection_id=detection_id,
                     track_id=match.track_id,
@@ -156,10 +184,13 @@ class RecognitionSession:
             source=source,
         )
         self.store.add_event(core_event)
+        self._publish("event", core_event.model_dump(mode="json"))
         alerts = self.rules_engine.process_event(core_event)
         for alert in alerts:
             self.store.add_alert(alert)
+            self._publish("alert", alert.model_dump(mode="json"))
             incident, trigger_label = self.incident_manager.handle_alert(alert)
+            self._publish("incident", incident.model_dump(mode="json"))
             trigger = ActionTrigger(trigger_label)
             planned_actions = self.policy_engine.evaluate(incident, trigger)
             executed = self.action_engine.execute(incident, planned_actions, trigger)
@@ -172,6 +203,7 @@ class RecognitionSession:
                     f"POLICY {incident.incident_id} {trigger.value} sev={incident.severity.value} -> [{action_names}]"
                 )
             for action in executed:
+                self._publish("action", action.model_dump(mode="json"))
                 self._track_event(
                     f"ACTION {action.action_type.value.upper()} {incident.incident_id} ({action.status.value})"
                 )
@@ -297,6 +329,7 @@ class RecognitionSession:
 
         if self.settings.pipeline.show_hud:
             self._overlay_panel(frame, fps=fps)
+        self._publish_live_state(fps)
         return frame
 
     def run(self) -> None:
