@@ -1,4 +1,4 @@
-from trace_ml.cli import app
+from trace_aml.cli import app
 
 if __name__ == "__main__":
     app()

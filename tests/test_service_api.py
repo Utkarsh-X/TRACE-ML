@@ -5,8 +5,8 @@ import pytest
 pytest.importorskip("fastapi")
 from fastapi.testclient import TestClient
 
-from trace_ml.core.config import load_settings
-from trace_ml.core.models import (
+from trace_aml.core.config import load_settings
+from trace_aml.core.models import (
     ActionRecord,
     ActionStatus,
     ActionTrigger,
@@ -19,9 +19,9 @@ from trace_ml.core.models import (
     EventRecord,
     IncidentRecord,
 )
-from trace_ml.core.streaming import InMemoryEventStreamPublisher
-from trace_ml.service.app import create_service_app
-from trace_ml.store.vector_store import VectorStore
+from trace_aml.core.streaming import InMemoryEventStreamPublisher
+from trace_aml.service.app import create_service_app
+from trace_aml.store.vector_store import VectorStore
 
 
 def _settings(tmp_path: Path):

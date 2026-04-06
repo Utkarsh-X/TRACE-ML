@@ -399,13 +399,13 @@ def run_recognition():
         prev_time = time.time()
         if ENABLE_HUD:
             info_lines = [
-                f"TRACE-ML | FPS: {fps:.1f}",
+                f"TRACE-AML | FPS: {fps:.1f}",
                 f"Coords: {coords}",
                 f"Time(UTC): {now.strftime('%Y-%m-%d %H:%M:%S')}",
             ]
             draw_top_panel(frame, info_lines)
 
-        cv2.imshow("TRACE-ML Recognition", frame)
+        cv2.imshow("TRACE-AML Recognition", frame)
         if cv2.waitKey(1) & 0xFF == ord("q"):
             break
 

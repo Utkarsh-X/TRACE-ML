@@ -1,25 +1,25 @@
 """Application-level error hierarchy."""
 
 
-class TraceMLError(Exception):
-    """Base error for TRACE-ML."""
+class TraceAMLError(Exception):
+    """Base error for TRACE-AML."""
 
 
-class ConfigError(TraceMLError):
+class ConfigError(TraceAMLError):
     """Raised for configuration problems."""
 
 
-class DependencyError(TraceMLError):
+class DependencyError(TraceAMLError):
     """Raised when required dependencies are missing."""
 
 
-class StorageError(TraceMLError):
+class StorageError(TraceAMLError):
     """Raised for persistence and query failures."""
 
 
-class RecognitionError(TraceMLError):
+class RecognitionError(TraceAMLError):
     """Raised for model loading and recognition failures."""
 
 
-class CameraError(TraceMLError):
+class CameraError(TraceAMLError):
     """Raised for webcam and frame pipeline failures."""

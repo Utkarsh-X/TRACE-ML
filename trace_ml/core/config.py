@@ -9,11 +9,11 @@ import yaml
 from pydantic import BaseModel, Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-from trace_ml.core.errors import ConfigError
+from trace_aml.core.errors import ConfigError
 
 
 class AppSettings(BaseModel):
-    name: str = "TRACE-ML"
+    name: str = "TRACE-AML"
     environment: str = "demo"
     timezone: str = "UTC"
 
@@ -124,7 +124,7 @@ class StoreSettings(BaseModel):
 
 class LoggingSettings(BaseModel):
     level: str = "INFO"
-    file_path: str = "data/logs/trace_ml.log"
+    file_path: str = "data/logs/trace_aml.log"
     rotation: str = "10 MB"
     retention: str = "14 days"
 
@@ -139,7 +139,7 @@ class LivenessSettings(BaseModel):
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_prefix="TRACE_ML_",
+        env_prefix="TRACE_AML_",
         env_nested_delimiter="__",
         extra="ignore",
     )
@@ -169,7 +169,7 @@ def load_yaml(path: Path) -> dict:
 
 
 def load_settings(config_path: str | Path | None = None) -> Settings:
-    path = Path(config_path or os.getenv("TRACE_ML_CONFIG", "config.yaml"))
+    path = Path(config_path or os.getenv("TRACE_AML_CONFIG", "config.yaml"))
     raw = load_yaml(path)
     try:
         settings = Settings(**raw)

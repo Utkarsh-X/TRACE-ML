@@ -74,8 +74,8 @@ Naming note:
 1. Add `alerts` table and `incidents` table in LanceDB.
 2. Add `case_id` linkage in detection decisions.
 3. Add unknown embedding clustering service in analytics layer.
-4. Add `trace-ml ops live` command for a focused command-center UX.
-5. Add `trace-ml incident export --incident-id ...` command.
+4. Add `trace-aml ops live` command for a focused command-center UX.
+5. Add `trace-aml incident export --incident-id ...` command.
 
 ## 6. KPI Model for "Best-in-Class" Progress
 Use these as formal engineering KPIs:

@@ -1,4 +1,4 @@
-"""TRACE-ML v3 package."""
+"""TRACE-AML v3 package."""
 
 __all__ = ["__version__"]
 

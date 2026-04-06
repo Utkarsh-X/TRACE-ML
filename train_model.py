@@ -1,10 +1,10 @@
 """Legacy compatibility stub.
 
-TRACE-ML v3 uses the new package runtime:
-    trace-ml train rebuild
+TRACE-AML v3 uses the new package runtime:
+    trace-aml train rebuild
 """
 
-from trace_ml.cli import app
+from trace_aml.cli import app
 
 
 if __name__ == "__main__":

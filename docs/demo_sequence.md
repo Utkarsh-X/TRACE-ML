@@ -1,4 +1,4 @@
-# TRACE-ML v3 Demo Sequence
+# TRACE-AML v3 Demo Sequence
 
 ## Objective
 Show a complete end-to-end flow on a single laptop webcam in under 5 minutes.
@@ -10,13 +10,13 @@ Show a complete end-to-end flow on a single laptop webcam in under 5 minutes.
 
 ## Command runbook
 ```powershell
-trace-ml doctor
-trace-ml person list
-trace-ml train rebuild
-trace-ml recognize live
-trace-ml history query --limit 10
-trace-ml report summary
-trace-ml export csv
+trace-aml doctor
+trace-aml person list
+trace-aml train rebuild
+trace-aml recognize live
+trace-aml history query --limit 10
+trace-aml report summary
+trace-aml export csv
 ```
 
 ## Presenter notes

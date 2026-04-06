@@ -90,54 +90,54 @@
 <!-- TopNavBar Implementation -->
 <nav class="fixed top-0 w-full z-50 bg-neutral-900 dark:bg-[#0e0e0e] flex items-center justify-between px-6 h-14 w-full top-nav-panel no-border bg-[#1b1b1b]">
 <div class="flex items-center gap-8">
-<span class="text-lg font-bold tracking-tighter text-white uppercase font-headline">TRACE-AML</span>
-<div class="hidden md:flex gap-6 items-center">
-<a class="font-['Inter'] font-medium text-[0.875rem] tracking-tight text-white border-b-2 border-white pb-1" href="#">Dashboard</a>
-<a class="font-['Inter'] font-medium text-[0.875rem] tracking-tight text-neutral-400 hover:text-white transition-colors" href="#">Investigations</a>
-<a class="font-['Inter'] font-medium text-[0.875rem] tracking-tight text-neutral-400 hover:text-white transition-colors" href="#">Audit Log</a>
-<a class="font-['Inter'] font-medium text-[0.875rem] tracking-tight text-neutral-400 hover:text-white transition-colors" href="#">Reports</a>
+<a href="./code.html" class="text-lg font-bold tracking-tighter text-white uppercase font-headline hover:text-primary transition-colors">TRACE-AML</a>
+<div class="hidden md:flex gap-6 items-center" id="top-nav-links">
+<a class="font-['Inter'] font-medium text-[0.875rem] tracking-tight text-white border-b-2 border-white pb-1" href="./code.html">Live Ops</a>
+<a class="font-['Inter'] font-medium text-[0.875rem] tracking-tight text-neutral-400 hover:text-white transition-colors nav-cross" data-mockup="../incidents_forensic_detail/code.html" href="#">Incidents</a>
+<a class="font-['Inter'] font-medium text-[0.875rem] tracking-tight text-neutral-400 hover:text-white transition-colors nav-cross" data-mockup="../entity_explorer_clean_canvas/code.html" href="#">Entities</a>
+<a class="font-['Inter'] font-medium text-[0.875rem] tracking-tight text-neutral-400 hover:text-white transition-colors nav-cross" data-mockup="../global_history_timeline_forensic_canvas/code.html" href="#">History</a>
 </div>
 </div>
 <div class="flex items-center gap-4">
 <div class="hidden md:block bg-surface-container-lowest px-3 py-1.5">
-<span class="text-[0.6875rem] font-mono text-outline uppercase tracking-widest">System Protocol: Active</span>
+<span class="text-[0.6875rem] font-mono text-outline uppercase tracking-widest" id="system-protocol-status">System Protocol: Active</span>
 </div>
-<span class="material-symbols-outlined text-white cursor-pointer hover:bg-[#2a2a2a] p-2 transition-all">notifications</span>
-<span class="material-symbols-outlined text-white cursor-pointer hover:bg-[#2a2a2a] p-2 transition-all">settings</span>
+<button type="button" class="material-symbols-outlined text-white cursor-pointer hover:bg-[#2a2a2a] p-2 transition-all bg-transparent border-0" id="nav-btn-notifications" aria-label="Notifications" title="Recent alerts">notifications</button>
+<button type="button" class="material-symbols-outlined text-white cursor-pointer hover:bg-[#2a2a2a] p-2 transition-all bg-transparent border-0" id="nav-btn-settings" aria-label="Connection settings" title="API settings">settings</button>
 <img alt="Investigator Profile" class="w-8 h-8 object-cover grayscale opacity-80 hover:opacity-100 transition-opacity" data-alt="professional portrait of a security investigator in a dark room with subtle blue backlight and sharp focus" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB86gUAUN-ju_iu1aspvdIg85HzZE4a7e0ittftm6N_OM05oLA7uiNxBkbb4TkR21qIZnZqHoHZWSCBZUZRGEiy9CB7l0Jv9AuQPMIH9z-97CYWYR0bGtqsB1NFDv1ZGjPfmPhQW4tmN4_H7WWfK-3czSf2vaP18BV3tcH4BtfBHz2wPxuZLtV_OAr0unacIka6U7oZAei7ZKS8UraZTpz4SdoqSASCeTIylzVDxzw7xkuEEOB1B05ryn6nuCFzIp7UqC902-pCxHc"/>
 </div>
 </nav>
 <!-- SideNavBar Implementation -->
 <aside class="fixed left-0 top-14 h-[calc(100vh-3.5rem)] w-20 bg-neutral-900 dark:bg-[#1b1b1b] flex flex-col items-center py-4 space-y-8 side-nav-tactical no-border tonal-shift bg-[#1b1b1b] z-40">
 <div class="flex flex-col items-center gap-6 w-full">
-<div class="group flex flex-col items-center gap-1 cursor-pointer transition-transform duration-150 bg-[#2a2a2a] text-white border-l-2 border-white w-full py-3">
+<a class="group flex flex-col items-center gap-1 cursor-pointer transition-transform duration-150 bg-[#2a2a2a] text-white border-l-2 border-white w-full py-3 no-underline hover:text-white nav-cross" data-mockup="../entity_explorer_clean_canvas/code.html" href="#" title="Entity registry">
 <span class="material-symbols-outlined" data-icon="search">search</span>
 <span class="font-['JetBrains_Mono'] text-[0.6rem] uppercase tracking-widest">Search</span>
-</div>
-<div class="group flex flex-col items-center gap-1 cursor-pointer transition-transform duration-150 text-neutral-500 hover:text-neutral-200 w-full py-2">
+</a>
+<a class="group flex flex-col items-center gap-1 cursor-pointer transition-transform duration-150 text-neutral-500 hover:text-neutral-200 w-full py-2 no-underline nav-cross" data-mockup="../entity_explorer_clean_canvas/code.html" href="#" title="Entities">
 <span class="material-symbols-outlined" data-icon="hub">hub</span>
 <span class="font-['JetBrains_Mono'] text-[0.6rem] uppercase tracking-widest">Network</span>
-</div>
-<div class="group flex flex-col items-center gap-1 cursor-pointer transition-transform duration-150 text-neutral-500 hover:text-neutral-200 w-full py-2">
+</a>
+<a class="group flex flex-col items-center gap-1 cursor-pointer transition-transform duration-150 text-neutral-500 hover:text-neutral-200 w-full py-2 no-underline nav-cross" data-mockup="../global_history_timeline_forensic_canvas/code.html" href="#" title="Global history">
 <span class="material-symbols-outlined" data-icon="timeline">timeline</span>
 <span class="font-['JetBrains_Mono'] text-[0.6rem] uppercase tracking-widest">Timeline</span>
-</div>
-<div class="group flex flex-col items-center gap-1 cursor-pointer transition-transform duration-150 text-neutral-500 hover:text-neutral-200 w-full py-2">
+</a>
+<a class="group flex flex-col items-center gap-1 cursor-pointer transition-transform duration-150 text-neutral-500 hover:text-neutral-200 w-full py-2 no-underline nav-cross" data-mockup="../database_explorer_high_density/code.html" href="#" title="Database explorer">
 <span class="material-symbols-outlined" data-icon="folder_open">folder_open</span>
 <span class="font-['JetBrains_Mono'] text-[0.6rem] uppercase tracking-widest">Files</span>
-</div>
-<div class="group flex flex-col items-center gap-1 cursor-pointer transition-transform duration-150 text-neutral-500 hover:text-neutral-200 w-full py-2">
+</a>
+<a class="group flex flex-col items-center gap-1 cursor-pointer transition-transform duration-150 text-neutral-500 hover:text-neutral-200 w-full py-2 no-underline nav-cross" data-mockup="../incidents_forensic_detail/code.html" href="#" title="Incidents">
 <span class="material-symbols-outlined" data-icon="lock">lock</span>
 <span class="font-['JetBrains_Mono'] text-[0.6rem] uppercase tracking-widest">Vault</span>
-</div>
+</a>
 </div>
 <div class="mt-auto flex flex-col items-center gap-6 w-full pb-4">
-<div class="text-neutral-500 hover:text-neutral-200 cursor-pointer py-2">
+<button type="button" class="text-neutral-500 hover:text-neutral-200 cursor-pointer py-2 bg-transparent border-0" id="nav-btn-help" aria-label="Help" title="Help">
 <span class="material-symbols-outlined" data-icon="help_outline">help_outline</span>
-</div>
-<div class="text-neutral-500 hover:text-neutral-200 cursor-pointer py-2">
+</button>
+<button type="button" class="text-neutral-500 hover:text-neutral-200 cursor-pointer py-2 bg-transparent border-0" id="nav-btn-logout" aria-label="Disconnect stream" title="Disconnect live stream (demo)">
 <span class="material-symbols-outlined" data-icon="logout">logout</span>
-</div>
+</button>
 </div>
 </aside>
 <!-- Main Forensic Canvas -->
@@ -153,15 +153,44 @@
 <h1 class="text-4xl font-headline font-bold text-white tracking-tight leading-none uppercase">Hub_04 Alpha</h1>
 </div>
 <div class="text-right">
-<p class="font-mono text-[0.75rem] text-primary">UTC 14:22:09</p>
+<p class="font-mono text-[0.75rem] text-primary" id="utc-clock">UTC --:--:--</p>
 <p class="font-mono text-[0.65rem] text-outline">SECURE CHANNEL // ENCRYPTED</p>
+<div class="mt-2 flex flex-wrap items-center justify-end gap-2">
+<button class="px-2 py-1 text-[0.62rem] font-mono bg-surface-container-high text-on-surface-variant border border-outline-variant hover:bg-surface-bright" id="btn-refresh-all" type="button">Refresh data</button>
+<button class="px-2 py-1 text-[0.62rem] font-mono bg-surface-container-high text-on-surface-variant border border-outline-variant" id="camera-enable-btn" type="button">Enable Camera</button>
+<span class="text-[0.58rem] font-mono text-outline" id="camera-status">camera: pending</span>
+</div>
 </div>
 </header>
+<div class="grid grid-cols-1 md:grid-cols-12 gap-1 mb-8">
+<div class="md:col-span-4 bg-surface-container-low p-4">
+<h2 class="text-[0.6875rem] font-label uppercase tracking-widest text-primary mb-3">Active Entities</h2>
+<div class="space-y-2" id="active-entities-list">
+<p class="text-[0.72rem] text-outline font-mono">Waiting for snapshot...</p>
+</div>
+</div>
+<div class="md:col-span-8 bg-surface-container-low p-4">
+<div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+<h2 class="text-[0.6875rem] font-label uppercase tracking-widest text-primary">Timeline</h2>
+<div class="flex flex-wrap items-center gap-1">
+<button type="button" class="timeline-filter px-2 py-0.5 text-[0.6rem] font-mono border border-transparent text-neutral-500 hover:text-white" data-window="all">All</button>
+<button type="button" class="timeline-filter px-2 py-0.5 text-[0.6rem] font-mono border border-transparent text-neutral-500 hover:text-white" data-window="24h">24H</button>
+<button type="button" class="timeline-filter px-2 py-0.5 text-[0.6rem] font-mono border border-white text-white" data-window="7d">7D</button>
+<button type="button" class="timeline-filter px-2 py-0.5 text-[0.6rem] font-mono border border-transparent text-neutral-500 hover:text-white" data-window="30d">30D</button>
+</div>
+<span class="text-[0.6rem] font-mono text-outline" id="timeline-status">loading</span>
+</div>
+<div class="space-y-2 max-h-44 overflow-y-auto" id="timeline-list">
+<p class="text-[0.72rem] text-outline font-mono">Waiting for timeline...</p>
+</div>
+</div>
+</div>
 <!-- Multi-Camera Grid -->
 <div class="grid grid-cols-1 md:grid-cols-12 gap-1 mb-12">
 <!-- Main Feed -->
-<div class="md:col-span-8 aspect-video relative bg-surface-container-lowest group">
-<img alt="Main Surveillance Feed" class="w-full h-full object-cover opacity-60 grayscale brightness-75 group-hover:opacity-80 transition-opacity" data-alt="high angle security camera footage of a busy modern airport terminal with blurred travelers and sharp industrial architecture" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBFyD3wjsGLyWPoba4R3fGNX_jP5Ljo1dMBIjNU7opxd9eREYMq8EgdRlJ3A_pC-CnZeH0VEcvJYe-3syJCVRPAQPPmYreTOMK12geIHQjMA3MOOjaIKLPfCRIVWlRnBPAmiX7tbLgmHN9PviIa4nkoVe8uRF02nEj3Bx4eptyauABRd4eyGHsSGxtyHZuuSUAIdY1FWloVN22lzi_8FmUPGft8hKU5WUAzM5qx1Jqfm-OS9E1jxTIF6UA__5pSS2h2Ux_ENIl3y0s"/>
+<div class="md:col-span-8 aspect-video relative bg-surface-container-lowest group" id="main-camera-feed">
+<canvas class="absolute inset-0 w-full h-full pointer-events-none z-[15]" id="detection-overlay-canvas" aria-hidden="true"></canvas>
+<img alt="Main Surveillance Feed" class="relative z-0 w-full h-full object-cover opacity-60 grayscale brightness-75 group-hover:opacity-80 transition-opacity" data-alt="high angle security camera footage of a busy modern airport terminal with blurred travelers and sharp industrial architecture" id="main-camera-placeholder" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBFyD3wjsGLyWPoba4R3fGNX_jP5Ljo1dMBIjNU7opxd9eREYMq8EgdRlJ3A_pC-CnZeH0VEcvJYe-3syJCVRPAQPPmYreTOMK12geIHQjMA3MOOjaIKLPfCRIVWlRnBPAmiX7tbLgmHN9PviIa4nkoVe8uRF02nEj3Bx4eptyauABRd4eyGHsSGxtyHZuuSUAIdY1FWloVN22lzi_8FmUPGft8hKU5WUAzM5qx1Jqfm-OS9E1jxTIF6UA__5pSS2h2Ux_ENIl3y0s"/>
 <!-- Overlay Overlays -->
 <div class="absolute inset-0 p-4 flex flex-col justify-between pointer-events-none">
 <div class="flex justify-between items-start">
@@ -212,6 +241,14 @@
 <div class="flex items-center justify-center">
 <img alt="Tactical Map" class="max-h-48 opacity-50 grayscale contrast-125" data-alt="abstract dark world map with minimalist white outlines and faint blue connection nodes on a deep black background" data-location="Global" src="https://lh3.googleusercontent.com/aida-public/AB6AXuASbQb-pSjdgP8JyaEy40CEuR3YPlKyPem2kNiBm1a1PQHNk4CQUBZSKWuNPrrHNCK-CK1MdhsPOU9xSiswTZV7UyDTrqHgsWfuXKns89xYpn7bzZ9cdWOUYtSoTJ5Vby0CYxZc4D2AazS43AA2ZJSxWS26JiB8WWTY8t0H4lt-vuoiHogb2La6v4fTo6r72vRf6-yV9cNLHW80PDySi3Y_xP5pErlb4rPlLh2QJR9o8c0rawwf3rLhxJL1S_X_Crhn7mtjkyxyoHk"/>
 </div>
+<div class="absolute right-4 top-10 bg-surface-container-high/80 px-3 py-2">
+<p class="text-[0.58rem] font-mono text-outline uppercase tracking-widest">System Health</p>
+<div class="space-y-0.5 mt-1 text-[0.62rem] font-mono text-on-surface-variant" id="system-health">
+<p>entities: --</p>
+<p>incidents: --</p>
+<p>alerts: --</p>
+</div>
+</div>
 <div class="text-[0.5rem] font-mono text-outline-variant flex gap-8">
 <span>COORD: 34.0522° N, 118.2437° W</span>
 <span>ELEV: 87M</span>
@@ -226,9 +263,9 @@
 <div class="p-6 border-b border-white/5">
 <div class="flex items-center justify-between mb-4">
 <h2 class="text-[0.6875rem] font-label uppercase tracking-widest text-primary font-bold">Alert Stream</h2>
-<span class="text-[0.6rem] font-mono text-error">CRITICAL (2)</span>
+<span class="text-[0.6rem] font-mono text-error" id="alerts-count">CRITICAL (0)</span>
 </div>
-<div class="space-y-4">
+<div class="space-y-4" id="alerts-list">
 <div class="bg-surface-container-high p-4 relative group">
 <div class="absolute left-0 top-0 bottom-0 w-0.5 bg-error"></div>
 <div class="flex justify-between items-start mb-1">
@@ -249,7 +286,7 @@
 <!-- INCIDENT UPDATES -->
 <div class="p-6 flex-grow overflow-y-auto">
 <h2 class="text-[0.6875rem] font-label uppercase tracking-widest text-outline mb-4">Incident Updates</h2>
-<div class="space-y-6">
+<div class="space-y-6" id="incidents-list">
 <div class="flex gap-4">
 <span class="w-1.5 h-1.5 mt-1.5 flex-shrink-0 bg-primary"></span>
 <div>
@@ -270,11 +307,14 @@
 </div>
 <!-- ACTION LOGS (Terminal Style) -->
 <div class="p-4 bg-surface-container-lowest h-64 font-mono text-[0.65rem] overflow-hidden">
-<div class="flex items-center gap-2 mb-3 border-b border-outline-variant pb-2">
+<div class="flex items-center justify-between gap-2 mb-3 border-b border-outline-variant pb-2">
+<div class="flex items-center gap-2">
 <span class="w-2 h-2 rounded-full bg-surface-bright"></span>
 <span class="uppercase tracking-widest text-outline">Terminal Output</span>
 </div>
-<div class="space-y-1 text-on-surface-variant/80">
+<button type="button" class="text-[0.58rem] font-mono text-outline hover:text-primary uppercase" id="btn-terminal-clear">Clear</button>
+</div>
+<div class="space-y-1 text-on-surface-variant/80" id="stream-log">
 <p><span class="text-primary">&gt;</span> trace --hub alpha --sync</p>
 <p class="text-outline">HUB SYNCING [||||||||||||||||||] 100%</p>
 <p><span class="text-primary">&gt;</span> log --level forensic</p>
@@ -286,6 +326,17 @@
 </div>
 </aside>
 </main>
-<!-- Contextual FAB (Hidden by instruction for Focused Task Screen) -->
-<!-- Suppression logic applied for intelligence hub/live ops as it's task-focused -->
+<!-- Slide-over panels -->
+<div class="fixed inset-0 z-[100] pointer-events-none" id="panel-overlay" aria-hidden="true">
+<div class="absolute inset-0 bg-black/50 opacity-0 transition-opacity pointer-events-auto hidden" id="panel-backdrop"></div>
+<aside class="absolute top-0 right-0 h-full w-full max-w-md bg-surface-container border-l border-outline-variant shadow-2xl translate-x-full transition-transform pointer-events-auto" id="panel-drawer">
+<div class="p-6 border-b border-outline-variant flex justify-between items-center">
+<h2 class="text-sm font-label uppercase tracking-widest text-primary" id="panel-title">Panel</h2>
+<button type="button" class="text-outline hover:text-white font-mono text-xs" id="panel-close">Close</button>
+</div>
+<div class="p-6 overflow-y-auto h-[calc(100%-4rem)] text-sm font-mono text-on-surface-variant" id="panel-body"></div>
+</aside>
+</div>
+<script src="../shared/trace_api.js"></script>
+<script src="./live_ops.js"></script>
 </body></html>

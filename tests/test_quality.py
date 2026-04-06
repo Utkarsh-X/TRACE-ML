@@ -2,10 +2,10 @@ from pathlib import Path
 
 import numpy as np
 
-from trace_ml.core.config import load_settings
-from trace_ml.core.models import PersonLifecycleStatus
-from trace_ml.quality.gating import decide_person_lifecycle
-from trace_ml.quality.scoring import score_face_image
+from trace_aml.core.config import load_settings
+from trace_aml.core.models import PersonLifecycleStatus
+from trace_aml.quality.gating import decide_person_lifecycle
+from trace_aml.quality.scoring import score_face_image
 
 
 def _settings(tmp_path: Path):

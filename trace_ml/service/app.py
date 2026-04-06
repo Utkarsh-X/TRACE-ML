@@ -1,4 +1,4 @@
-"""FastAPI service bridge for TRACE-ML read models."""
+"""FastAPI service bridge for TRACE-AML read models."""
 
 from __future__ import annotations
 
@@ -8,11 +8,12 @@ from typing import Any
 
 from pydantic import BaseModel
 
-from trace_ml.core.config import Settings
-from trace_ml.core.models import AlertSeverity
-from trace_ml.core.streaming import EventStreamPublisher, NullEventStreamPublisher, StreamEvent
-from trace_ml.query.read_models import IntelligenceReadModelService
-from trace_ml.store.vector_store import VectorStore
+from trace_aml.core.config import Settings
+from trace_aml.core.models import AlertSeverity
+from trace_aml.core.streaming import EventStreamPublisher, NullEventStreamPublisher, StreamEvent
+from trace_aml.pipeline.live_overlay import get_live_overlay
+from trace_aml.query.read_models import IntelligenceReadModelService
+from trace_aml.store.vector_store import VectorStore
 
 
 class IncidentSeverityPayload(BaseModel):
@@ -37,6 +38,7 @@ def create_service_app(
     """Create FastAPI app lazily so CLI stays usable without web deps."""
     try:
         from fastapi import FastAPI, HTTPException, Query, Request
+        from fastapi.middleware.cors import CORSMiddleware
         from fastapi.responses import StreamingResponse
     except ImportError as exc:  # pragma: no cover - environment-dependent.
         raise RuntimeError(
@@ -48,7 +50,15 @@ def create_service_app(
     app = FastAPI(
         title=f"{settings.app.name} Service",
         version="4.0.0",
-        description="TRACE-ML UI/API bridge over intelligence read models.",
+        description="TRACE-AML UI/API bridge over intelligence read models.",
+    )
+    # Dev-friendly: allow the static mockup to call the API with ?api=http://127.0.0.1:8080
+    # without a reverse proxy (EventSource + fetch need CORS when origins differ).
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_methods=["*"],
+        allow_headers=["*"],
     )
 
     @app.get("/")
@@ -64,6 +74,11 @@ def create_service_app(
     def health() -> dict[str, Any]:
         snapshot = read_models.get_live_ops_snapshot(entity_limit=3, incident_limit=3, alert_limit=3)
         return snapshot.system_health.model_dump(mode="json")
+
+    @app.get("/api/v1/live/overlay")
+    def live_overlay() -> dict[str, Any]:
+        """Latest normalized detection boxes from in-process live recognition (if running)."""
+        return get_live_overlay()
 
     @app.get("/api/v1/live/snapshot")
     def live_snapshot(

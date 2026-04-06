@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from trace_ml.core.config import ConfigError, load_settings
+from trace_aml.core.config import ConfigError, load_settings
 
 
 def test_load_settings_defaults(tmp_path: Path) -> None:

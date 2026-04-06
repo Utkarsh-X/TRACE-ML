@@ -14,10 +14,10 @@ import numpy as np
 import pyarrow as pa
 from loguru import logger
 
-from trace_ml.core.config import Settings
-from trace_ml.core.errors import StorageError
-from trace_ml.core.ids import next_unknown_entity_id
-from trace_ml.core.models import (
+from trace_aml.core.config import Settings
+from trace_aml.core.errors import StorageError
+from trace_aml.core.ids import next_unknown_entity_id
+from trace_aml.core.models import (
     ActionRecord,
     AlertRecord,
     DetectionEvent,

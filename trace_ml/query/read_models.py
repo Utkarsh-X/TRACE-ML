@@ -1,4 +1,4 @@
-"""UI-ready read models and timeline aggregation for TRACE-ML."""
+"""UI-ready read models and timeline aggregation for TRACE-AML."""
 
 from __future__ import annotations
 
@@ -6,7 +6,7 @@ from datetime import datetime
 import time
 from typing import Any
 
-from trace_ml.core.models import (
+from trace_aml.core.models import (
     ActionRecord,
     AlertRecord,
     EntityProfile,
@@ -19,8 +19,8 @@ from trace_ml.core.models import (
     TimelineItem,
     TimelineItemKind,
 )
-from trace_ml.core.streaming import EventStreamPublisher, NullEventStreamPublisher
-from trace_ml.store.vector_store import VectorStore
+from trace_aml.core.streaming import EventStreamPublisher, NullEventStreamPublisher
+from trace_aml.store.vector_store import VectorStore
 
 
 def _parse_iso(value: str | None) -> datetime | None:

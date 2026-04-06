@@ -1,10 +1,10 @@
 from pathlib import Path
 
-from trace_ml.core.config import load_settings
-from trace_ml.core.models import ActionTrigger, ActionType, AlertSeverity, IncidentRecord
-from trace_ml.pipeline.action_engine import ActionEngine
-from trace_ml.pipeline.policy_engine import PolicyEngine
-from trace_ml.store.vector_store import VectorStore
+from trace_aml.core.config import load_settings
+from trace_aml.core.models import ActionTrigger, ActionType, AlertSeverity, IncidentRecord
+from trace_aml.pipeline.action_engine import ActionEngine
+from trace_aml.pipeline.policy_engine import PolicyEngine
+from trace_aml.store.vector_store import VectorStore
 
 
 def _settings(tmp_path: Path):

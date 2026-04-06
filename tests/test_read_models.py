@@ -1,7 +1,7 @@
 from pathlib import Path
 
-from trace_ml.core.config import load_settings
-from trace_ml.core.models import (
+from trace_aml.core.config import load_settings
+from trace_aml.core.models import (
     ActionRecord,
     ActionStatus,
     ActionTrigger,
@@ -20,9 +20,9 @@ from trace_ml.core.models import (
     PersonRecord,
     TimelineItemKind,
 )
-from trace_ml.core.streaming import InMemoryEventStreamPublisher
-from trace_ml.query.read_models import IntelligenceReadModelService
-from trace_ml.store.vector_store import VectorStore
+from trace_aml.core.streaming import InMemoryEventStreamPublisher
+from trace_aml.query.read_models import IntelligenceReadModelService
+from trace_aml.store.vector_store import VectorStore
 
 
 def _settings(tmp_path: Path):

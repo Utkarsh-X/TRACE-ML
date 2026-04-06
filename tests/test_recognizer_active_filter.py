@@ -1,8 +1,8 @@
 import numpy as np
 
-from trace_ml.core.config import Settings
-from trace_ml.core.models import FaceCandidate
-from trace_ml.recognizers.arcface import ArcFaceRecognizer
+from trace_aml.core.config import Settings
+from trace_aml.core.models import FaceCandidate
+from trace_aml.recognizers.arcface import ArcFaceRecognizer
 
 
 class _RecognizerStub(ArcFaceRecognizer):

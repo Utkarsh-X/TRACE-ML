@@ -7,8 +7,8 @@ import time
 from collections import Counter, deque
 from dataclasses import dataclass, field
 
-from trace_ml.core.config import Settings
-from trace_ml.core.models import DecisionState, RecognitionMatch
+from trace_aml.core.config import Settings
+from trace_aml.core.models import DecisionState, RecognitionMatch
 
 
 @dataclass

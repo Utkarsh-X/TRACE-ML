@@ -41,7 +41,7 @@ Out of scope:
 
 Deliverables:
 
-- `trace_ml/service/app.py` app factory
+- `trace_aml/service/app.py` app factory
 - health and root endpoints
 - lazy dependency handling so CLI remains safe without web deps
 

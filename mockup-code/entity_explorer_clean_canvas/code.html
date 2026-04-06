@@ -103,8 +103,8 @@
 <div class="flex items-center space-x-12">
 <div class="text-lg font-bold tracking-tighter text-white uppercase">TRACE-AML</div>
 <nav class="hidden md:flex items-center space-x-8">
-<a class="text-neutral-400 hover:text-white transition-colors" href="#">Dashboard</a>
-<a class="text-white border-b-2 border-white pb-1" href="#">Investigations</a>
+<a class="text-neutral-400 hover:text-white transition-colors" href="../live_ops_intelligence_hub/code.html">Live Ops</a>
+<a class="text-white border-b-2 border-white pb-1" href="./code.html">Entities</a>
 <a class="text-neutral-400 hover:text-white transition-colors" href="#">Audit Log</a>
 <a class="text-neutral-400 hover:text-white transition-colors" href="#">Reports</a>
 </nav>
@@ -157,28 +157,35 @@
 </aside>
 <!-- Main Content Canvas -->
 <main class="col-start-2 p-10 ml-20">
+<div class="mb-10 flex flex-wrap gap-4 items-end">
+<div>
+<label class="font-label text-[0.6rem] text-outline uppercase tracking-widest block mb-1" for="entity-select">Entity</label>
+<select id="entity-select" class="bg-surface-container-high text-sm font-mono text-white border border-outline-variant px-3 py-2 min-w-[280px] max-w-full"></select>
+</div>
+<p class="text-[0.65rem] text-outline font-mono" id="entity-load-status"></p>
+</div>
 <!-- Header Section -->
 <div class="flex justify-between items-start mb-16">
 <div>
 <div class="flex items-center space-x-3 mb-2">
 <span class="w-1 h-1 bg-primary"></span>
-<span class="font-label text-[0.6875rem] uppercase tracking-[0.2em] text-outline">Entity Profile // ID: 8849-X</span>
+<span class="font-label text-[0.6875rem] uppercase tracking-[0.2em] text-outline" id="entity-profile-label">Entity Profile // ID: —</span>
 </div>
-<h1 class="font-headline text-5xl font-bold tracking-tighter text-white mb-4">ALEXIS_VAUGHN</h1>
+<h1 class="font-headline text-5xl font-bold tracking-tighter text-white mb-4" id="entity-display-name">—</h1>
 <div class="flex space-x-6">
 <div class="flex flex-col">
 <span class="font-label text-[0.6rem] text-neutral-500 uppercase tracking-widest">Status</span>
-<span class="font-body text-sm text-primary uppercase font-medium">Active Monitoring</span>
+<span class="font-body text-sm text-primary uppercase font-medium" id="entity-status">—</span>
 </div>
 <div class="flex flex-col border-l border-outline-variant pl-6">
-<span class="font-label text-[0.6rem] text-neutral-500 uppercase tracking-widest">Watchlist</span>
-<span class="font-body text-sm text-primary uppercase font-medium">Tier 1 Surveillance</span>
+<span class="font-label text-[0.6rem] text-neutral-500 uppercase tracking-widest">Type</span>
+<span class="font-body text-sm text-primary uppercase font-medium" id="entity-type">—</span>
 </div>
 </div>
 </div>
 <div class="text-right">
 <span class="font-label text-[0.6875rem] text-neutral-500 uppercase tracking-widest block mb-1">System Timestamp</span>
-<span class="font-body text-sm text-outline">2024-05-22 // 14:02:11.082 UTC</span>
+<span class="font-body text-sm text-outline" id="entity-clock">—</span>
 </div>
 </div>
 <!-- Asymmetrical Grid -->
@@ -248,55 +255,8 @@
 <button class="font-label text-[0.6rem] text-neutral-500 hover:text-white uppercase transition-colors">30D</button>
 </div>
 </div>
-<div class="space-y-4">
-<!-- Timeline Entry -->
-<div class="flex group cursor-pointer hover:bg-surface-container-low transition-all duration-150 p-4 -mx-4">
-<div class="w-24 shrink-0">
-<span class="font-label text-[0.6rem] text-neutral-500">14:02:11</span>
-</div>
-<div class="flex-1 flex flex-col">
-<div class="flex justify-between items-start mb-2">
-<span class="font-body text-sm text-white uppercase font-medium">Facial Recognition Confirmed</span>
-<span class="intel-label flex items-center">
-<span class="w-1 h-1 bg-primary mr-2"></span>
-<span class="font-label text-[0.6rem] text-white tracking-widest uppercase">CAM_102_NORTH</span>
-</span>
-</div>
-<p class="font-body text-xs text-neutral-400 max-w-lg">Entity identified entering secured perimeter at South Gate. Gait analysis matching signature VAUGHN-G8.</p>
-</div>
-</div>
-<!-- Timeline Entry -->
-<div class="flex group cursor-pointer hover:bg-surface-container-low transition-all duration-150 p-4 -mx-4">
-<div class="w-24 shrink-0">
-<span class="font-label text-[0.6rem] text-neutral-500">09:44:52</span>
-</div>
-<div class="flex-1 flex flex-col">
-<div class="flex justify-between items-start mb-2">
-<span class="font-body text-sm text-white uppercase font-medium">Digital Footprint Intersection</span>
-<span class="intel-label flex items-center">
-<span class="w-1 h-1 bg-primary mr-2"></span>
-<span class="font-label text-[0.6rem] text-white tracking-widest uppercase">NODE_TRACE_ALPHA</span>
-</span>
-</div>
-<p class="font-body text-xs text-neutral-400 max-w-lg">Connection detected to encrypted subnet 192.168.0.XX. Data packet size: 4.2GB.</p>
-</div>
-</div>
-<!-- Timeline Entry -->
-<div class="flex group cursor-pointer hover:bg-surface-container-low transition-all duration-150 p-4 -mx-4 opacity-60">
-<div class="w-24 shrink-0">
-<span class="font-label text-[0.6rem] text-neutral-500">MAY 21</span>
-</div>
-<div class="flex-1 flex flex-col">
-<div class="flex justify-between items-start mb-2">
-<span class="font-body text-sm text-white uppercase font-medium">Last Known Habitation</span>
-<span class="intel-label flex items-center">
-<span class="w-1 h-1 bg-primary mr-2"></span>
-<span class="font-label text-[0.6rem] text-white tracking-widest uppercase">RESD_04</span>
-</span>
-</div>
-<p class="font-body text-xs text-neutral-400 max-w-lg">Signal decay detected at residential beacon. Target likely mobile.</p>
-</div>
-</div>
+<div class="space-y-4 min-h-[120px]" id="entity-timeline-root">
+<p class="text-[0.72rem] text-outline font-mono">Loading timeline…</p>
 </div>
 </div>
 <!-- Linked Incidents (Side Panel) -->
@@ -305,26 +265,10 @@
 <span class="material-symbols-outlined text-primary text-sm">link</span>
 <h3 class="font-label text-xs uppercase tracking-[0.2em] text-white">Linked Incidents</h3>
 </div>
-<div class="space-y-8">
-<div>
-<span class="font-label text-[0.55rem] text-neutral-500 uppercase block mb-2">INCIDENT // #4401-22</span>
-<span class="font-body text-sm text-white block mb-1">Unauthorized Data Siphon</span>
-<span class="font-label text-[0.6rem] text-outline uppercase tracking-widest">Severity: High</span>
+<div class="space-y-8" id="entity-incidents-root">
+<p class="text-[0.72rem] text-outline font-mono">No incidents loaded</p>
 </div>
-<div>
-<span class="font-label text-[0.55rem] text-neutral-500 uppercase block mb-2">INCIDENT // #3911-09</span>
-<span class="font-body text-sm text-white block mb-1">Perimeter Breach (Attempted)</span>
-<span class="font-label text-[0.6rem] text-outline uppercase tracking-widest">Severity: Moderate</span>
-</div>
-<div>
-<span class="font-label text-[0.55rem] text-neutral-500 uppercase block mb-2">INCIDENT // #1102-X</span>
-<span class="font-body text-sm text-white block mb-1">Physical Surveillance Alert</span>
-<span class="font-label text-[0.6rem] text-outline uppercase tracking-widest">Severity: Informational</span>
-</div>
-</div>
-<button class="w-full mt-10 py-3 bg-white text-on-primary font-label text-[0.7rem] uppercase tracking-[0.2em] hover:bg-neutral-200 transition-all active:scale-95">
-                            Launch Full Forensic Inquiry
-                        </button>
+<a class="block w-full mt-10 py-3 bg-white text-on-primary font-label text-[0.7rem] uppercase tracking-[0.2em] hover:bg-neutral-200 transition-all active:scale-95 text-center" id="entity-open-incidents-link" href="../incidents_forensic_detail/code.html">Open Incidents workspace</a>
 </div>
 </div>
 </div>
@@ -338,5 +282,6 @@
 </footer>
 </main>
 </div>
-<!-- Floating Intelligence Bar (Bottom) -->
+<script src="../shared/trace_api.js"></script>
+<script src="./entity_explorer.js"></script>
 </body></html>

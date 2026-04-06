@@ -3,10 +3,10 @@ import time
 
 import numpy as np
 
-from trace_ml.core.models import RecognitionMatch
-from trace_ml.liveness.base import LivenessResult
-from trace_ml.pipeline.capture import FramePacket
-from trace_ml.pipeline.inference import InferenceWorker
+from trace_aml.core.models import RecognitionMatch
+from trace_aml.liveness.base import LivenessResult
+from trace_aml.pipeline.capture import FramePacket
+from trace_aml.pipeline.inference import InferenceWorker
 
 
 class _FakeRecognizer:

@@ -4,16 +4,16 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from trace_ml.core.config import Settings
-from trace_ml.core.ids import new_event_id
-from trace_ml.core.models import (
+from trace_aml.core.config import Settings
+from trace_aml.core.ids import new_event_id
+from trace_aml.core.models import (
     EntityStatus,
     EntityType,
     EventLocation,
     EventRecord,
     RecognitionMatch,
 )
-from trace_ml.store.vector_store import VectorStore
+from trace_aml.store.vector_store import VectorStore
 
 
 @dataclass

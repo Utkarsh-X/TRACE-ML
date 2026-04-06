@@ -1,9 +1,9 @@
 from pathlib import Path
 
-from trace_ml.core.config import load_settings
-from trace_ml.core.models import DecisionState, RecognitionMatch
-from trace_ml.pipeline.entity_resolver import EntityResolver
-from trace_ml.store.vector_store import VectorStore
+from trace_aml.core.config import load_settings
+from trace_aml.core.models import DecisionState, RecognitionMatch
+from trace_aml.pipeline.entity_resolver import EntityResolver
+from trace_aml.store.vector_store import VectorStore
 
 
 def _settings(tmp_path: Path):

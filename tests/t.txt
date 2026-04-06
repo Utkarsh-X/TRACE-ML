@@ -1,12 +1,12 @@
-(.venv311) PS D:\github FORK\TRACE-ML> python -V
+(.venv311) PS D:\github FORK\TRACE-AML> python -V
 Python 3.11.9
-(.venv311) PS D:\github FORK\TRACE-ML> python -m pytest -q
+(.venv311) PS D:\github FORK\TRACE-AML> python -m pytest -q
 .............................                                                                   [100%]
-(.venv311) PS D:\github FORK\TRACE-ML> python -m trace_ml --help
+(.venv311) PS D:\github FORK\TRACE-AML> python -m trace_aml --help
                                                                                                        
- Usage: python -m trace_ml [OPTIONS] COMMAND [ARGS]...                                                 
+ Usage: python -m trace_aml [OPTIONS] COMMAND [ARGS]...                                                 
                                                                                                        
- TRACE-ML v3 tactical CLI
+ TRACE-AML v3 tactical CLI
 
 ╭─ Options ───────────────────────────────────────────────────────────────────────────────────────────╮
 │ --config              -c      TEXT  Path to config.yaml                                             │
@@ -29,9 +29,9 @@ Python 3.11.9
 │ action     Action audit commands                                                                    │
 ╰─────────────────────────────────────────────────────────────────────────────────────────────────────╯
 
-(.venv311) PS D:\github FORK\TRACE-ML> python -m trace_ml person --help
+(.venv311) PS D:\github FORK\TRACE-AML> python -m trace_aml person --help
                                                                                                        
- Usage: python -m trace_ml person [OPTIONS] COMMAND [ARGS]...                                          
+ Usage: python -m trace_aml person [OPTIONS] COMMAND [ARGS]...                                          
                                                                                                        
  Person registry commands
 
@@ -47,9 +47,9 @@ Python 3.11.9
 │ delete   Delete person and linked embeddings/detections.                                            │
 ╰─────────────────────────────────────────────────────────────────────────────────────────────────────╯
 
-(.venv311) PS D:\github FORK\TRACE-ML> python -m trace_ml events --help
+(.venv311) PS D:\github FORK\TRACE-AML> python -m trace_aml events --help
                                                                                                        
- Usage: python -m trace_ml events [OPTIONS] COMMAND [ARGS]...                                          
+ Usage: python -m trace_aml events [OPTIONS] COMMAND [ARGS]...                                          
                                                                                                        
  Entity-event stream commands
 
@@ -60,9 +60,9 @@ Python 3.11.9
 │ tail  Show latest entity-linked event stream.                                                       │
 ╰─────────────────────────────────────────────────────────────────────────────────────────────────────╯
 
-(.venv311) PS D:\github FORK\TRACE-ML> python -m trace_ml alerts --help
+(.venv311) PS D:\github FORK\TRACE-AML> python -m trace_aml alerts --help
                                                                                                        
- Usage: python -m trace_ml alerts [OPTIONS] COMMAND [ARGS]...                                          
+ Usage: python -m trace_aml alerts [OPTIONS] COMMAND [ARGS]...                                          
                                                                                                        
  Alert stream commands
 
@@ -73,9 +73,9 @@ Python 3.11.9
 │ tail  Show latest rule-generated alerts.                                                            │
 ╰─────────────────────────────────────────────────────────────────────────────────────────────────────╯
 
-(.venv311) PS D:\github FORK\TRACE-ML> python -m trace_ml incident --help
+(.venv311) PS D:\github FORK\TRACE-AML> python -m trace_aml incident --help
                                                                                                        
- Usage: python -m trace_ml incident [OPTIONS] COMMAND [ARGS]...                                        
+ Usage: python -m trace_aml incident [OPTIONS] COMMAND [ARGS]...                                        
 
  Incident commands
 
@@ -89,9 +89,9 @@ Python 3.11.9
 │ set-severity  Set incident severity manually (operator control).                                    │
 ╰─────────────────────────────────────────────────────────────────────────────────────────────────────╯
 
-(.venv311) PS D:\github FORK\TRACE-ML> python -m trace_ml action --help
+(.venv311) PS D:\github FORK\TRACE-AML> python -m trace_aml action --help
                                                                                                        
- Usage: python -m trace_ml action [OPTIONS] COMMAND [ARGS]...                                          
+ Usage: python -m trace_aml action [OPTIONS] COMMAND [ARGS]...                                          
 
  Action audit commands
 
@@ -102,7 +102,7 @@ Python 3.11.9
 │ list  List action audit records for an incident.                                                    │
 ╰─────────────────────────────────────────────────────────────────────────────────────────────────────╯
 
-(.venv311) PS D:\github FORK\TRACE-ML> python -m trace_ml person list
+(.venv311) PS D:\github FORK\TRACE-AML> python -m trace_aml person list
 
   ID       Name          Category   State    Emb   Score   Updated                          
  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -110,7 +110,7 @@ Python 3.11.9
   PRC002   Demo Person   criminal   ready      3    0.63   2026-03-25T12:35:12.213510+00:00 
   PRC004   arjun_v2      criminal   active    10    0.69   2026-03-25T13:30:11.834234+00:00 
 
-(.venv311) PS D:\github FORK\TRACE-ML> python -m trace_ml person audit
+(.venv311) PS D:\github FORK\TRACE-AML> python -m trace_aml person audit
                                              Person Audit                                              
 
   Person   Current   Recommended   Emb   Valid/Total   Quality   Issues                                
@@ -119,7 +119,7 @@ Python 3.11.9
   PRC002   ready     ready           3          3/15      0.63   few_valid_images
   PRC004   active    active         10         10/30      0.69   none
 
-(.venv311) PS D:\github FORK\TRACE-ML> python -m trace_ml report summary
+(.venv311) PS D:\github FORK\TRACE-AML> python -m trace_aml report summary
 ╭──────────────────── Session Summary ────────────────────╮
 │ Total detections: 254                                   │
 │ Unique persons: 2                                       │
@@ -135,7 +135,7 @@ Python 3.11.9
   Unknown       unknown      26             0.36
   Demo Person   criminal      7            69.24
 
-(.venv311) PS D:\github FORK\TRACE-ML> python -m trace_ml report quality
+(.venv311) PS D:\github FORK\TRACE-AML> python -m trace_aml report quality
                       Low-quality / Non-active Enrollments                       
 
   Person   Name          State   Score   Emb   Valid/Total   Reason             
@@ -148,9 +148,9 @@ Python 3.11.9
 │ review_band: 56        │
 │ reject_band: 38        │
 ╰────────────────────────╯
-(.venv311) PS D:\github FORK\TRACE-ML> python -m trace_ml --config config.demo.yaml recognize live
+(.venv311) PS D:\github FORK\TRACE-AML> python -m trace_aml --config config.demo.yaml recognize live
 ╭───────────────────────────────────────╮
-│ TRACE-ML v3                           │
+│ TRACE-AML v3                           │
 │ Tactical CLI | Quality Core Hardening │
 ╰───────────────────────────────────────╯
 Press q on the OpenCV window to stop.
@@ -159,9 +159,9 @@ find model: C:\Users\Utkarsh/.insightface\models\buffalo_sc\det_500m.onnx detect
 Applied providers: ['CPUExecutionProvider'], with options: {'CPUExecutionProvider': {}}
 find model: C:\Users\Utkarsh/.insightface\models\buffalo_sc\w600k_mbf.onnx recognition ['None', 3, 112, 112] 127.5 127.5
 set det-size: (640, 640)
-D:\github FORK\TRACE-ML\.venv311\Lib\site-packages\insightface\utils\face_align.py:23: FutureWarning: `estimate` is deprecated since version 0.26 and will be removed in version 2.2. Please use `SimilarityTransform.from_estimate` class constructor instead.
+D:\github FORK\TRACE-AML\.venv311\Lib\site-packages\insightface\utils\face_align.py:23: FutureWarning: `estimate` is deprecated since version 0.26 and will be removed in version 2.2. Please use `SimilarityTransform.from_estimate` class constructor instead.
   tform.estimate(lmk, dst)
-(.venv311) PS D:\github FORK\TRACE-ML> python -m trace_ml history query --limit 30
+(.venv311) PS D:\github FORK\TRACE-AML> python -m trace_aml history query --limit 30
                                      Detection History                                      
 
   Timestamp                          Name       ID       Decision    Conf   Smooth   Track 
@@ -197,7 +197,7 @@ D:\github FORK\TRACE-ML\.venv311\Lib\site-packages\insightface\utils\face_align.
   2026-03-27T06:02:01.333706+00:00   arjun_v2   PRC004   accept     79.82    79.90   T0007
   2026-03-27T06:01:59.120471+00:00   arjun_v2   PRC004   accept     78.87    77.84   T0007
 
-(.venv311) PS D:\github FORK\TRACE-ML> python -m trace_ml events tail --limit 30
+(.venv311) PS D:\github FORK\TRACE-AML> python -m trace_aml events tail --limit 30
                                 Entity Event Stream                                
 
   Time                               Entity   Decision    Conf   Track   Source   
@@ -233,7 +233,7 @@ D:\github FORK\TRACE-ML\.venv311\Lib\site-packages\insightface\utils\face_align.
   2026-03-27T06:57:54.198205+00:00   PRC004   accept     69.73   T0002   webcam:0 
   2026-03-27T06:57:53.613671+00:00   PRC004   accept     73.44   T0002   webcam:0 
 
-(.venv311) PS D:\github FORK\TRACE-ML> python -m trace_ml alerts tail --limit 30
+(.venv311) PS D:\github FORK\TRACE-AML> python -m trace_aml alerts tail --limit 30
                                              Alert Stream                                              
 
   Time                      Severity   Entity   Type                 Events   Reason                   
@@ -269,7 +269,7 @@ D:\github FORK\TRACE-ML\.venv311\Lib\site-packages\insightface\utils\face_align.
   2026-03-27T05:09:46.39…   LOW        PRC004   REAPPEARANCE              3   REAPPEARANCE detected    
                                                                               with 3 events
 
-(.venv311) PS D:\github FORK\TRACE-ML> python -m trace_ml incident list --status open --limit 30
+(.venv311) PS D:\github FORK\TRACE-AML> python -m trace_aml incident list --status open --limit 30
                                                Incidents                                               
 
   ID               Entity   Status   Severity   Alerts   Start           Last Seen        Last Action  
@@ -277,9 +277,9 @@ D:\github FORK\TRACE-ML\.venv311\Lib\site-packages\insightface\utils\face_align.
   INC-20260327T…   PRC004   open     low             8   2026-03-27T0…   2026-03-27T06…                
   INC-20260327T…   UNK002   open     low             2   2026-03-27T0…   2026-03-27T06…                
 
-(.venv311) PS D:\github FORK\TRACE-ML> python -m trace_ml --config config.demo.yaml recognize live
+(.venv311) PS D:\github FORK\TRACE-AML> python -m trace_aml --config config.demo.yaml recognize live
 ╭───────────────────────────────────────╮
-│ TRACE-ML v3                           │
+│ TRACE-AML v3                           │
 │ Tactical CLI | Quality Core Hardening │
 ╰───────────────────────────────────────╯
 Press q on the OpenCV window to stop.
@@ -288,9 +288,9 @@ find model: C:\Users\Utkarsh/.insightface\models\buffalo_sc\det_500m.onnx detect
 Applied providers: ['CPUExecutionProvider'], with options: {'CPUExecutionProvider': {}}
 find model: C:\Users\Utkarsh/.insightface\models\buffalo_sc\w600k_mbf.onnx recognition ['None', 3, 112, 112] 127.5 127.5
 set det-size: (640, 640)
-D:\github FORK\TRACE-ML\.venv311\Lib\site-packages\insightface\utils\face_align.py:23: FutureWarning: `estimate` is deprecated since version 0.26 and will be removed in version 2.2. Please use `SimilarityTransform.from_estimate` class constructor instead.
+D:\github FORK\TRACE-AML\.venv311\Lib\site-packages\insightface\utils\face_align.py:23: FutureWarning: `estimate` is deprecated since version 0.26 and will be removed in version 2.2. Please use `SimilarityTransform.from_estimate` class constructor instead.
   tform.estimate(lmk, dst)
-(.venv311) PS D:\github FORK\TRACE-ML> python -m trace_ml alerts tail --limit 30
+(.venv311) PS D:\github FORK\TRACE-AML> python -m trace_aml alerts tail --limit 30
                                              Alert Stream                                              
 
   Time                      Severity   Entity   Type                 Events   Reason                   
@@ -356,7 +356,7 @@ D:\github FORK\TRACE-ML\.venv311\Lib\site-packages\insightface\utils\face_align.
   2026-03-27T05:10:23.06…   MEDIUM     PRC004   REAPPEARANCE             18   REAPPEARANCE detected    
                                                                               with 18 events
 
-(.venv311) PS D:\github FORK\TRACE-ML> python -m trace_ml incident list --status open --limit 30
+(.venv311) PS D:\github FORK\TRACE-AML> python -m trace_aml incident list --status open --limit 30
                                                Incidents                                               
 
   ID               Entity   Status   Severity   Alerts   Start           Last Seen        Last Action  
@@ -369,7 +369,7 @@ D:\github FORK\TRACE-ML\.venv311\Lib\site-packages\insightface\utils\face_align.
   INC-20260327T…   UNK005   open     low             2   2026-03-27T0…   2026-03-27T06…                
   INC-20260327T…   UNK002   open     low             2   2026-03-27T0…   2026-03-27T06…                
 
-(.venv311) PS D:\github FORK\TRACE-ML> python -m trace_ml incident show --id REAL_INCIDENT_ID
+(.venv311) PS D:\github FORK\TRACE-AML> python -m trace_aml incident show --id REAL_INCIDENT_ID
 ╭────────────── Incident Detail ──────────────╮
 │ Incident: INC-20260327T050946Z-1bc7222d     │
 │ Entity: PRC004                              │
@@ -395,9 +395,9 @@ D:\github FORK\TRACE-ML\.venv311\Lib\site-packages\insightface\utils\face_align.
   2026-03-27T05:10:35.1…   ALT-20260327T051035Z-7…   REAPPEARANCE   medium     REAPPEARANCE detected   
                                                                                with 22 events
 
-(.venv311) PS D:\github FORK\TRACE-ML> python -m trace_ml --config config.demo.yaml recognize live
+(.venv311) PS D:\github FORK\TRACE-AML> python -m trace_aml --config config.demo.yaml recognize live
 ╭───────────────────────────────────────╮
-│ TRACE-ML v3                           │
+│ TRACE-AML v3                           │
 │ Tactical CLI | Quality Core Hardening │
 ╰───────────────────────────────────────╯
 Press q on the OpenCV window to stop.
@@ -406,9 +406,9 @@ find model: C:\Users\Utkarsh/.insightface\models\buffalo_sc\det_500m.onnx detect
 Applied providers: ['CPUExecutionProvider'], with options: {'CPUExecutionProvider': {}}
 find model: C:\Users\Utkarsh/.insightface\models\buffalo_sc\w600k_mbf.onnx recognition ['None', 3, 112, 112] 127.5 127.5
 set det-size: (640, 640)
-D:\github FORK\TRACE-ML\.venv311\Lib\site-packages\insightface\utils\face_align.py:23: FutureWarning: `estimate` is deprecated since version 0.26 and will be removed in version 2.2. Please use `SimilarityTransform.from_estimate` class constructor instead.
+D:\github FORK\TRACE-AML\.venv311\Lib\site-packages\insightface\utils\face_align.py:23: FutureWarning: `estimate` is deprecated since version 0.26 and will be removed in version 2.2. Please use `SimilarityTransform.from_estimate` class constructor instead.
   tform.estimate(lmk, dst)
-(.venv311) PS D:\github FORK\TRACE-ML> python -m trace_ml alerts tail --limit 30
+(.venv311) PS D:\github FORK\TRACE-AML> python -m trace_aml alerts tail --limit 30
                                              Alert Stream                                              
 
   Time                      Severity   Entity   Type                 Events   Reason                   
@@ -474,7 +474,7 @@ D:\github FORK\TRACE-ML\.venv311\Lib\site-packages\insightface\utils\face_align.
   2026-03-27T06:01:40.52…   MEDIUM     PRC004   REAPPEARANCE             20   REAPPEARANCE detected    
                                                                               with 20 events
 
-(.venv311) PS D:\github FORK\TRACE-ML> python -m trace_ml incident list --status open --limit 30
+(.venv311) PS D:\github FORK\TRACE-AML> python -m trace_aml incident list --status open --limit 30
                                                Incidents                                               
 
   ID               Entity   Status   Severity   Alerts   Start           Last Seen        Last Action  
@@ -488,13 +488,13 @@ D:\github FORK\TRACE-ML\.venv311\Lib\site-packages\insightface\utils\face_align.
   INC-20260327T…   UNK005   open     low             2   2026-03-27T0…   2026-03-27T06…                
   INC-20260327T…   UNK002   open     low             2   2026-03-27T0…   2026-03-27T06…                
 
-(.venv311) PS D:\github FORK\TRACE-ML> python -m trace_ml incident set-severity --id REAL_INCIDENT_ID --severity hig
-Usage: python -m trace_ml incident set-severity [OPTIONS]
-Try 'python -m trace_ml incident set-severity --help' for help.
+(.venv311) PS D:\github FORK\TRACE-AML> python -m trace_aml incident set-severity --id REAL_INCIDENT_ID --severity hig
+Usage: python -m trace_aml incident set-severity [OPTIONS]
+Try 'python -m trace_aml incident set-severity --help' for help.
 ╭─ Error ─────────────────────────────────────────────────────────────────────────────────────────────╮
 │ Invalid value for '--severity': 'hig' is not one of 'low', 'medium', 'high'.                        │
 ╰─────────────────────────────────────────────────────────────────────────────────────────────────────╯
-(.venv311) PS D:\github FORK\TRACE-ML> python -m trace_ml incident show --id REAL_INCIDENT_ID
+(.venv311) PS D:\github FORK\TRACE-AML> python -m trace_aml incident show --id REAL_INCIDENT_ID
 ╭────────────── Incident Detail ──────────────╮
 │ Incident: INC-20260327T050946Z-1bc7222d     │
 │ Entity: PRC004                              │
@@ -520,15 +520,15 @@ Try 'python -m trace_ml incident set-severity --help' for help.
   2026-03-27T05:10:35.1…   ALT-20260327T051035Z-7…   REAPPEARANCE   medium     REAPPEARANCE detected   
                                                                                with 22 events
 
-(.venv311) PS D:\github FORK\TRACE-ML> python -m trace_ml action list --incident-id REAL_INCIDENT_ID
+(.venv311) PS D:\github FORK\TRACE-AML> python -m trace_aml action list --incident-id REAL_INCIDENT_ID
              Actions for REAL_INCIDENT_ID              
 
   Time   Action ID   Type   Trigger   Status   Reason 
  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-(.venv311) PS D:\github FORK\TRACE-ML> python -m trace_ml incident close --id REAL_INCIDENT_ID
+(.venv311) PS D:\github FORK\TRACE-AML> python -m trace_aml incident close --id REAL_INCIDENT_ID
 Closed incident REAL_INCIDENT_ID
-(.venv311) PS D:\github FORK\TRACE-ML> python -m trace_ml incident list --status open --limit 20
+(.venv311) PS D:\github FORK\TRACE-AML> python -m trace_aml incident list --status open --limit 20
                                                Incidents                                               
 
   ID               Entity   Status   Severity   Alerts   Start           Last Seen        Last Action  
@@ -542,16 +542,16 @@ Closed incident REAL_INCIDENT_ID
   INC-20260327T…   UNK005   open     low             2   2026-03-27T0…   2026-03-27T06…                
   INC-20260327T…   UNK002   open     low             2   2026-03-27T0…   2026-03-27T06…                
 
-(.venv311) PS D:\github FORK\TRACE-ML> python -m trace_ml incident list --status closed --limit 20
+(.venv311) PS D:\github FORK\TRACE-AML> python -m trace_aml incident list --status closed --limit 20
                                                Incidents                                               
 
   ID               Entity   Status   Severity   Alerts   Start           Last Seen        Last Action  
  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 
   INC-20260327T…   PRC004   closed   low             5   2026-03-27T0…   2026-03-27T05…                
 
-(.venv311) PS D:\github FORK\TRACE-ML> python -m trace_ml doctor
+(.venv311) PS D:\github FORK\TRACE-AML> python -m trace_aml doctor
 ╭───────────────────────────────────────╮
-│ TRACE-ML v3                           │
+│ TRACE-AML v3                           │
 │ Tactical CLI | Quality Core Hardening │
 ╰───────────────────────────────────────╯
 
@@ -571,7 +571,7 @@ Closed incident REAL_INCIDENT_ID
   path:data\logs          OK       ready              
   camera                  OK       device 0 available 
 
-(.venv311) PS D:\github FORK\TRACE-ML> python -m trace_ml person list
+(.venv311) PS D:\github FORK\TRACE-AML> python -m trace_aml person list
 
   ID       Name          Category   State    Emb   Score   Updated                          
  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -579,7 +579,7 @@ Closed incident REAL_INCIDENT_ID
   PRC002   Demo Person   criminal   ready      3    0.63   2026-03-25T12:35:12.213510+00:00 
   PRC004   arjun_v2      criminal   active    10    0.69   2026-03-25T13:30:11.834234+00:00 
 
-(.venv311) PS D:\github FORK\TRACE-ML> python -m trace_ml person audit
+(.venv311) PS D:\github FORK\TRACE-AML> python -m trace_aml person audit
                                              Person Audit                                              
 
   Person   Current   Recommended   Emb   Valid/Total   Quality   Issues                                
@@ -588,14 +588,14 @@ Closed incident REAL_INCIDENT_ID
   PRC002   ready     ready           3          3/15      0.63   few_valid_images
   PRC004   active    active         10         10/30      0.69   none
 
-(.venv311) PS D:\github FORK\TRACE-ML> python -m trace_ml train rebuild
+(.venv311) PS D:\github FORK\TRACE-AML> python -m trace_aml train rebuild
 2026-03-27 12:33:03 | WARNING | No embeddings provided for person PRC001
 Applied providers: ['CPUExecutionProvider'], with options: {'CPUExecutionProvider': {}}
 find model: C:\Users\Utkarsh/.insightface\models\buffalo_sc\det_500m.onnx detection [1, 3, '?', '?'] 127.5 128.0
 Applied providers: ['CPUExecutionProvider'], with options: {'CPUExecutionProvider': {}}
 find model: C:\Users\Utkarsh/.insightface\models\buffalo_sc\w600k_mbf.onnx recognition ['None', 3, 112, 112] 127.5 127.5
 set det-size: (640, 640)
-D:\github FORK\TRACE-ML\.venv311\Lib\site-packages\insightface\utils\face_align.py:23: FutureWarning: `estimate` is deprecated since version 0.26 and will be removed in version 2.2. Please use `SimilarityTransform.from_estimate` class constructor instead.
+D:\github FORK\TRACE-AML\.venv311\Lib\site-packages\insightface\utils\face_align.py:23: FutureWarning: `estimate` is deprecated since version 0.26 and will be removed in version 2.2. Please use `SimilarityTransform.from_estimate` class constructor instead.
   tform.estimate(lmk, dst)
       Embedding Rebuild       
 
@@ -609,17 +609,17 @@ D:\github FORK\TRACE-ML\.venv311\Lib\site-packages\insightface\utils\face_align.
   Ready persons            1
   Blocked persons          0
 
-(.venv311) PS D:\github FORK\TRACE-ML> .python -m trace_ml history query --limit 20
+(.venv311) PS D:\github FORK\TRACE-AML> .python -m trace_aml history query --limit 20
 .python : The term '.python' is not recognized as the name of a cmdlet, function, script file, or 
 operable program. Check the spelling of the name, or if a path was included, verify that the path is   
 correct and try again.
 At line:1 char:1
-+ .python -m trace_ml history query --limit 20
++ .python -m trace_aml history query --limit 20
 + ~~~~~~~
     + CategoryInfo          : ObjectNotFound: (.python:String) [], CommandNotFoundException
     + FullyQualifiedErrorId : CommandNotFoundException
 
-(.venv311) PS D:\github FORK\TRACE-ML> python -m trace_ml history query --limit 20
+(.venv311) PS D:\github FORK\TRACE-AML> python -m trace_aml history query --limit 20
                                      Detection History                                      
 
   Timestamp                          Name       ID       Decision    Conf   Smooth   Track 
@@ -645,7 +645,7 @@ At line:1 char:1
   2026-03-27T06:59:35.374951+00:00   arjun_v2   PRC004   accept     66.70    66.70   T0013
   2026-03-27T06:59:31.165871+00:00   arjun_v2   PRC004   review     43.40    51.22   T0011
 
-(.venv311) PS D:\github FORK\TRACE-ML> python -m trace_ml report summary
+(.venv311) PS D:\github FORK\TRACE-AML> python -m trace_aml report summary
 ╭──────────────────── Session Summary ────────────────────╮
 │ Total detections: 311                                   │
 │ Unique persons: 2                                       │
@@ -661,7 +661,7 @@ At line:1 char:1
   Unknown       unknown      26             0.36
   Demo Person   criminal      7            69.24
 
-(.venv311) PS D:\github FORK\TRACE-ML> python -m trace_ml report quality
+(.venv311) PS D:\github FORK\TRACE-AML> python -m trace_aml report quality
                       Low-quality / Non-active Enrollments                       
 
   Person   Name          State   Score   Emb   Valid/Total   Reason             
@@ -674,9 +674,9 @@ At line:1 char:1
 │ review_band: 72        │
 │ reject_band: 40        │
 ╰────────────────────────╯
-(.venv311) PS D:\github FORK\TRACE-ML> python -m trace_ml export csv
+(.venv311) PS D:\github FORK\TRACE-AML> python -m trace_aml export csv
 Exported data\exports\detections_20260327T070341Z.csv
-(.venv311) PS D:\github FORK\TRACE-ML> python -m trace_ml events tail --limit 20
+(.venv311) PS D:\github FORK\TRACE-AML> python -m trace_aml events tail --limit 20
                                 Entity Event Stream                                
 
   Time                               Entity   Decision    Conf   Track   Source   
@@ -702,7 +702,7 @@ Exported data\exports\detections_20260327T070341Z.csv
   2026-03-27T06:59:56.125665+00:00   PRC004   accept     75.50   T0024   webcam:0 
   2026-03-27T06:59:55.224675+00:00   PRC004   accept     72.83   T0023   webcam:0 
 
-(.venv311) PS D:\github FORK\TRACE-ML> python -m trace_ml alerts tail --limit 20
+(.venv311) PS D:\github FORK\TRACE-AML> python -m trace_aml alerts tail --limit 20
                                              Alert Stream                                              
 
   Time                      Severity   Entity   Type                 Events   Reason                   
@@ -748,7 +748,7 @@ Exported data\exports\detections_20260327T070341Z.csv
   2026-03-27T06:59:13.42…   LOW        UNK004   REAPPEARANCE              3   REAPPEARANCE detected    
                                                                               with 3 events
 
-(.venv311) PS D:\github FORK\TRACE-ML> python -m trace_ml incident list --limit 20
+(.venv311) PS D:\github FORK\TRACE-AML> python -m trace_aml incident list --limit 20
                                                Incidents                                               
 
   ID               Entity   Status   Severity   Alerts   Start           Last Seen        Last Action  
@@ -763,7 +763,7 @@ Exported data\exports\detections_20260327T070341Z.csv
   INC-20260327T…   UNK002   open     low             2   2026-03-27T0…   2026-03-27T06…                
   INC-20260327T…   PRC004   closed   low             5   2026-03-27T0…   2026-03-27T05…                
 
-(.venv311) PS D:\github FORK\TRACE-ML> python -m trace_ml incident show --id INC-DOES-NOT-EXIST
+(.venv311) PS D:\github FORK\TRACE-AML> python -m trace_aml incident show --id INC-DOES-NOT-EXIST
 ╭────────────── Incident Detail ──────────────╮
 │ Incident: INC-20260327T050946Z-1bc7222d     │
 │ Entity: PRC004                              │
@@ -789,5 +789,5 @@ Exported data\exports\detections_20260327T070341Z.csv
   2026-03-27T05:10:35.1…   ALT-20260327T051035Z-7…   REAPPEARANCE   medium     REAPPEARANCE detected   
                                                                                with 22 events
 
-(.venv311) PS D:\github FORK\TRACE-ML> python -m trace_ml incident close --id INC-DOES-NOT-EXIST
+(.venv311) PS D:\github FORK\TRACE-AML> python -m trace_aml incident close --id INC-DOES-NOT-EXIST
 Closed incident INC-DOES-NOT-EXIST

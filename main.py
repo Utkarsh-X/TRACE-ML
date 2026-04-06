@@ -1,10 +1,10 @@
 """Legacy entrypoint compatibility.
 
-TRACE-ML v3 official entrypoint:
-    trace-ml --help
+TRACE-AML v3 official entrypoint:
+    trace-aml --help
 """
 
-from trace_ml.cli import app
+from trace_aml.cli import app
 
 
 if __name__ == "__main__":

@@ -16,12 +16,12 @@ Use this document as the single execution script before moving to Service Layer 
 & ".\.venv311\Scripts\Activate.ps1"
 python -V
 python -m pytest -q
-python -m trace_ml --help
-python -m trace_ml person --help
-python -m trace_ml events --help
-python -m trace_ml alerts --help
-python -m trace_ml incident --help
-python -m trace_ml action --help
+python -m trace_aml --help
+python -m trace_aml person --help
+python -m trace_aml events --help
+python -m trace_aml alerts --help
+python -m trace_aml incident --help
+python -m trace_aml action --help
 ```
 
 Pass criteria:
@@ -33,10 +33,10 @@ Pass criteria:
 ## 2) Baseline Data Snapshot
 
 ```powershell
-python -m trace_ml person list
-python -m trace_ml person audit
-python -m trace_ml report summary
-python -m trace_ml report quality
+python -m trace_aml person list
+python -m trace_aml person audit
+python -m trace_aml report summary
+python -m trace_aml report quality
 ```
 
 Record:
@@ -50,15 +50,15 @@ Record:
 ## Scenario A: Known Entity Stability
 1. Start live:
 ```powershell
-python -m trace_ml --config config.demo.yaml recognize live
+python -m trace_aml --config config.demo.yaml recognize live
 ```
 2. Stay in frame continuously for 30-60 seconds, then quit with `q`.
 3. Validate:
 ```powershell
-python -m trace_ml history query --limit 30
-python -m trace_ml events tail --limit 30
-python -m trace_ml alerts tail --limit 30
-python -m trace_ml incident list --status open --limit 30
+python -m trace_aml history query --limit 30
+python -m trace_aml events tail --limit 30
+python -m trace_aml alerts tail --limit 30
+python -m trace_aml incident list --status open --limit 30
 ```
 
 Expected:
@@ -72,12 +72,12 @@ Expected:
 - hide face / occlude / leave frame / return repeatedly.
 2. Validate:
 ```powershell
-python -m trace_ml alerts tail --limit 30
-python -m trace_ml incident list --status open --limit 30
+python -m trace_aml alerts tail --limit 30
+python -m trace_aml incident list --status open --limit 30
 ```
 3. Pick real incident ID from list and inspect:
 ```powershell
-python -m trace_ml incident show --id REAL_INCIDENT_ID
+python -m trace_aml incident show --id REAL_INCIDENT_ID
 ```
 
 Expected:
@@ -88,8 +88,8 @@ Expected:
 1. Enter/exit frame quickly multiple times in one live session.
 2. Validate:
 ```powershell
-python -m trace_ml alerts tail --limit 30
-python -m trace_ml incident list --status open --limit 30
+python -m trace_aml alerts tail --limit 30
+python -m trace_aml incident list --status open --limit 30
 ```
 
 Expected:
@@ -103,12 +103,12 @@ Expected:
 ## A) Operator Severity Control
 1. List incidents and copy one full ID:
 ```powershell
-python -m trace_ml incident list --status open --limit 20
+python -m trace_aml incident list --status open --limit 20
 ```
 2. Set severity:
 ```powershell
-python -m trace_ml incident set-severity --id REAL_INCIDENT_ID --severity high
-python -m trace_ml incident show --id REAL_INCIDENT_ID
+python -m trace_aml incident set-severity --id REAL_INCIDENT_ID --severity high
+python -m trace_aml incident show --id REAL_INCIDENT_ID
 ```
 
 Expected:
@@ -117,7 +117,7 @@ Expected:
 
 ## B) Action Audit Visibility
 ```powershell
-python -m trace_ml action list --incident-id REAL_INCIDENT_ID
+python -m trace_aml action list --incident-id REAL_INCIDENT_ID
 ```
 
 Expected:
@@ -129,9 +129,9 @@ Expected:
 
 ## C) Incident Lifecycle Control
 ```powershell
-python -m trace_ml incident close --id REAL_INCIDENT_ID
-python -m trace_ml incident list --status open --limit 20
-python -m trace_ml incident list --status closed --limit 20
+python -m trace_aml incident close --id REAL_INCIDENT_ID
+python -m trace_aml incident list --status open --limit 20
+python -m trace_aml incident list --status closed --limit 20
 ```
 
 Expected:
@@ -144,17 +144,17 @@ Expected:
 Run all primary command surfaces once:
 
 ```powershell
-python -m trace_ml doctor
-python -m trace_ml person list
-python -m trace_ml person audit
-python -m trace_ml train rebuild
-python -m trace_ml history query --limit 20
-python -m trace_ml report summary
-python -m trace_ml report quality
-python -m trace_ml export csv
-python -m trace_ml events tail --limit 20
-python -m trace_ml alerts tail --limit 20
-python -m trace_ml incident list --limit 20
+python -m trace_aml doctor
+python -m trace_aml person list
+python -m trace_aml person audit
+python -m trace_aml train rebuild
+python -m trace_aml history query --limit 20
+python -m trace_aml report summary
+python -m trace_aml report quality
+python -m trace_aml export csv
+python -m trace_aml events tail --limit 20
+python -m trace_aml alerts tail --limit 20
+python -m trace_aml incident list --limit 20
 ```
 
 Pass criteria:
@@ -166,9 +166,9 @@ Pass criteria:
 ## 6) Negative / Error-Path Tests
 
 ```powershell
-python -m trace_ml incident show --id INC-DOES-NOT-EXIST
-python -m trace_ml incident close --id INC-DOES-NOT-EXIST
-python -m trace_ml action list --incident-id INC-DOES-NOT-EXIST
+python -m trace_aml incident show --id INC-DOES-NOT-EXIST
+python -m trace_aml incident close --id INC-DOES-NOT-EXIST
+python -m trace_aml action list --incident-id INC-DOES-NOT-EXIST
 ```
 
 Expected:
@@ -182,10 +182,10 @@ Expected:
 ## A) Query Stress (read path)
 Open PowerShell and run:
 ```powershell
-1..100 | ForEach-Object { python -m trace_ml history query --limit 50 > $null }
-1..100 | ForEach-Object { python -m trace_ml events tail --limit 50 > $null }
-1..100 | ForEach-Object { python -m trace_ml alerts tail --limit 50 > $null }
-1..50  | ForEach-Object { python -m trace_ml incident list --limit 50 > $null }
+1..100 | ForEach-Object { python -m trace_aml history query --limit 50 > $null }
+1..100 | ForEach-Object { python -m trace_aml events tail --limit 50 > $null }
+1..100 | ForEach-Object { python -m trace_aml alerts tail --limit 50 > $null }
+1..50  | ForEach-Object { python -m trace_aml incident list --limit 50 > $null }
 ```
 
 Expected:
@@ -196,9 +196,9 @@ Expected:
 - During run, vary conditions: lighting, distance, occlusion, enter/exit.
 - After run:
 ```powershell
-python -m trace_ml report summary
-python -m trace_ml alerts tail --limit 50
-python -m trace_ml incident list --limit 50
+python -m trace_aml report summary
+python -m trace_aml alerts tail --limit 50
+python -m trace_aml incident list --limit 50
 ```
 
 Expected:

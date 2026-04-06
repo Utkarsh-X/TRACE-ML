@@ -5,7 +5,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime, timezone
 
-from trace_ml.core.models import PersonCategory
+from trace_aml.core.models import PersonCategory
 
 
 def build_person_prefix(category: PersonCategory) -> str:

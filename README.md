@@ -1,9 +1,9 @@
-# TRACE-ML v3
+# TRACE-AML v3
 
 CLI-first face recognition demo stack for final-year-project presentation.
 
 ## What This Version Delivers
-- Fresh package-based runtime (`trace_ml/`) with `trace-ml` command surface.
+- Fresh package-based runtime (`trace_aml/`) with `trace-aml` command surface.
 - InsightFace `buffalo_sc` recognition pipeline (SCRFD + ArcFace embeddings).
 - LanceDB for person/embedding/detection storage.
 - DuckDB analytics helpers for history queries, summary, and CSV export.
@@ -24,57 +24,57 @@ pip install -r requirements.txt
 
 ## Verify Environment
 ```powershell
-trace-ml doctor
+trace-aml doctor
 ```
 
 ## Basic Workflow
 1. Register a person:
 ```powershell
-trace-ml person add --name "John Doe" --category criminal --images-dir "C:\faces\john"
+trace-aml person add --name "John Doe" --category criminal --images-dir "C:\faces\john"
 ```
 or capture from webcam:
 ```powershell
-trace-ml person add --name "John Doe" --category criminal --capture-count 10
+trace-aml person add --name "John Doe" --category criminal --capture-count 10
 ```
 or append more captures to an existing person (recommended for robustness):
 ```powershell
-trace-ml person capture --person-id PRC004 --capture-count 20 --capture-mode manual
+trace-aml person capture --person-id PRC004 --capture-count 20 --capture-mode manual
 ```
 
 2. Build embeddings:
 ```powershell
-trace-ml train rebuild
+trace-aml train rebuild
 ```
 
 3. Run live recognition:
 ```powershell
-trace-ml recognize live
+trace-aml recognize live
 ```
 
 4. Query history:
 ```powershell
-trace-ml history query --limit 20
+trace-aml history query --limit 20
 ```
 
 5. Show summary:
 ```powershell
-trace-ml report summary
+trace-aml report summary
 ```
 
 6. Audit enrollment quality/lifecycle:
 ```powershell
-trace-ml person audit --apply
-trace-ml report quality
+trace-aml person audit --apply
+trace-aml report quality
 ```
 
 7. Export CSV:
 ```powershell
-trace-ml export csv
+trace-aml export csv
 ```
 
 8. Run Service Layer (for UI integration):
 ```powershell
-trace-ml service run --host 127.0.0.1 --port 8080
+trace-aml service run --host 127.0.0.1 --port 8080
 ```
 Key endpoints:
 - `GET /api/v1/live/snapshot`
@@ -84,25 +84,25 @@ Key endpoints:
 - `GET /api/v1/events/stream` (SSE)
 
 ## Demo Script (Examiner Flow)
-1. `trace-ml doctor`
-2. `trace-ml person list`
-3. `trace-ml train rebuild`
-4. `trace-ml recognize live` (show live webcam recognition and overlay)
-5. `trace-ml history query --limit 10`
-6. `trace-ml report summary`
-7. `trace-ml export csv`
+1. `trace-aml doctor`
+2. `trace-aml person list`
+3. `trace-aml train rebuild`
+4. `trace-aml recognize live` (show live webcam recognition and overlay)
+5. `trace-aml history query --limit 10`
+6. `trace-aml report summary`
+7. `trace-aml export csv`
 
 ## Config
 Default config is `config.yaml`.
 
 You can pass a custom config:
 ```powershell
-trace-ml --config .\config.yaml doctor
+trace-aml --config .\config.yaml doctor
 ```
 Profile presets:
 ```powershell
-trace-ml --config .\config.demo.yaml recognize live
-trace-ml --config .\config.strict.yaml recognize live
+trace-aml --config .\config.demo.yaml recognize live
+trace-aml --config .\config.strict.yaml recognize live
 ```
 
 Important MVP constraint:
@@ -114,7 +114,7 @@ pytest
 ```
 
 ## Notes
-- Legacy scripts remain in repository as historical reference, but v3 runtime is `trace-ml`.
+- Legacy scripts remain in repository as historical reference, but v3 runtime is `trace-aml`.
 - Liveness is scaffolded and disabled by default (hooks and metrics are in place for later enforcement).
 - Records that do not pass quality/lifecycle gates are blocked from active recognition by default.
 - GUI integration (Electron or other framework) can call these same core services later.

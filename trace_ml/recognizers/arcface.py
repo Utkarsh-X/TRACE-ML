@@ -8,11 +8,11 @@ from typing import Any
 import cv2
 import numpy as np
 
-from trace_ml.core.config import Settings
-from trace_ml.core.errors import DependencyError, RecognitionError
-from trace_ml.core.models import DecisionState, FaceCandidate, RecognitionMatch
-from trace_ml.liveness.base import BaseLivenessChecker, LivenessResult, PassThroughLiveness
-from trace_ml.store.vector_store import VectorStore
+from trace_aml.core.config import Settings
+from trace_aml.core.errors import DependencyError, RecognitionError
+from trace_aml.core.models import DecisionState, FaceCandidate, RecognitionMatch
+from trace_aml.liveness.base import BaseLivenessChecker, LivenessResult, PassThroughLiveness
+from trace_aml.store.vector_store import VectorStore
 
 
 class ArcFaceRecognizer:

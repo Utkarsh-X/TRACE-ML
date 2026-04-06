@@ -4,13 +4,13 @@ Date: 2026-04-04
 
 ## Purpose
 
-This roadmap defines the implementation path for evolving TRACE-ML from a pipeline-and-CLI backend into a queryable, explainable, UI-ready intelligence backend.
+This roadmap defines the implementation path for evolving TRACE-AML from a pipeline-and-CLI backend into a queryable, explainable, UI-ready intelligence backend.
 
 This roadmap does **not** cover API wiring or frontend implementation. It focuses on backend capabilities that must exist before the service layer can be built cleanly.
 
 ## Current Baseline
 
-TRACE-ML already has a working operational chain:
+TRACE-AML already has a working operational chain:
 
 ```text
 Detection -> Event -> Alert -> Incident -> Action

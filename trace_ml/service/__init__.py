@@ -1,5 +1,5 @@
-"""Service layer entrypoints for TRACE-ML."""
+"""Service layer entrypoints for TRACE-AML."""
 
-from trace_ml.service.app import create_service_app
+from trace_aml.service.app import create_service_app
 
 __all__ = ["create_service_app"]

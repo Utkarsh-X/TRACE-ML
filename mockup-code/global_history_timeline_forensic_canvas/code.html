@@ -101,10 +101,10 @@
 <div class="flex items-center gap-8">
 <span class="font-['Inter'] font-black text-xl tracking-tighter text-[#ffffff]">TRACE-AML</span>
 <nav class="hidden md:flex gap-6 items-center">
-<a class="font-['Inter'] font-medium text-[0.875rem] tracking-tight text-[#c6c6c6] hover:text-[#ffffff] transition-colors" href="#">Live Ops</a>
-<a class="font-['Inter'] font-medium text-[0.875rem] tracking-tight text-[#c6c6c6] hover:text-[#ffffff] transition-colors" href="#">Incidents</a>
-<a class="font-['Inter'] font-medium text-[0.875rem] tracking-tight text-[#c6c6c6] hover:text-[#ffffff] transition-colors" href="#">Entities</a>
-<a class="font-['Inter'] font-medium text-[0.875rem] tracking-tight text-[#ffffff] border-b border-[#ffffff] pb-1" href="#">History</a>
+<a class="font-['Inter'] font-medium text-[0.875rem] tracking-tight text-[#c6c6c6] hover:text-[#ffffff] transition-colors" href="../live_ops_intelligence_hub/code.html">Live Ops</a>
+<a class="font-['Inter'] font-medium text-[0.875rem] tracking-tight text-[#c6c6c6] hover:text-[#ffffff] transition-colors" href="../incidents_forensic_detail/code.html">Incidents</a>
+<a class="font-['Inter'] font-medium text-[0.875rem] tracking-tight text-[#c6c6c6] hover:text-[#ffffff] transition-colors" href="../entity_explorer_clean_canvas/code.html">Entities</a>
+<a class="font-['Inter'] font-medium text-[0.875rem] tracking-tight text-[#ffffff] border-b border-[#ffffff] pb-1" href="./code.html">History</a>
 <a class="font-['Inter'] font-medium text-[0.875rem] tracking-tight text-[#c6c6c6] hover:text-[#ffffff] transition-colors" href="#">Database</a>
 <a class="font-['Inter'] font-medium text-[0.875rem] tracking-tight text-[#c6c6c6] hover:text-[#ffffff] transition-colors" href="#">Settings</a>
 </nav>
@@ -151,7 +151,7 @@
 <!-- Left Panel: Investigation Timeline -->
 <section class="flex-1 overflow-y-auto p-8 custom-scrollbar bg-surface-container-lowest">
 <div class="max-w-4xl mx-auto">
-<div class="flex justify-between items-end mb-12">
+<div class="flex justify-between items-end mb-8">
 <div>
 <h1 class="text-display-md font-bold leading-none tracking-tight mb-2">Global History</h1>
 <p class="text-on-surface-variant font-label text-xs uppercase tracking-[0.2em]">Forensic Thread / TRACE-01-AX-99</p>
@@ -161,105 +161,26 @@
 <span class="px-3 py-1 bg-primary text-on-primary font-label text-[0.6875rem] font-bold">MODE: FORENSIC</span>
 </div>
 </div>
-<div class="investigation-thread space-y-24">
-<!-- Entity Group 1 -->
-<div class="relative grid grid-cols-11 items-center">
-<div class="col-span-5 text-right pr-12">
-<div class="bg-surface-container-low p-5 rounded-lg inline-block text-left w-full max-w-sm">
-<div class="flex justify-between items-start mb-4">
-<span class="font-label text-xs text-on-surface-variant">2023-11-24T14:22:01.002Z</span>
-<span class="material-symbols-outlined text-primary text-sm" data-icon="flag" style="font-variation-settings: 'FILL' 1;">flag</span>
-</div>
-<h3 class="headline-sm font-bold mb-1">Inbound Wire Transfer</h3>
-<p class="text-on-surface-variant text-body-md mb-4">High-volume transfer originating from flagged offshore node. Layering detected.</p>
-<div class="flex gap-4">
+<div class="flex flex-wrap gap-4 mb-8 items-end">
 <div>
-<p class="text-[0.625rem] font-label text-on-surface-variant uppercase">Amount</p>
-<p class="font-label text-sm">$4,220,000.00</p>
+<label class="font-label text-xs text-on-surface-variant uppercase block" for="history-filter-entity">entity_id</label>
+<input class="mt-1 bg-surface-container-high border border-outline-variant px-3 py-2 font-mono text-sm text-white w-56 max-w-full" id="history-filter-entity" placeholder="optional" type="text"/>
 </div>
 <div>
-<p class="text-[0.625rem] font-label text-on-surface-variant uppercase">Asset</p>
-<p class="font-label text-sm">USDT/TRC20</p>
+<label class="font-label text-xs text-on-surface-variant uppercase block" for="history-filter-kind">kind</label>
+<select class="mt-1 bg-surface-container-high border border-outline-variant px-3 py-2 font-mono text-sm text-white" id="history-filter-kind">
+<option value="">all</option>
+<option value="event">event</option>
+<option value="alert">alert</option>
+<option value="incident">incident</option>
+<option value="action">action</option>
+</select>
 </div>
+<button class="px-4 py-2 bg-primary text-on-primary font-label text-xs uppercase tracking-widest" id="history-refresh" type="button">Refresh</button>
+<span class="text-xs font-mono text-outline" id="history-status"></span>
 </div>
-</div>
-</div>
-<div class="col-span-1 flex justify-center relative z-10">
-<div class="w-3 h-3 bg-primary rounded-full shadow-[0_0_15px_rgba(255,255,255,0.8)]"></div>
-</div>
-<div class="col-span-5 pl-12">
-<div class="flex items-center gap-4">
-<div class="w-12 h-12 rounded-full bg-surface-container-high flex items-center justify-center">
-<span class="material-symbols-outlined text-on-surface" data-icon="account_balance">account_balance</span>
-</div>
-<div>
-<p class="font-label text-xs text-on-surface-variant mb-1">Entity ID</p>
-<p class="font-bold text-headline-sm leading-tight">Vanguard Capital</p>
-<p class="font-label text-[0.6875rem] text-on-surface-variant">0x71C765...d897</p>
-</div>
-</div>
-</div>
-</div>
-<!-- Entity Group 2 -->
-<div class="relative grid grid-cols-11 items-center">
-<div class="col-span-5 text-right pr-12">
-<div class="flex items-center justify-end gap-4">
-<div>
-<p class="font-label text-xs text-on-surface-variant mb-1">Entity ID</p>
-<p class="font-bold text-headline-sm leading-tight">Marcus Thorne</p>
-<p class="font-label text-[0.6875rem] text-on-surface-variant">MT-0982-UK</p>
-</div>
-<div class="w-12 h-12 rounded-full bg-surface-container-high flex items-center justify-center">
-<span class="material-symbols-outlined text-on-surface" data-icon="person">person</span>
-</div>
-</div>
-</div>
-<div class="col-span-1 flex justify-center relative z-10">
-<div class="w-2 h-2 bg-on-surface-variant rounded-full border-2 border-surface-container-lowest"></div>
-</div>
-<div class="col-span-5 pl-12">
-<div class="bg-surface-container-low p-5 rounded-lg inline-block text-left w-full max-w-sm">
-<div class="flex justify-between items-start mb-4">
-<span class="font-label text-xs text-on-surface-variant">2023-11-24T16:05:12.441Z</span>
-<span class="material-symbols-outlined text-on-surface-variant text-sm" data-icon="location_on">location_on</span>
-</div>
-<h3 class="headline-sm font-bold mb-1">Geographic Shift</h3>
-<p class="text-on-surface-variant text-body-md mb-4">Device activity logged in Dubai, UAE within 2 hours of London activity.</p>
-<div class="flex items-center gap-2">
-<span class="px-2 py-0.5 bg-surface-bright rounded text-[0.625rem] font-label">IP: 82.1.22.4</span>
-<span class="px-2 py-0.5 bg-surface-bright rounded text-[0.625rem] font-label">UA: TRACE-V3</span>
-</div>
-</div>
-</div>
-</div>
-<!-- Entity Group 3 -->
-<div class="relative grid grid-cols-11 items-center">
-<div class="col-span-5 text-right pr-12">
-<div class="bg-surface-container-low p-5 rounded-lg inline-block text-left w-full max-w-sm">
-<div class="flex justify-between items-start mb-4">
-<span class="font-label text-xs text-on-surface-variant">2023-11-25T03:12:00.000Z</span>
-<span class="material-symbols-outlined text-on-surface-variant text-sm" data-icon="shuffle">shuffle</span>
-</div>
-<h3 class="headline-sm font-bold mb-1">Mixing Service Cluster</h3>
-<p class="text-on-surface-variant text-body-md">Fragmentation of initial $4.2M into 1,200 micro-transactions.</p>
-</div>
-</div>
-<div class="col-span-1 flex justify-center relative z-10">
-<div class="w-3 h-3 bg-primary rounded-full shadow-[0_0_15px_rgba(255,255,255,0.8)]"></div>
-</div>
-<div class="col-span-5 pl-12">
-<div class="flex items-center gap-4">
-<div class="w-12 h-12 rounded-full bg-surface-container-high flex items-center justify-center">
-<span class="material-symbols-outlined text-on-surface" data-icon="cloud_off">cloud_off</span>
-</div>
-<div>
-<p class="font-label text-xs text-on-surface-variant mb-1">Cluster ID</p>
-<p class="font-bold text-headline-sm leading-tight">DarkNet-Mixer-01</p>
-<p class="font-label text-[0.6875rem] text-on-surface-variant">TOR-ENTRY-NODE-88</p>
-</div>
-</div>
-</div>
-</div>
+<div class="investigation-thread space-y-6" id="history-timeline-root">
+<p class="text-sm text-outline font-mono">Loading…</p>
 </div>
 </div>
 </section>
@@ -385,4 +306,6 @@
 <span class="font-label text-[0.6875rem] uppercase">Finalize Report</span>
 </button>
 </div>
+<script src="../shared/trace_api.js"></script>
+<script src="./global_history.js"></script>
 </body></html>

@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from trace_ml.core.config import Settings
-from trace_ml.core.models import PersonLifecycleStatus
+from trace_aml.core.config import Settings
+from trace_aml.core.models import PersonLifecycleStatus
 
 
 @dataclass

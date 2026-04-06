@@ -7,8 +7,8 @@ from pathlib import Path
 
 import cv2
 
-from trace_ml.core.config import Settings
-from trace_ml.core.errors import CameraError
+from trace_aml.core.config import Settings
+from trace_aml.core.errors import CameraError
 
 
 def person_image_dir(settings: Settings, person_id: str) -> Path:

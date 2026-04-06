@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from trace_ml.core.ids import new_incident_id
-from trace_ml.core.models import AlertRecord, IncidentRecord, IncidentStatus
-from trace_ml.store.vector_store import VectorStore
+from trace_aml.core.ids import new_incident_id
+from trace_aml.core.models import AlertRecord, IncidentRecord, IncidentStatus
+from trace_aml.store.vector_store import VectorStore
 
 
 class IncidentManager:

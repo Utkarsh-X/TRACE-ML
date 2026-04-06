@@ -1,5 +1,5 @@
 app:
-  name: TRACE-ML
+  name: TRACE-AML
   environment: demo
   timezone: UTC
 
@@ -84,7 +84,7 @@ store:
 
 logging:
   level: INFO
-  file_path: data/logs/trace_ml.log
+  file_path: data/logs/trace_aml.log
   rotation: 10 MB
   retention: 14 days
 

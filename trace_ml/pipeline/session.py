@@ -6,26 +6,28 @@ import json
 import math
 import queue
 import time
+from typing import Any
 from collections import deque
 from pathlib import Path
 
 import cv2
 
-from trace_ml.core.config import Settings
-from trace_ml.core.ids import new_detection_id
-from trace_ml.core.models import ActionTrigger, DecisionState, DetectionEvent, RecognitionMatch
-from trace_ml.core.streaming import EventStreamPublisher, NullEventStreamPublisher
-from trace_ml.liveness.base import LivenessResult
-from trace_ml.pipeline.action_engine import ActionEngine
-from trace_ml.pipeline.capture import CameraCapture
-from trace_ml.pipeline.entity_resolver import EntityResolver
-from trace_ml.pipeline.incident_manager import IncidentManager
-from trace_ml.pipeline.inference import InferencePacket, InferenceWorker
-from trace_ml.pipeline.policy_engine import PolicyEngine
-from trace_ml.pipeline.rules_engine import RulesEngine
-from trace_ml.pipeline.temporal import TemporalDecisionEngine
-from trace_ml.recognizers.arcface import ArcFaceRecognizer
-from trace_ml.store.vector_store import VectorStore
+from trace_aml.core.config import Settings
+from trace_aml.core.ids import new_detection_id
+from trace_aml.core.models import ActionTrigger, DecisionState, DetectionEvent, RecognitionMatch
+from trace_aml.core.streaming import EventStreamPublisher, NullEventStreamPublisher
+from trace_aml.liveness.base import LivenessResult
+from trace_aml.pipeline.action_engine import ActionEngine
+from trace_aml.pipeline.capture import CameraCapture
+from trace_aml.pipeline.entity_resolver import EntityResolver
+from trace_aml.pipeline.incident_manager import IncidentManager
+from trace_aml.pipeline.inference import InferencePacket, InferenceWorker
+from trace_aml.pipeline.policy_engine import PolicyEngine
+from trace_aml.pipeline.rules_engine import RulesEngine
+from trace_aml.pipeline.live_overlay import update_live_overlay
+from trace_aml.pipeline.temporal import TemporalDecisionEngine
+from trace_aml.recognizers.arcface import ArcFaceRecognizer
+from trace_aml.store.vector_store import VectorStore
 
 
 def draw_text(frame, text: str, xy: tuple[int, int], color: tuple[int, int, int], scale: float = 0.55) -> None:
@@ -83,6 +85,7 @@ class RecognitionSession:
         self.last_latency_ms = 0.0
         self.last_frame_queue_depth = 0
         self.last_result_queue_depth = 0
+        self._headless_mode = False
 
     def _should_log(self, key: str) -> bool:
         now = time.time()
@@ -241,7 +244,7 @@ class RecognitionSession:
 
         pulse = int(6 + (math.sin(time.time() * 4) + 1) * 4)
         cv2.circle(frame, (18, 18), pulse, (0, 255, 200), 1)
-        draw_text(frame, "TRACE-ML // OPERATOR MODE", (40, 22), (0, 255, 200))
+        draw_text(frame, "TRACE-AML // OPERATOR MODE", (40, 22), (0, 255, 200))
         draw_text(
             frame,
             f"FPS:{fps:.1f}  TRACKS:{self.temporal.active_track_count()}  LAT:{self.last_latency_ms:.0f}ms  CAMERA:device0",
@@ -327,9 +330,26 @@ class RecognitionSession:
                     scale=0.45,
                 )
 
-        if self.settings.pipeline.show_hud:
+        if self.settings.pipeline.show_hud and not self._headless_mode:
             self._overlay_panel(frame, fps=fps)
         self._publish_live_state(fps)
+        h, w = frame.shape[:2]
+        boxes: list[dict[str, Any]] = []
+        for match in packet.matches:
+            x, y, bw, bh = match.bbox
+            boxes.append(
+                {
+                    "x": float(x) / max(w, 1),
+                    "y": float(y) / max(h, 1),
+                    "w": float(bw) / max(w, 1),
+                    "h": float(bh) / max(h, 1),
+                    "label": str(match.name or "Unknown"),
+                    "decision": str(match.decision_state.value),
+                    "confidence": float(match.smoothed_confidence),
+                    "track_id": str(match.track_id or ""),
+                }
+            )
+        update_live_overlay(frame_width=w, frame_height=h, fps=fps, boxes=boxes)
         return frame
 
     def run(self) -> None:
@@ -343,7 +363,7 @@ class RecognitionSession:
 
         prev = time.time()
         fps = 0.0
-        title = "TRACE-ML v3 | Press q to stop"
+        title = "TRACE-AML v3 | Press q to stop"
 
         try:
             while True:
@@ -372,3 +392,38 @@ class RecognitionSession:
             inference.stop()
             capture.stop()
             cv2.destroyAllWindows()
+
+    def run_headless(self) -> None:
+        """Run capture + inference without OpenCV windows (for service-integrated live recognition)."""
+        frame_q: queue.Queue = queue.Queue(maxsize=self.settings.pipeline.frame_queue_size)
+        result_q: queue.Queue = queue.Queue(maxsize=self.settings.pipeline.result_queue_size)
+        capture = CameraCapture(self.settings, frame_q)
+        inference = InferenceWorker(self.recognizer, self.store, frame_q, result_q)
+
+        capture.start()
+        inference.start()
+
+        prev = time.time()
+        fps = 0.0
+        self._headless_mode = True
+        try:
+            while True:
+                try:
+                    packet: InferencePacket = result_q.get(timeout=0.5)
+                except queue.Empty:
+                    continue
+
+                now = time.time()
+                fps = 0.92 * fps + 0.08 * (1.0 / max(1e-6, now - prev))
+                prev = now
+                self.last_latency_ms = max(0.0, (now - packet.captured_at) * 1000.0)
+                self.last_frame_queue_depth = frame_q.qsize()
+                self.last_result_queue_depth = result_q.qsize()
+
+                self._annotate(packet, fps=fps)
+                for match, emb, live in zip(packet.matches, packet.embeddings, packet.liveness, strict=False):
+                    self._save_detection(packet.frame, match=match, embedding=emb, liveness=live)
+        finally:
+            self._headless_mode = False
+            inference.stop()
+            capture.stop()

@@ -1,1 +1,1 @@
-"""Core primitives for TRACE-ML."""
+"""Core primitives for TRACE-AML."""

@@ -8,7 +8,7 @@ from pathlib import Path
 
 import cv2
 
-from trace_ml.core.config import Settings
+from trace_aml.core.config import Settings
 
 
 @dataclass

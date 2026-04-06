@@ -7,7 +7,7 @@ from pathlib import Path
 
 from loguru import logger
 
-from trace_ml.core.config import Settings
+from trace_aml.core.config import Settings
 
 
 def configure_logger(settings: Settings) -> None:

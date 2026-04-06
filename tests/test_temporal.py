@@ -1,8 +1,8 @@
 from pathlib import Path
 
-from trace_ml.core.config import load_settings
-from trace_ml.core.models import DecisionState, RecognitionMatch
-from trace_ml.pipeline.temporal import TemporalDecisionEngine
+from trace_aml.core.config import load_settings
+from trace_aml.core.models import DecisionState, RecognitionMatch
+from trace_aml.pipeline.temporal import TemporalDecisionEngine
 
 
 def _settings(tmp_path: Path):

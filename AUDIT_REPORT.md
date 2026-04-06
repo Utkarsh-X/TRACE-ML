@@ -1,4 +1,4 @@
-# TRACE-ML SYSTEM AUDIT REPORT
+# TRACE-AML SYSTEM AUDIT REPORT
 ## Tracking and Recognition of Criminal and Missing using Machine Learning
 
 **Report Date**: March 23, 2026  
@@ -14,7 +14,7 @@
 **Production Readiness**: 4/10 🔴 - NOT ready for production deployment  
 **Recommendation**: Significant improvements required before operational use
 
-TRACE-ML is a **facial recognition system** designed to identify criminals and missing persons from live webcam feeds. The system has **working core functionality** with dual algorithm implementations (OpenCV LBPH and dlib ResNet), but requires substantial work in error handling, documentation, security, and testing before production deployment.
+TRACE-AML is a **facial recognition system** designed to identify criminals and missing persons from live webcam feeds. The system has **working core functionality** with dual algorithm implementations (OpenCV LBPH and dlib ResNet), but requires substantial work in error handling, documentation, security, and testing before production deployment.
 
 **Key Finding**: System is suitable for **proof-of-concept and development**, but faces critical blockers for production including an unresolved git merge conflict, missing error handling, no logging system, and weak security posture.
 
@@ -22,7 +22,7 @@ TRACE-ML is a **facial recognition system** designed to identify criminals and m
 
 ## 1. CURRENT SYSTEM STATUS
 
-**Project Name**: TRACE-ML (Tracking and Recognition of Criminal and Missing using Machine Learning)  
+**Project Name**: TRACE-AML (Tracking and Recognition of Criminal and Missing using Machine Learning)  
 **Primary Purpose**: Real-time facial recognition for criminal/missing person identification  
 **Copyright**: © 2025 Utkarsh Chandra  
 **License**: MIT License  
@@ -148,7 +148,7 @@ View/edit/delete persons and associated data → Import/export JSON
 ### 3.4 Database Schema
 
 **Database Type**: SQLite (local file-based, unencrypted)  
-**Location**: data/trace_ml.db  
+**Location**: data/trace_aml.db  
 **Tables**: 3 (persons, images, detections)  
 **Columns**: 22 total  
 **Relations**: Properly designed with CASCADE DELETE
@@ -178,7 +178,7 @@ View/edit/delete persons and associated data → Import/export JSON
 ### 3.6 Data Organization
 
 ```
-TRACE-ML/
+TRACE-AML/
 ├── Source files (8 .py modules)
 ├── dataset/             [Created at runtime]
 │   └── <unique_id>/     [Person directories]
@@ -188,7 +188,7 @@ TRACE-ML/
 │   ├── embeddings.npy   [dlib 128-D vectors]
 │   └── label_map.json   [ID mapping]
 ├── data/                [Created at runtime]
-│   ├── trace_ml.db      [SQLite database]
+│   ├── trace_aml.db      [SQLite database]
 │   └── detections/      [Screenshot images]
 └── .gitignore           [Properly configured to ignore data/]
 ```
@@ -332,7 +332,7 @@ TRACE-ML/
 ### 6.1 Data Security Issues
 
 **At Rest** 🔴
-- SQLite database is unencrypted (data/trace_ml.db)
+- SQLite database is unencrypted (data/trace_aml.db)
 - Face images stored in plaintext
 - Detection screenshots saved unencrypted
 - **Risk**: Anyone with file system access can view all criminal records and photos
@@ -650,7 +650,7 @@ System has significant security gaps suitable only for offline, single-user deve
 ## 13. AUDIT SIGN-OFF
 
 **Audit Date**: March 23, 2026  
-**Project**: TRACE-ML v1.0  
+**Project**: TRACE-AML v1.0  
 **Status**: Complete System Review  
 **Confidence Level**: High (based on direct code analysis)
 

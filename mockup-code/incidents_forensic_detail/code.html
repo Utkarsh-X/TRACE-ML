@@ -101,8 +101,8 @@
 <div class="flex items-center gap-8">
 <span class="text-lg font-bold tracking-tighter text-white uppercase font-['Inter']">TRACE-AML</span>
 <nav class="hidden md:flex items-center space-x-6 font-['Inter'] font-medium text-[0.875rem] tracking-tight">
-<a class="text-neutral-400 hover:text-white transition-colors" href="#">Dashboard</a>
-<a class="text-white border-b-2 border-white pb-1" href="#">Investigations</a>
+<a class="text-neutral-400 hover:text-white transition-colors" href="../live_ops_intelligence_hub/code.html">Live Ops</a>
+<a class="text-white border-b-2 border-white pb-1" href="./code.html">Incidents</a>
 <a class="text-neutral-400 hover:text-white transition-colors" href="#">Audit Log</a>
 <a class="text-neutral-400 hover:text-white transition-colors" href="#">Reports</a>
 </nav>
@@ -149,18 +149,25 @@
 </aside>
 <!-- Forensic Canvas Main Content -->
 <main class="pl-20 pt-14 flex flex-col min-h-screen bg-surface">
+<section class="px-10 pt-4 flex flex-wrap gap-4 items-end">
+<div>
+<label class="font-label text-[0.65rem] text-outline uppercase block mb-1" for="incident-select">Incident</label>
+<select id="incident-select" class="bg-surface-container-high font-mono text-sm text-white border border-outline-variant px-3 py-2 min-w-[280px] max-w-full"></select>
+</div>
+<span class="text-[0.65rem] font-mono text-outline pb-2" id="incident-load-status"></span>
+</section>
 <!-- Investigation Header -->
 <section class="p-10 pb-4 flex justify-between items-end border-b border-transparent">
 <div>
 <div class="flex items-center gap-2 mb-2">
 <span class="w-1 h-4 bg-primary"></span>
-<span class="font-label text-[0.6875rem] uppercase tracking-[0.2em] text-outline">Incident ID: 0992-TX-ALPHA</span>
+<span class="font-label text-[0.6875rem] uppercase tracking-[0.2em] text-outline" id="incident-id-label">Incident ID: —</span>
 </div>
-<h1 class="font-headline text-4xl font-bold tracking-tight text-white">Cross-Border Shell Velocity</h1>
+<h1 class="font-headline text-4xl font-bold tracking-tight text-white" id="incident-title">—</h1>
 </div>
 <div class="text-right">
 <span class="font-label text-[0.6875rem] uppercase tracking-[0.2em] text-outline block mb-1">Status</span>
-<span class="font-mono text-xl text-primary">IN_PROGRESS // P6</span>
+<span class="font-mono text-xl text-primary" id="incident-status">—</span>
 </div>
 </section>
 <div class="flex-grow grid grid-cols-12 overflow-hidden">
@@ -168,88 +175,26 @@
 <div class="col-span-3 bg-surface-container p-8 space-y-10 overflow-y-auto">
 <div class="canvas-item space-y-4">
 <h3 class="font-label text-[0.6875rem] uppercase tracking-widest text-primary border-b border-outline-variant pb-2">Entity Profile</h3>
-<div class="space-y-4">
+<div class="space-y-4" id="incident-entity-root">
 <div class="bg-surface-container-lowest p-4">
-<span class="block text-outline font-label text-[0.6rem] uppercase mb-1">Subject Name</span>
-<span class="block font-mono text-sm">VANDELAY IMPORT/EXPORT LTD</span>
-</div>
-<div class="bg-surface-container-lowest p-4">
-<span class="block text-outline font-label text-[0.6rem] uppercase mb-1">Jurisdiction</span>
-<span class="block font-mono text-sm">CAYMAN ISLANDS [KY]</span>
-</div>
-<div class="bg-surface-container-lowest p-4">
-<span class="block text-outline font-label text-[0.6rem] uppercase mb-1">Risk Weighting</span>
-<div class="flex items-center gap-2 mt-2">
-<div class="flex-grow h-1 bg-surface-variant">
-<div class="h-full bg-primary w-[88%]"></div>
-</div>
-<span class="font-mono text-xs">88%</span>
-</div>
+<span class="block text-outline font-label text-[0.6rem] uppercase mb-1">Entity</span>
+<span class="block font-mono text-sm" id="incident-entity-name">—</span>
+<span class="block font-mono text-xs text-outline mt-1" id="incident-entity-id">—</span>
 </div>
 </div>
 </div>
 <div class="canvas-item space-y-4">
 <h3 class="font-label text-[0.6875rem] uppercase tracking-widest text-primary border-b border-outline-variant pb-2">Trigger Logs</h3>
-<div class="space-y-3">
-<div class="flex justify-between items-center text-[0.6875rem] font-mono p-2 hover:bg-surface-container-high transition-colors cursor-pointer">
-<span class="text-outline">14:22:01</span>
-<span class="text-white">AUTH_FAILURE_RETRY</span>
-</div>
-<div class="flex justify-between items-center text-[0.6875rem] font-mono p-2 hover:bg-surface-container-high transition-colors cursor-pointer">
-<span class="text-outline">14:23:45</span>
-<span class="text-primary font-bold">LARGE_V_TRANSFER</span>
-</div>
-<div class="flex justify-between items-center text-[0.6875rem] font-mono p-2 hover:bg-surface-container-high transition-colors cursor-pointer">
-<span class="text-outline">14:25:12</span>
-<span class="text-outline">GEO_MISMATCH</span>
-</div>
+<div class="space-y-3" id="incident-alerts-root">
+<p class="text-[0.72rem] text-outline font-mono">No alerts loaded</p>
 </div>
 </div>
 </div>
 <!-- Center: Explainability Chain Timeline -->
 <div class="col-span-6 bg-surface p-10 relative overflow-y-auto scrollbar-hide">
 <div class="absolute left-1/2 top-0 bottom-0 timeline-connector -translate-x-1/2 opacity-20"></div>
-<div class="relative space-y-16">
-<!-- EVENT -->
-<div class="flex flex-col items-center">
-<div class="z-10 bg-surface border border-outline-variant p-2 mb-4">
-<span class="material-symbols-outlined text-outline">database</span>
-</div>
-<div class="text-center max-w-xs">
-<span class="intel-label font-label text-[0.6875rem] uppercase tracking-[0.2em] text-primary block mb-2">[ EVENT ]</span>
-<p class="font-mono text-sm text-on-surface-variant">Multiple wire transfers initiated from segregated account AC-8821 within 300ms window.</p>
-</div>
-</div>
-<!-- ALERT -->
-<div class="flex flex-col items-center">
-<div class="z-10 bg-surface border border-primary p-2 mb-4">
-<span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">warning</span>
-</div>
-<div class="text-center max-w-xs">
-<span class="intel-label font-label text-[0.6875rem] uppercase tracking-[0.2em] text-primary block mb-2">[ ALERT ]</span>
-<p class="font-mono text-sm text-on-surface-variant">Structural Velocity Violation: Cumulative threshold exceeded by 402%. Heuristic: 'Smurfing Pattern'.</p>
-</div>
-</div>
-<!-- INCIDENT -->
-<div class="flex flex-col items-center">
-<div class="z-10 bg-surface border border-outline-variant p-2 mb-4">
-<span class="material-symbols-outlined text-outline">fingerprint</span>
-</div>
-<div class="text-center max-w-xs">
-<span class="intel-label font-label text-[0.6875rem] uppercase tracking-[0.2em] text-primary block mb-2">[ INCIDENT ]</span>
-<p class="font-mono text-sm text-on-surface-variant">Investigation #0992 opened. Link established to high-risk PEP cluster in Eastern Europe.</p>
-</div>
-</div>
-<!-- ACTION -->
-<div class="flex flex-col items-center">
-<div class="z-10 bg-primary p-2 mb-4">
-<span class="material-symbols-outlined text-on-primary">gavel</span>
-</div>
-<div class="text-center max-w-xs">
-<span class="intel-label font-label text-[0.6875rem] uppercase tracking-[0.2em] text-primary block mb-2">[ ACTION ]</span>
-<p class="font-mono text-sm text-on-surface-variant">Asset Freeze Protocol 09 initiated. Financial Intelligence Unit (FIU) notified via secure relay.</p>
-</div>
-</div>
+<div class="relative space-y-8" id="incident-timeline-root">
+<p class="text-[0.72rem] text-outline font-mono text-center">Loading timeline…</p>
 </div>
 </div>
 <!-- Right Side: Action Trigger Logs & Controls -->
@@ -257,15 +202,16 @@
 <div class="space-y-8">
 <div>
 <h3 class="font-label text-[0.6875rem] uppercase tracking-widest text-outline mb-4">Decision Engine</h3>
-<div class="space-y-2">
-<button class="w-full bg-primary text-on-primary py-4 px-6 font-label font-bold uppercase tracking-widest text-xs flex justify-between items-center group transition-all">
-<span>Escalate Case</span>
-<span class="material-symbols-outlined group-hover:translate-x-1 transition-transform">arrow_forward</span>
-</button>
-<button class="w-full bg-secondary-container text-white py-4 px-6 font-label font-bold uppercase tracking-widest text-xs flex justify-between items-center hover:bg-surface-bright transition-all">
-<span>False Positive</span>
-<span class="material-symbols-outlined">close</span>
-</button>
+<div class="space-y-3">
+<label class="font-label text-[0.6rem] text-outline uppercase block" for="incident-severity-select">Severity</label>
+<select id="incident-severity-select" class="w-full bg-surface-container-high text-white font-mono text-sm border border-outline-variant px-3 py-2">
+<option value="low">low</option>
+<option value="medium">medium</option>
+<option value="high">high</option>
+</select>
+<button type="button" id="incident-apply-severity" class="w-full bg-primary text-on-primary py-3 px-4 font-label font-bold uppercase tracking-widest text-xs">Apply severity</button>
+<button type="button" id="incident-close-btn" class="w-full bg-secondary-container text-white py-3 px-4 font-label font-bold uppercase tracking-widest text-xs hover:bg-surface-bright transition-all">Close incident</button>
+<p class="text-[0.65rem] font-mono text-outline" id="incident-action-status"></p>
 </div>
 </div>
 <div class="pt-8">
@@ -350,4 +296,6 @@
 </svg>
 </section>
 </main>
+<script src="../shared/trace_api.js"></script>
+<script src="./incidents.js"></script>
 </body></html>

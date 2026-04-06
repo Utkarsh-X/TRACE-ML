@@ -9,11 +9,11 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from trace_ml.core.models import RecognitionMatch
-from trace_ml.liveness.base import LivenessResult
-from trace_ml.pipeline.capture import FramePacket
-from trace_ml.recognizers.arcface import ArcFaceRecognizer
-from trace_ml.store.vector_store import VectorStore
+from trace_aml.core.models import RecognitionMatch
+from trace_aml.liveness.base import LivenessResult
+from trace_aml.pipeline.capture import FramePacket
+from trace_aml.recognizers.arcface import ArcFaceRecognizer
+from trace_aml.store.vector_store import VectorStore
 
 
 @dataclass

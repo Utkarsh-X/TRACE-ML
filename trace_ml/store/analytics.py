@@ -9,8 +9,8 @@ from typing import Any
 import duckdb
 import pyarrow as pa
 
-from trace_ml.core.models import HistoryQuery, SummaryReport
-from trace_ml.store.vector_store import VectorStore
+from trace_aml.core.models import HistoryQuery, SummaryReport
+from trace_aml.store.vector_store import VectorStore
 
 
 class AnalyticsStore:

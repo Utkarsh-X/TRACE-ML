@@ -1,6 +1,6 @@
-"""Query and read-model surfaces for TRACE-ML."""
+"""Query and read-model surfaces for TRACE-AML."""
 
-from trace_ml.query.read_models import (
+from trace_aml.query.read_models import (
     IntelligenceReadModelService,
     get_entity,
     get_entity_incidents,

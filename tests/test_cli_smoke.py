@@ -2,9 +2,9 @@ from pathlib import Path
 
 from typer.testing import CliRunner
 
-from trace_ml.cli import app
-from trace_ml.core.config import load_settings
-from trace_ml.core.models import (
+from trace_aml.cli import app
+from trace_aml.core.config import load_settings
+from trace_aml.core.models import (
     ActionRecord,
     ActionStatus,
     ActionTrigger,
@@ -20,7 +20,7 @@ from trace_ml.core.models import (
     PersonLifecycleStatus,
     PersonRecord,
 )
-from trace_ml.store.vector_store import VectorStore
+from trace_aml.store.vector_store import VectorStore
 
 
 def _write_config(tmp_path: Path) -> Path:
@@ -35,7 +35,7 @@ store:
   screenshots_dir: {tmp_path.as_posix()}/data/screens
   exports_dir: {tmp_path.as_posix()}/data/exports
 logging:
-  file_path: {tmp_path.as_posix()}/data/logs/trace_ml.log
+  file_path: {tmp_path.as_posix()}/data/logs/trace_aml.log
 """.strip(),
         encoding="utf-8",
     )

@@ -47,10 +47,10 @@ The system transitions from purely forensic (post-facto detection analysis) to *
 
 ## 3. Current System Architecture
 
-Core package structure: `trace_ml/` with modular separation across **9 functional domains**
+Core package structure: `trace_aml/` with modular separation across **9 functional domains**
 
 ```
-trace_ml/
+trace_aml/
 ├── core/              [Foundation: config, models, errors, health, IDs]
 ├── pipeline/          [Recognition pipeline: capture→inference→decision→storage]
 ├── recognizers/       [Face recognition: ArcFace + detection + embedding]
@@ -76,7 +76,7 @@ trace_ml/
 - Query interfaces: HistoryQuery (filtered detection retrieval), SummaryReport (aggregated analytics)
 
 **Error Taxonomy** (`core/errors.py`):
-- Inheritance hierarchy: TraceMLError → {ConfigError, DependencyError, StorageError, RecognitionError, CameraError}
+- Inheritance hierarchy: TraceAMLError → {ConfigError, DependencyError, StorageError, RecognitionError, CameraError}
 - Enables structured error handling and graceful degradation
 
 **ID Generation** (`core/ids.py`):
@@ -1120,30 +1120,30 @@ actions:
 
 **Live Recognition**:
 ```bash
-trace-ml recognize live --config config.strict.yaml
+trace-aml recognize live --config config.strict.yaml
 ```
 
 **Enroll New Person**:
 ```bash
-trace-ml person add --name "John Doe" --category criminal --severity high
-trace-ml person capture PRC001 --count 10
-trace-ml train rebuild
+trace-aml person add --name "John Doe" --category criminal --severity high
+trace-aml person capture PRC001 --count 10
+trace-aml train rebuild
 ```
 
 **Query History**:
 ```bash
-trace-ml history query --person PRC001 --start 2026-04-01 --end 2026-04-03
+trace-aml history query --person PRC001 --start 2026-04-01 --end 2026-04-03
 ```
 
 **View Incidents**:
 ```bash
-trace-ml incident list --severity high
-trace-ml incident show INC001
+trace-aml incident list --severity high
+trace-aml incident show INC001
 ```
 
 **Export Data**:
 ```bash
-trace-ml export csv --output detections.csv --decision accept
+trace-aml export csv --output detections.csv --decision accept
 ```
 
 ### C. Metrics and Monitoring

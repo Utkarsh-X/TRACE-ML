@@ -1,4 +1,4 @@
-"""TRACE-ML CLI entrypoint."""
+"""TRACE-AML CLI entrypoint."""
 
 from __future__ import annotations
 
@@ -13,22 +13,22 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 
-from trace_ml.core.config import Settings, load_settings
-from trace_ml.core.health import run_health_checks
-from trace_ml.core.ids import next_person_id
-from trace_ml.core.logger import configure_logger
-from trace_ml.core.models import AlertSeverity, HistoryQuery, PersonCategory, PersonLifecycleStatus, PersonRecord
-from trace_ml.core.streaming import EventStreamPublisher, InMemoryEventStreamPublisher
-from trace_ml.liveness.base import MiniFASNetStub
-from trace_ml.pipeline.collect import capture_from_webcam, import_from_directory, person_image_dir
-from trace_ml.pipeline.session import RecognitionSession
-from trace_ml.pipeline.train import rebuild_embeddings
-from trace_ml.quality.gating import decide_person_lifecycle
-from trace_ml.recognizers.arcface import ArcFaceRecognizer
-from trace_ml.store.analytics import AnalyticsStore
-from trace_ml.store.vector_store import VectorStore
+from trace_aml.core.config import Settings, load_settings
+from trace_aml.core.health import run_health_checks
+from trace_aml.core.ids import next_person_id
+from trace_aml.core.logger import configure_logger
+from trace_aml.core.models import AlertSeverity, HistoryQuery, PersonCategory, PersonLifecycleStatus, PersonRecord
+from trace_aml.core.streaming import EventStreamPublisher, InMemoryEventStreamPublisher
+from trace_aml.liveness.base import MiniFASNetStub
+from trace_aml.pipeline.collect import capture_from_webcam, import_from_directory, person_image_dir
+from trace_aml.pipeline.session import RecognitionSession
+from trace_aml.pipeline.train import rebuild_embeddings
+from trace_aml.quality.gating import decide_person_lifecycle
+from trace_aml.recognizers.arcface import ArcFaceRecognizer
+from trace_aml.store.analytics import AnalyticsStore
+from trace_aml.store.vector_store import VectorStore
 
-app = typer.Typer(help="TRACE-ML v3 tactical CLI", no_args_is_help=True, rich_markup_mode="rich")
+app = typer.Typer(help="TRACE-AML v3 tactical CLI", no_args_is_help=True, rich_markup_mode="rich")
 person_app = typer.Typer(help="Person registry commands", no_args_is_help=True)
 train_app = typer.Typer(help="Embedding build commands", no_args_is_help=True)
 recognize_app = typer.Typer(help="Live recognition commands", no_args_is_help=True)
@@ -99,7 +99,7 @@ def _recognizer(runtime: Runtime) -> ArcFaceRecognizer:
 
 def _banner() -> Panel:
     return Panel.fit(
-        "[bold cyan]TRACE-ML v3[/bold cyan]\n"
+        "[bold cyan]TRACE-AML v3[/bold cyan]\n"
         "[dim]Tactical CLI | Quality Core Hardening[/dim]",
         border_style="bright_black",
     )
@@ -110,7 +110,7 @@ def main(
     ctx: typer.Context,
     config: str | None = typer.Option(None, "--config", "-c", help="Path to config.yaml"),
 ) -> None:
-    """TRACE-ML command root."""
+    """TRACE-AML command root."""
     ctx.ensure_object(dict)
     ctx.obj["runtime"] = _init_runtime(config)
 
@@ -808,8 +808,13 @@ def service_run(
     ctx: typer.Context,
     host: str = typer.Option("127.0.0.1", help="Bind host"),
     port: int = typer.Option(8080, help="Bind port"),
+    live: bool = typer.Option(
+        False,
+        "--live",
+        help="Run webcam recognition in-process (same SSE stream as the API; do not run 'recognize live' separately).",
+    ),
 ) -> None:
-    """Run TRACE-ML service API for UI integration."""
+    """Run TRACE-AML service API for UI integration."""
     runtime = _runtime(ctx)
     try:
         import uvicorn
@@ -818,13 +823,40 @@ def service_run(
             "uvicorn is not installed. Install service deps: pip install fastapi uvicorn"
         ) from exc
 
-    from trace_ml.service.app import create_service_app
+    from trace_aml.service.app import create_service_app
 
     api = create_service_app(
         settings=runtime.settings,
         store=runtime.store,
         stream_publisher=runtime.stream_publisher,
     )
+    if live:
+        import threading
+
+        from trace_aml.pipeline.session import RecognitionSession
+
+        def _live_worker() -> None:
+            try:
+                recognizer = _recognizer(runtime)
+                session = RecognitionSession(
+                    runtime.settings,
+                    runtime.store,
+                    recognizer,
+                    stream_publisher=runtime.stream_publisher,
+                )
+                session.run_headless()
+            except Exception as exc:  # pragma: no cover - hardware-dependent
+                console.print(Panel.fit(f"[red]Live recognition stopped: {exc}[/red]", title="service run --live"))
+
+        threading.Thread(target=_live_worker, name="trace-aml-live-recognition", daemon=True).start()
+        console.print(
+            Panel.fit(
+                "[yellow]Live recognition thread started (webcam index 0).[/yellow]\n"
+                "Do not run [bold]recognize live[/bold] in another terminal (camera conflict).",
+                title="service run --live",
+                border_style="yellow",
+            )
+        )
     console.print(
         Panel.fit(
             f"[cyan]Service starting[/cyan]\n"

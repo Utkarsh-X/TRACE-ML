@@ -6,10 +6,10 @@ import time
 
 import numpy as np
 
-from trace_ml.core.config import Settings
-from trace_ml.core.ids import new_alert_id
-from trace_ml.core.models import AlertRecord, AlertSeverity, AlertType, EventRecord
-from trace_ml.store.vector_store import VectorStore
+from trace_aml.core.config import Settings
+from trace_aml.core.ids import new_alert_id
+from trace_aml.core.models import AlertRecord, AlertSeverity, AlertType, EventRecord
+from trace_aml.store.vector_store import VectorStore
 
 
 class RulesEngine:

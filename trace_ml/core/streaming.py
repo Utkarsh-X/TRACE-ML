@@ -7,7 +7,7 @@ from dataclasses import dataclass, field
 from threading import RLock
 from typing import Any, Callable, Protocol
 
-from trace_ml.core.models import utc_now_iso
+from trace_aml.core.models import utc_now_iso
 
 
 @dataclass(slots=True)

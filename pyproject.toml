@@ -3,9 +3,9 @@ requires = ["setuptools>=69", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "trace-ml"
+name = "trace-aml"
 version = "3.0.0"
-description = "TRACE-ML v3 CLI-first facial recognition demo stack"
+description = "TRACE-AML v3 CLI-first facial recognition demo stack"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
@@ -35,13 +35,13 @@ dev = [
 ]
 
 [project.scripts]
-trace-ml = "trace_ml.cli:app"
+trace-aml = "trace_aml.cli:app"
 
 [tool.setuptools]
 include-package-data = true
 
 [tool.setuptools.packages.find]
-include = ["trace_ml*"]
+include = ["trace_aml*"]
 
 [tool.pytest.ini_options]
 minversion = "8.0"

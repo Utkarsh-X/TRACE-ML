@@ -48,22 +48,22 @@ Only after that should the service layer be implemented.
 
 ### Frontend Files Reviewed
 
-- `D:\github FORK\TRACE-ML\MOCK.html`
-- `D:\github FORK\TRACE-ML\mockup.html`
+- `D:\github FORK\TRACE-AML\MOCK.html`
+- `D:\github FORK\TRACE-AML\mockup.html`
 
 ### Backend Files Reviewed
 
-- `D:\github FORK\TRACE-ML\trace_ml\core\models.py`
-- `D:\github FORK\TRACE-ML\trace_ml\core\config.py`
-- `D:\github FORK\TRACE-ML\trace_ml\pipeline\session.py`
-- `D:\github FORK\TRACE-ML\trace_ml\pipeline\entity_resolver.py`
-- `D:\github FORK\TRACE-ML\trace_ml\pipeline\rules_engine.py`
-- `D:\github FORK\TRACE-ML\trace_ml\pipeline\incident_manager.py`
-- `D:\github FORK\TRACE-ML\trace_ml\pipeline\policy_engine.py`
-- `D:\github FORK\TRACE-ML\trace_ml\pipeline\action_engine.py`
-- `D:\github FORK\TRACE-ML\trace_ml\store\vector_store.py`
-- `D:\github FORK\TRACE-ML\trace_ml\store\analytics.py`
-- `D:\github FORK\TRACE-ML\trace_ml\cli.py`
+- `D:\github FORK\TRACE-AML\trace_aml\core\models.py`
+- `D:\github FORK\TRACE-AML\trace_aml\core\config.py`
+- `D:\github FORK\TRACE-AML\trace_aml\pipeline\session.py`
+- `D:\github FORK\TRACE-AML\trace_aml\pipeline\entity_resolver.py`
+- `D:\github FORK\TRACE-AML\trace_aml\pipeline\rules_engine.py`
+- `D:\github FORK\TRACE-AML\trace_aml\pipeline\incident_manager.py`
+- `D:\github FORK\TRACE-AML\trace_aml\pipeline\policy_engine.py`
+- `D:\github FORK\TRACE-AML\trace_aml\pipeline\action_engine.py`
+- `D:\github FORK\TRACE-AML\trace_aml\store\vector_store.py`
+- `D:\github FORK\TRACE-AML\trace_aml\store\analytics.py`
+- `D:\github FORK\TRACE-AML\trace_aml\cli.py`
 
 ## Current System Snapshot
 
@@ -354,7 +354,7 @@ This means the backend cannot be surfaced as raw CLI commands or raw tables. The
 
 ## 1. Existing Backend Architecture
 
-The central runtime logic in `trace_ml/pipeline/session.py` already performs the following:
+The central runtime logic in `trace_aml/pipeline/session.py` already performs the following:
 
 ```text
 recognition

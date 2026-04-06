@@ -10,8 +10,8 @@ from dataclasses import dataclass
 import cv2
 import numpy as np
 
-from trace_ml.core.config import Settings
-from trace_ml.core.errors import CameraError
+from trace_aml.core.config import Settings
+from trace_aml.core.errors import CameraError
 
 
 @dataclass

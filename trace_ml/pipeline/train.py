@@ -8,13 +8,13 @@ from pathlib import Path
 import cv2
 from loguru import logger
 
-from trace_ml.core.config import Settings
-from trace_ml.core.ids import new_embedding_id
-from trace_ml.core.models import EmbeddingRecord, PersonLifecycleStatus
-from trace_ml.quality.gating import decide_person_lifecycle
-from trace_ml.quality.scoring import build_assessment
-from trace_ml.recognizers.arcface import ArcFaceRecognizer
-from trace_ml.store.vector_store import VectorStore
+from trace_aml.core.config import Settings
+from trace_aml.core.ids import new_embedding_id
+from trace_aml.core.models import EmbeddingRecord, PersonLifecycleStatus
+from trace_aml.quality.gating import decide_person_lifecycle
+from trace_aml.quality.scoring import build_assessment
+from trace_aml.recognizers.arcface import ArcFaceRecognizer
+from trace_aml.store.vector_store import VectorStore
 
 
 @dataclass

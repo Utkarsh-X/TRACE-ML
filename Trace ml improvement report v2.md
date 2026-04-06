@@ -1,4 +1,4 @@
-# TRACE-ML Improvement Report v2
+# TRACE-AML Improvement Report v2
 ## Architecture + Modern Stack + CLI→GUI Roadmap
 **Updated**: March 23, 2026 | Supersedes v1
 
@@ -249,7 +249,7 @@ class AntispoofChecker:
 ## 6. UPDATED ARCHITECTURE MAP
 
 ```
-trace_ml/
+trace_aml/
 ├── config.yaml
 ├── requirements.txt
 ├── README.md
@@ -449,4 +449,4 @@ After the CLI phases are complete:
 
 ---
 
-*End of Report — TRACE-ML v2 | CLI→GUI Architecture + Modern Stack*
+*End of Report — TRACE-AML v2 | CLI→GUI Architecture + Modern Stack*
