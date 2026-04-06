@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+  <title>TRACE-AML | Entities</title>
+
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
+
+  <script>
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "surface-lowest":"#0e0e0e","surface-low":"#1b1b1b","surface":"#131313",
+            "surface-container":"#1f1f1f","surface-high":"#2a2a2a","surface-highest":"#353535",
+            "surface-bright":"#393939","on-surface":"#e2e2e2","on-surface-variant":"#c6c6c6",
+            "outline":"#919191","outline-variant":"#474747","primary":"#ffffff",
+            "on-primary":"#1a1c1c","error":"#ffb4ab","error-container":"#93000a","background":"#131313",
+          },
+          fontFamily: { headline:["Inter"],body:["Inter"],mono:["JetBrains Mono"] },
+          borderRadius: { DEFAULT:"0.125rem", lg:"0.25rem" },
+        },
+      },
+    }
+  </script>
+  <link rel="stylesheet" href="../shared/base.css" />
+</head>
+
+<body class="bg-background text-on-surface font-body overflow-hidden">
+
+<!-- TOP NAV -->
+<nav class="fixed top-0 w-full z-50 bg-surface-low flex items-center justify-between px-6 h-14 no-border">
+  <div class="flex items-center gap-8">
+    <a href="../live_ops/index.html" class="text-lg font-black tracking-tighter text-white uppercase font-headline">TRACE-AML</a>
+    <div class="hidden md:flex gap-6 items-center">
+      <a class="font-headline font-medium text-[0.875rem] tracking-tight text-neutral-400 hover:text-white transition-colors" href="../live_ops/index.html">Live Ops</a>
+      <a class="font-headline font-medium text-[0.875rem] tracking-tight text-neutral-400 hover:text-white transition-colors" href="../incidents/index.html">Incidents</a>
+      <a class="font-headline font-medium text-[0.875rem] tracking-tight text-white border-b-2 border-white pb-1" href="./index.html">Entities</a>
+      <a class="font-headline font-medium text-[0.875rem] tracking-tight text-neutral-400 hover:text-white transition-colors" href="../history/index.html">History</a>
+      <a class="font-headline font-medium text-[0.875rem] tracking-tight text-neutral-400 hover:text-white transition-colors" href="../database/index.html">Database</a>
+      <a class="font-headline font-medium text-[0.875rem] tracking-tight text-neutral-400 hover:text-white transition-colors" href="../settings/index.html">Settings</a>
+    </div>
+  </div>
+  <div class="flex items-center gap-3">
+    <div class="hidden md:flex items-center bg-surface-lowest px-3 py-1.5 gap-2">
+      <span class="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span>
+      <span class="text-[0.6875rem] font-mono text-outline uppercase tracking-widest">System Active</span>
+    </div>
+    <button type="button" class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:bg-surface-high p-2 bg-transparent border-0">notifications</button>
+    <button type="button" class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:bg-surface-high p-2 bg-transparent border-0">settings</button>
+    <div class="w-8 h-8 bg-surface-high flex items-center justify-center">
+      <span class="material-symbols-outlined text-on-surface-variant text-[18px]">person</span>
+    </div>
+  </div>
+</nav>
+
+<!-- SIDE NAV -->
+<aside class="fixed left-0 top-14 h-[calc(100vh-3.5rem)] w-20 bg-surface-low flex flex-col items-center py-4 z-40 no-border">
+  <div class="flex flex-col items-center gap-1 w-full">
+    <a class="flex flex-col items-center gap-1 text-neutral-500 hover:text-neutral-200 w-full py-3 no-underline" href="../live_ops/index.html"><span class="material-symbols-outlined">monitoring</span><span class="font-mono text-[0.55rem] uppercase tracking-widest">Live Ops</span></a>
+    <a class="flex flex-col items-center gap-1 text-neutral-500 hover:text-neutral-200 w-full py-3 no-underline" href="../incidents/index.html"><span class="material-symbols-outlined">timeline</span><span class="font-mono text-[0.55rem] uppercase tracking-widest">Incidents</span></a>
+    <a class="flex flex-col items-center gap-1 text-white bg-surface-high border-l-2 border-white w-full py-3 no-underline" href="./index.html"><span class="material-symbols-outlined">hub</span><span class="font-mono text-[0.55rem] uppercase tracking-widest">Entities</span></a>
+    <a class="flex flex-col items-center gap-1 text-neutral-500 hover:text-neutral-200 w-full py-3 no-underline" href="../history/index.html"><span class="material-symbols-outlined">history</span><span class="font-mono text-[0.55rem] uppercase tracking-widest">History</span></a>
+    <a class="flex flex-col items-center gap-1 text-neutral-500 hover:text-neutral-200 w-full py-3 no-underline" href="../database/index.html"><span class="material-symbols-outlined">database</span><span class="font-mono text-[0.55rem] uppercase tracking-widest">Database</span></a>
+    <a class="flex flex-col items-center gap-1 text-neutral-500 hover:text-neutral-200 w-full py-3 no-underline" href="../settings/index.html"><span class="material-symbols-outlined">tune</span><span class="font-mono text-[0.55rem] uppercase tracking-widest">Settings</span></a>
+  </div>
+  <div class="mt-auto flex flex-col items-center gap-4 w-full pb-4">
+    <button class="text-neutral-500 hover:text-neutral-200 py-2 bg-transparent border-0"><span class="material-symbols-outlined">help_outline</span></button>
+    <button class="text-neutral-500 hover:text-neutral-200 py-2 bg-transparent border-0"><span class="material-symbols-outlined">logout</span></button>
+  </div>
+</aside>
+
+<!-- MAIN CANVAS — ENTITIES -->
+<main class="pl-20 pt-14 h-screen w-full overflow-y-auto">
+  <div class="p-8">
+
+    <!-- Entity Selector -->
+    <div class="mb-6 flex flex-wrap gap-4 items-end">
+      <div>
+        <label class="font-mono text-[0.6rem] text-outline uppercase block mb-1" for="entity-select">Entity</label>
+        <select id="entity-select" class="bg-surface-high font-mono text-[0.8rem] text-white border-0 px-3 py-2 min-w-[300px] cursor-pointer focus:ring-1 focus:ring-white">
+          <option value="ENT-KN-0001">ENT-KN-0001 — Mikhail Volkov (criminal)</option>
+          <option value="UNK-0042">UNK-0042 — Unknown Subject</option>
+          <option value="ENT-KN-0003">ENT-KN-0003 — Sarah Chen (person_of_interest)</option>
+        </select>
+      </div>
+      <span class="text-[0.65rem] font-mono text-outline pb-2" id="entity-load-status">3 entities loaded</span>
+    </div>
+
+    <!-- Entity Header -->
+    <div class="flex justify-between items-start mb-12">
+      <div>
+        <div class="flex items-center gap-3 mb-2">
+          <span class="w-1 h-1 bg-primary inline-block"></span>
+          <span class="font-mono text-[0.6875rem] uppercase tracking-[0.2em] text-outline" id="entity-profile-label">Entity Profile // ID: ENT-KN-0001</span>
+        </div>
+        <h1 class="font-headline text-4xl font-bold tracking-tight text-white mb-4" id="entity-display-name">Mikhail Volkov</h1>
+        <div class="flex gap-6">
+          <div class="flex flex-col">
+            <span class="font-mono text-[0.6rem] text-neutral-500 uppercase tracking-widest">Status</span>
+            <span class="text-[0.875rem] text-primary uppercase font-medium" id="entity-status">Active</span>
+          </div>
+          <div class="flex flex-col pl-6 border-l border-outline-variant/30">
+            <span class="font-mono text-[0.6rem] text-neutral-500 uppercase tracking-widest">Category</span>
+            <span class="text-[0.875rem] text-primary uppercase font-medium" id="entity-type">Criminal</span>
+          </div>
+          <div class="flex flex-col pl-6 border-l border-outline-variant/30">
+            <span class="font-mono text-[0.6rem] text-neutral-500 uppercase tracking-widest">Severity</span>
+            <span class="text-[0.875rem] text-error uppercase font-medium" id="entity-severity">HIGH</span>
+          </div>
+        </div>
+      </div>
+      <div class="text-right">
+        <span class="font-mono text-[0.6875rem] text-neutral-500 uppercase tracking-widest block mb-1">Last Updated</span>
+        <span class="text-[0.875rem] text-outline font-mono" id="entity-clock">2026-04-06T14:22:09Z</span>
+      </div>
+    </div>
+
+    <!-- Row 1: Profile Image + Vision Telemetry -->
+    <div class="flex flex-col lg:flex-row gap-8 items-start mb-12">
+
+      <!-- Profile Image Area -->
+      <div class="w-full lg:w-1/3 aspect-[4/5] bg-surface-low relative overflow-hidden max-h-[380px]">
+        <!-- Placeholder for entity screenshot -->
+        <div class="w-full h-full flex items-center justify-center">
+          <div class="text-center">
+            <span class="material-symbols-outlined text-outline-variant text-[56px] mb-2 block">person_search</span>
+            <p class="font-mono text-[0.7rem] text-outline">Entity screenshot</p>
+            <p class="font-mono text-[0.6rem] text-outline-variant">Captured from CAM_01</p>
+          </div>
+        </div>
+        <!-- Confidence overlay -->
+        <div class="absolute bottom-4 left-4 right-4">
+          <div class="glass-panel p-3 space-y-2">
+            <div class="flex justify-between items-center">
+              <span class="font-mono text-[0.6rem] text-on-surface-variant uppercase tracking-widest">Detection Confidence</span>
+              <span class="text-[0.8rem] text-white font-medium" id="entity-confidence">89.4%</span>
+            </div>
+            <div class="w-full bg-surface-lowest h-[2px]">
+              <div class="bg-primary h-full" style="width: 89.4%"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Vision Telemetry Stats -->
+      <div class="flex-1 grid grid-cols-2 gap-4">
+        <div class="col-span-2 mb-2">
+          <span class="section-header">Vision Telemetry</span>
+        </div>
+        <div class="bg-surface-low p-5 flex flex-col justify-between h-32">
+          <span class="stat-label">Appearances</span>
+          <div class="flex items-baseline gap-2">
+            <span class="font-headline text-3xl font-light text-primary" id="stat-appearances">42</span>
+            <span class="material-symbols-outlined text-[14px] text-primary">trending_up</span>
+          </div>
+        </div>
+        <div class="bg-surface-low p-5 flex flex-col justify-between h-32">
+          <span class="stat-label">Incident Count</span>
+          <span class="font-headline text-3xl font-light text-primary" id="stat-incident-count">3</span>
+        </div>
+        <div class="bg-surface-low p-5 flex flex-col justify-between h-32">
+          <span class="stat-label">Avg Confidence</span>
+          <span class="font-headline text-3xl font-light text-primary" id="stat-avg-conf">0.89</span>
+        </div>
+        <div class="bg-surface-low p-5 flex flex-col justify-between h-32">
+          <span class="stat-label">Source</span>
+          <div>
+            <span class="text-[0.9rem] text-white block uppercase" id="stat-source">CAM_01</span>
+            <span class="font-mono text-[0.6rem] text-neutral-500 mt-1 block" id="stat-source-detail">Primary Webcam</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Row 2: Detection Timeline + Linked Incidents -->
+    <div class="flex flex-col lg:flex-row gap-8 mb-12">
+
+      <!-- Detection Timeline -->
+      <div class="w-full lg:w-2/3">
+        <div class="flex items-center justify-between mb-6">
+          <h3 class="section-header">Detection Timeline</h3>
+          <div class="flex gap-4">
+            <button class="font-mono text-[0.6rem] text-neutral-500 hover:text-white uppercase cursor-pointer bg-transparent border-0">24H</button>
+            <button class="font-mono text-[0.6rem] text-white border-b border-primary uppercase cursor-pointer bg-transparent border-0">7D</button>
+            <button class="font-mono text-[0.6rem] text-neutral-500 hover:text-white uppercase cursor-pointer bg-transparent border-0">30D</button>
+          </div>
+        </div>
+        <div class="space-y-2" id="entity-timeline-root">
+          <div class="flex items-start gap-4 p-3 hover:bg-surface-high transition-colors">
+            <span class="font-mono text-[0.6rem] text-outline whitespace-nowrap mt-0.5">14:22:09</span>
+            <span class="badge badge--ghost mt-0.5">DETECT</span>
+            <div>
+              <span class="text-[0.75rem] text-on-surface">Confirmed detection — confidence 0.89, decision: <span class="text-primary">accept</span>, track T004</span>
+            </div>
+          </div>
+          <div class="flex items-start gap-4 p-3 hover:bg-surface-high transition-colors">
+            <span class="font-mono text-[0.6rem] text-outline whitespace-nowrap mt-0.5">14:18:44</span>
+            <span class="badge badge--error mt-0.5">ALERT</span>
+            <div>
+              <span class="text-[0.75rem] text-on-surface">Reappearance alert — 3 detections in 10s window. Severity: <span class="text-error">medium</span></span>
+            </div>
+          </div>
+          <div class="flex items-start gap-4 p-3 hover:bg-surface-high transition-colors">
+            <span class="font-mono text-[0.6rem] text-outline whitespace-nowrap mt-0.5">14:18:20</span>
+            <span class="badge badge--ghost mt-0.5">DETECT</span>
+            <div>
+              <span class="text-[0.75rem] text-on-surface">Confirmed detection — confidence 0.91, decision: accept, track T004</span>
+            </div>
+          </div>
+          <div class="flex items-start gap-4 p-3 hover:bg-surface-high transition-colors">
+            <span class="font-mono text-[0.6rem] text-outline whitespace-nowrap mt-0.5">14:12:30</span>
+            <span class="badge badge--filled mt-0.5">INCIDENT</span>
+            <div>
+              <span class="text-[0.75rem] text-on-surface">Incident INC-017 opened — reappearance pattern detected</span>
+            </div>
+          </div>
+          <div class="flex items-start gap-4 p-3 hover:bg-surface-high transition-colors">
+            <span class="font-mono text-[0.6rem] text-outline whitespace-nowrap mt-0.5">14:10:05</span>
+            <span class="badge badge--ghost mt-0.5">DETECT</span>
+            <div>
+              <span class="text-[0.75rem] text-on-surface">First detection this session — confidence 0.87, decision: accept</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Linked Incidents -->
+      <div class="flex-1 bg-surface-container p-6">
+        <div class="flex items-center gap-2 mb-4">
+          <span class="material-symbols-outlined text-primary text-[16px]">link</span>
+          <h3 class="section-header">Linked Incidents</h3>
+        </div>
+        <div class="space-y-4" id="entity-incidents-root">
+          <div class="bg-surface-high p-4 hover:bg-surface-bright transition-colors cursor-pointer">
+            <div class="flex items-center justify-between mb-1">
+              <span class="font-headline font-semibold text-[0.8rem] text-primary">INC-017</span>
+              <span class="badge badge--ghost">OPEN</span>
+            </div>
+            <p class="text-[0.7rem] text-on-surface-variant leading-snug">Reappearance alert — known entity re-detected in rapid succession.</p>
+            <span class="font-mono text-[0.55rem] text-outline mt-1 block">Started: 14:12:30 · Alerts: 2</span>
+          </div>
+          <div class="bg-surface-high p-4 hover:bg-surface-bright transition-colors cursor-pointer">
+            <div class="flex items-center justify-between mb-1">
+              <span class="font-headline font-semibold text-[0.8rem] text-primary">INC-009</span>
+              <span class="badge badge--ghost">CLOSED</span>
+            </div>
+            <p class="text-[0.7rem] text-on-surface-variant leading-snug">Score instability — confidence variance exceeded threshold.</p>
+            <span class="font-mono text-[0.55rem] text-outline mt-1 block">Started: 12:45:10 · Alerts: 1</span>
+          </div>
+        </div>
+        <a class="block w-full mt-6 py-2.5 bg-primary text-on-primary font-mono text-[0.65rem] uppercase tracking-widest hover:bg-on-surface transition-all text-center no-underline" href="../incidents/index.html">Open Incidents Workspace</a>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+</body>
+</html>

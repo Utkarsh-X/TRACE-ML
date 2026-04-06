@@ -169,7 +169,7 @@ def load_yaml(path: Path) -> dict:
 
 
 def load_settings(config_path: str | Path | None = None) -> Settings:
-    path = Path(config_path or os.getenv("TRACE_AML_CONFIG", "config.yaml"))
+    path = Path(config_path or os.getenv("TRACE_AML_CONFIG", "config/config.yaml"))
     raw = load_yaml(path)
     try:
         settings = Settings(**raw)

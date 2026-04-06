@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+  <title>TRACE-AML | Incidents</title>
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+
+  <!-- Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
+
+  <!-- Tailwind Config: Obsidian TRACE Design System -->
+  <script>
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "surface-lowest":     "#0e0e0e",
+            "surface-low":        "#1b1b1b",
+            "surface":            "#131313",
+            "surface-container":  "#1f1f1f",
+            "surface-high":       "#2a2a2a",
+            "surface-highest":    "#353535",
+            "surface-bright":     "#393939",
+            "on-surface":         "#e2e2e2",
+            "on-surface-variant": "#c6c6c6",
+            "outline":            "#919191",
+            "outline-variant":    "#474747",
+            "primary":            "#ffffff",
+            "on-primary":         "#1a1c1c",
+            "error":              "#ffb4ab",
+            "error-container":    "#93000a",
+            "background":         "#131313",
+          },
+          fontFamily: {
+            headline: ["Inter", "sans-serif"],
+            body:     ["Inter", "sans-serif"],
+            mono:     ["JetBrains Mono", "monospace"],
+          },
+          borderRadius: {
+            DEFAULT: "0.125rem",
+            lg:      "0.25rem",
+          },
+        },
+      },
+    }
+  </script>
+
+  <!-- Shared Base Styles -->
+  <link rel="stylesheet" href="../shared/base.css" />
+
+  <style>
+    /* Incident-specific grid */
+    .incident-grid {
+      display: grid;
+      grid-template-columns: 260px 1fr 260px;
+      grid-template-rows: auto 1fr auto;
+      height: calc(100vh - 3.5rem);
+      gap: 0;
+    }
+    /* Timeline connector */
+    .timeline-connector {
+      width: 2px;
+      background: linear-gradient(180deg, #1f1f1f 0%, #2a2a2a 50%, #1f1f1f 100%);
+    }
+    /* Timeline node dot */
+    .timeline-node {
+      width: 10px;
+      height: 10px;
+      border: 2px solid #474747;
+      background: #131313;
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 2;
+    }
+    .timeline-node--event { border-color: #919191; }
+    .timeline-node--alert { border-color: #ffb4ab; background: #93000a; }
+    .timeline-node--incident { border-color: #ffffff; background: #ffffff; }
+    .timeline-node--action { border-color: #c6c6c6; background: #2a2a2a; }
+  </style>
+</head>
+
+<body class="bg-background text-on-surface font-body overflow-hidden">
+
+<!-- ═══════════════════════════════════════════════════════
+     TOP NAVIGATION BAR
+     ═══════════════════════════════════════════════════════ -->
+<nav class="fixed top-0 w-full z-50 bg-surface-low flex items-center justify-between px-6 h-14 no-border" id="top-nav">
+  <div class="flex items-center gap-8">
+    <a href="../live_ops/index.html" class="text-lg font-black tracking-tighter text-white uppercase font-headline hover:text-primary/80 transition-colors">TRACE-AML</a>
+    <div class="hidden md:flex gap-6 items-center" id="top-nav-links">
+      <a class="font-headline font-medium text-[0.875rem] tracking-tight text-neutral-400 hover:text-white transition-colors" href="../live_ops/index.html">Live Ops</a>
+      <a class="font-headline font-medium text-[0.875rem] tracking-tight text-white border-b-2 border-white pb-1" href="./index.html">Incidents</a>
+      <a class="font-headline font-medium text-[0.875rem] tracking-tight text-neutral-400 hover:text-white transition-colors" href="../entities/index.html">Entities</a>
+      <a class="font-headline font-medium text-[0.875rem] tracking-tight text-neutral-400 hover:text-white transition-colors" href="../history/index.html">History</a>
+      <a class="font-headline font-medium text-[0.875rem] tracking-tight text-neutral-400 hover:text-white transition-colors" href="../database/index.html">Database</a>
+      <a class="font-headline font-medium text-[0.875rem] tracking-tight text-neutral-400 hover:text-white transition-colors" href="../settings/index.html">Settings</a>
+    </div>
+  </div>
+  <div class="flex items-center gap-3">
+    <div class="hidden md:flex items-center bg-surface-lowest px-3 py-1.5 gap-2">
+      <span class="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span>
+      <span class="text-[0.6875rem] font-mono text-outline uppercase tracking-widest">System Active</span>
+    </div>
+    <button type="button" class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:bg-surface-high p-2 bg-transparent border-0" aria-label="Notifications">notifications</button>
+    <button type="button" class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:bg-surface-high p-2 bg-transparent border-0" aria-label="Settings">settings</button>
+    <div class="w-8 h-8 bg-surface-high flex items-center justify-center">
+      <span class="material-symbols-outlined text-on-surface-variant text-[18px]">person</span>
+    </div>
+  </div>
+</nav>
+
+<!-- ═══════════════════════════════════════════════════════
+     SIDE NAVIGATION RAIL
+     ═══════════════════════════════════════════════════════ -->
+<aside class="fixed left-0 top-14 h-[calc(100vh-3.5rem)] w-20 bg-surface-low flex flex-col items-center py-4 z-40 no-border" id="side-nav">
+  <div class="flex flex-col items-center gap-1 w-full">
+    <a class="flex flex-col items-center gap-1 cursor-pointer text-neutral-500 hover:text-neutral-200 w-full py-3 no-underline" href="../live_ops/index.html" title="Live Ops">
+      <span class="material-symbols-outlined">monitoring</span>
+      <span class="font-mono text-[0.55rem] uppercase tracking-widest">Live Ops</span>
+    </a>
+    <!-- Incidents (ACTIVE) -->
+    <a class="flex flex-col items-center gap-1 cursor-pointer text-white bg-surface-high border-l-2 border-white w-full py-3 no-underline" href="./index.html" title="Incidents">
+      <span class="material-symbols-outlined">timeline</span>
+      <span class="font-mono text-[0.55rem] uppercase tracking-widest">Incidents</span>
+    </a>
+    <a class="flex flex-col items-center gap-1 cursor-pointer text-neutral-500 hover:text-neutral-200 w-full py-3 no-underline" href="../entities/index.html" title="Entities">
+      <span class="material-symbols-outlined">hub</span>
+      <span class="font-mono text-[0.55rem] uppercase tracking-widest">Entities</span>
+    </a>
+    <a class="flex flex-col items-center gap-1 cursor-pointer text-neutral-500 hover:text-neutral-200 w-full py-3 no-underline" href="../history/index.html" title="History">
+      <span class="material-symbols-outlined">history</span>
+      <span class="font-mono text-[0.55rem] uppercase tracking-widest">History</span>
+    </a>
+    <a class="flex flex-col items-center gap-1 cursor-pointer text-neutral-500 hover:text-neutral-200 w-full py-3 no-underline" href="../database/index.html" title="Database">
+      <span class="material-symbols-outlined">database</span>
+      <span class="font-mono text-[0.55rem] uppercase tracking-widest">Database</span>
+    </a>
+    <a class="flex flex-col items-center gap-1 cursor-pointer text-neutral-500 hover:text-neutral-200 w-full py-3 no-underline" href="../settings/index.html" title="Settings">
+      <span class="material-symbols-outlined">tune</span>
+      <span class="font-mono text-[0.55rem] uppercase tracking-widest">Settings</span>
+    </a>
+  </div>
+  <div class="mt-auto flex flex-col items-center gap-4 w-full pb-4">
+    <button type="button" class="text-neutral-500 hover:text-neutral-200 cursor-pointer py-2 bg-transparent border-0" title="Help">
+      <span class="material-symbols-outlined">help_outline</span>
+    </button>
+    <button type="button" class="text-neutral-500 hover:text-neutral-200 cursor-pointer py-2 bg-transparent border-0" title="Disconnect">
+      <span class="material-symbols-outlined">logout</span>
+    </button>
+  </div>
+</aside>
+
+<!-- ═══════════════════════════════════════════════════════
+     MAIN CANVAS — INCIDENTS
+     ═══════════════════════════════════════════════════════ -->
+<main class="pl-20 pt-14 h-screen w-full flex flex-col">
+
+  <!-- Incident Selector + Header -->
+  <section class="bg-surface px-6 pt-4 pb-2 flex flex-wrap gap-4 items-end flex-shrink-0">
+    <div>
+      <label class="font-mono text-[0.6rem] text-outline uppercase block mb-1" for="incident-select">Incident</label>
+      <select id="incident-select" class="bg-surface-high font-mono text-[0.8rem] text-white border-0 px-3 py-2 min-w-[280px] cursor-pointer focus:ring-1 focus:ring-white">
+        <option value="INC-018">INC-018 — Repeated Unknown Detection (UNK-0042)</option>
+        <option value="INC-017">INC-017 — Reappearance Alert (ENT-KN-0001)</option>
+        <option value="INC-016">INC-016 — Score Instability (ENT-KN-0003)</option>
+      </select>
+    </div>
+    <span class="text-[0.65rem] font-mono text-outline pb-2" id="incident-load-status">Loaded 3 incidents</span>
+  </section>
+
+  <!-- Investigation Header Banner -->
+  <section class="bg-surface px-6 py-4 flex justify-between items-end flex-shrink-0">
+    <div>
+      <div class="flex items-center gap-2 mb-2">
+        <span class="w-1 h-4 bg-primary inline-block"></span>
+        <span class="font-mono text-[0.6875rem] uppercase tracking-[0.2em] text-outline" id="incident-id-label">Incident ID: INC-018</span>
+      </div>
+      <h1 class="font-headline text-3xl font-bold tracking-tight text-white" id="incident-title">Repeated Unknown Detection</h1>
+    </div>
+    <div class="text-right">
+      <span class="font-mono text-[0.6875rem] uppercase tracking-[0.2em] text-outline block mb-1">Status</span>
+      <span class="font-mono text-xl text-primary" id="incident-status">OPEN</span>
+    </div>
+  </section>
+
+  <!-- 3-Column Investigation Grid -->
+  <div class="flex-1 grid grid-cols-[260px_1fr_260px] overflow-hidden min-h-0">
+
+    <!-- ─── LEFT: Entity Profile + Trigger Logs ─────────── -->
+    <div class="bg-surface-container p-6 space-y-8 overflow-y-auto">
+
+      <!-- Entity Profile -->
+      <div>
+        <h3 class="section-header mb-4 pb-2 border-b border-outline-variant/20">Entity Profile</h3>
+        <div class="space-y-3" id="incident-entity-root">
+          <div class="bg-surface-lowest p-4">
+            <span class="block font-mono text-[0.6rem] text-outline uppercase mb-1">Entity</span>
+            <span class="block font-headline font-semibold text-[0.9rem] text-primary" id="entity-name">UNK-0042</span>
+            <span class="block font-mono text-[0.65rem] text-outline mt-1" id="entity-id">entity_id: unk-0042</span>
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+            <div class="bg-surface-lowest p-3">
+              <span class="stat-label block mb-1">Type</span>
+              <span class="font-mono text-[0.8rem] text-primary" id="entity-type">Unknown</span>
+            </div>
+            <div class="bg-surface-lowest p-3">
+              <span class="stat-label block mb-1">Status</span>
+              <span class="font-mono text-[0.8rem] text-error" id="entity-status">Flagged</span>
+            </div>
+          </div>
+          <div class="bg-surface-lowest p-3">
+            <span class="stat-label block mb-1">First Seen</span>
+            <span class="font-mono text-[0.75rem] text-on-surface-variant" id="entity-first-seen">2026-04-06T14:21:30Z</span>
+          </div>
+          <div class="bg-surface-lowest p-3">
+            <span class="stat-label block mb-1">Last Seen</span>
+            <span class="font-mono text-[0.75rem] text-on-surface-variant" id="entity-last-seen">2026-04-06T14:22:09Z</span>
+          </div>
+          <div class="bg-surface-lowest p-3">
+            <span class="stat-label block mb-1">Detections</span>
+            <span class="font-headline font-bold text-[1.2rem] text-primary" id="entity-detections">7</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Trigger Logs (Linked Alerts) -->
+      <div>
+        <h3 class="section-header mb-4 pb-2 border-b border-outline-variant/20">Trigger Logs</h3>
+        <div class="space-y-3" id="incident-alerts-root">
+          <div class="bg-surface-high p-3 hover:bg-surface-bright transition-colors cursor-pointer">
+            <div class="flex items-center justify-between mb-1">
+              <span class="font-mono text-[0.6rem] text-error font-medium uppercase">Repeated Unknown</span>
+              <span class="badge badge--error">HIGH</span>
+            </div>
+            <p class="text-[0.7rem] text-on-surface-variant leading-snug">5 detections in 10s window for unknown subject</p>
+            <span class="font-mono text-[0.6rem] text-outline block mt-1">14:21:45 · ALR-0891</span>
+          </div>
+          <div class="bg-surface-high p-3 hover:bg-surface-bright transition-colors cursor-pointer">
+            <div class="flex items-center justify-between mb-1">
+              <span class="font-mono text-[0.6rem] text-on-surface-variant font-medium uppercase">Unknown Burst</span>
+              <span class="badge badge--ghost">MEDIUM</span>
+            </div>
+            <p class="text-[0.7rem] text-on-surface-variant leading-snug">3 unknown detections in rapid succession</p>
+            <span class="font-mono text-[0.6rem] text-outline block mt-1">14:21:38 · ALR-0890</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── CENTER: Explainability Timeline ─────────────── -->
+    <div class="bg-surface p-8 relative overflow-y-auto">
+      <!-- Vertical connector line -->
+      <div class="absolute left-8 top-0 bottom-0 timeline-connector opacity-30"></div>
+
+      <h3 class="section-header mb-6 relative z-10">Explainability Timeline</h3>
+
+      <div class="relative space-y-6" id="incident-timeline-root">
+
+        <!-- Timeline Entry: Incident Created -->
+        <div class="relative pl-10">
+          <div class="timeline-node timeline-node--incident" style="left: 32px; top: 4px;"></div>
+          <div class="bg-surface-container p-4 hover:bg-surface-high transition-colors">
+            <div class="flex items-center justify-between mb-2">
+              <div class="flex items-center gap-2">
+                <span class="badge badge--filled">INCIDENT</span>
+                <span class="font-headline font-semibold text-[0.8rem] text-primary">INC-018 Opened</span>
+              </div>
+              <span class="font-mono text-[0.6rem] text-outline">14:21:45</span>
+            </div>
+            <p class="text-[0.75rem] text-on-surface leading-relaxed">Incident created automatically. Trigger: Repeated unknown detection for entity UNK-0042. Severity auto-assigned: <span class="text-error font-medium">HIGH</span>.</p>
+            <div class="mt-2 flex items-center gap-3">
+              <span class="font-mono text-[0.6rem] text-outline">Entity: UNK-0042</span>
+              <span class="font-mono text-[0.6rem] text-outline">Source: rules_engine</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Timeline Entry: Alert Generated -->
+        <div class="relative pl-10">
+          <div class="timeline-node timeline-node--alert" style="left: 32px; top: 4px;"></div>
+          <div class="bg-surface-container p-4 hover:bg-surface-high transition-colors">
+            <div class="flex items-center justify-between mb-2">
+              <div class="flex items-center gap-2">
+                <span class="badge badge--error">ALERT</span>
+                <span class="font-headline font-semibold text-[0.8rem] text-primary">Repeated Unknown Detection</span>
+              </div>
+              <span class="font-mono text-[0.6rem] text-outline">14:21:45</span>
+            </div>
+            <p class="text-[0.75rem] text-on-surface leading-relaxed">Unknown subject detected 5 times within a 10-second window. Pattern matches <span class="text-primary font-medium">repeated_unknown</span> rule. Confidence range: 0.68 – 0.74.</p>
+            <div class="mt-2 flex items-center gap-3">
+              <span class="font-mono text-[0.6rem] text-outline">Alert: ALR-0891</span>
+              <span class="font-mono text-[0.6rem] text-outline">Events: 5</span>
+              <span class="font-mono text-[0.6rem] text-outline">Window: 10s</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Timeline Entry: Detection Event -->
+        <div class="relative pl-10">
+          <div class="timeline-node timeline-node--event" style="left: 32px; top: 4px;"></div>
+          <div class="bg-surface-container p-4 hover:bg-surface-high transition-colors">
+            <div class="flex items-center justify-between mb-2">
+              <div class="flex items-center gap-2">
+                <span class="badge badge--ghost">EVENT</span>
+                <span class="font-headline font-semibold text-[0.8rem] text-on-surface">Detection #5</span>
+              </div>
+              <span class="font-mono text-[0.6rem] text-outline">14:21:44</span>
+            </div>
+            <p class="text-[0.75rem] text-on-surface-variant leading-relaxed">Face detected. Confidence: 0.74. Decision: <span class="text-primary">review</span>. Smoothed confidence: 0.71. Track ID: T007.</p>
+            <div class="mt-2 flex items-center gap-3">
+              <span class="font-mono text-[0.6rem] text-outline">Source: CAM_01</span>
+              <span class="font-mono text-[0.6rem] text-outline">Track: T007</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Timeline Entry: Detection Event -->
+        <div class="relative pl-10">
+          <div class="timeline-node timeline-node--event" style="left: 32px; top: 4px;"></div>
+          <div class="bg-surface-container p-4 hover:bg-surface-high transition-colors">
+            <div class="flex items-center justify-between mb-2">
+              <div class="flex items-center gap-2">
+                <span class="badge badge--ghost">EVENT</span>
+                <span class="font-headline font-semibold text-[0.8rem] text-on-surface">Detection #4</span>
+              </div>
+              <span class="font-mono text-[0.6rem] text-outline">14:21:42</span>
+            </div>
+            <p class="text-[0.75rem] text-on-surface-variant leading-relaxed">Face detected. Confidence: 0.71. Decision: review. Smoothed confidence: 0.70. Track ID: T007.</p>
+          </div>
+        </div>
+
+        <!-- Timeline Entry: Detection Event -->
+        <div class="relative pl-10">
+          <div class="timeline-node timeline-node--event" style="left: 32px; top: 4px;"></div>
+          <div class="bg-surface-container p-4 hover:bg-surface-high transition-colors">
+            <div class="flex items-center justify-between mb-2">
+              <div class="flex items-center gap-2">
+                <span class="badge badge--ghost">EVENT</span>
+                <span class="font-headline font-semibold text-[0.8rem] text-on-surface">Detection #3</span>
+              </div>
+              <span class="font-mono text-[0.6rem] text-outline">14:21:39</span>
+            </div>
+            <p class="text-[0.75rem] text-on-surface-variant leading-relaxed">Face detected. Confidence: 0.68. Decision: review. Smoothed confidence: 0.69.</p>
+          </div>
+        </div>
+
+        <!-- Timeline Entry: Entity Resolved -->
+        <div class="relative pl-10">
+          <div class="timeline-node timeline-node--event" style="left: 32px; top: 4px;"></div>
+          <div class="bg-surface-container p-4 hover:bg-surface-high transition-colors">
+            <div class="flex items-center justify-between mb-2">
+              <div class="flex items-center gap-2">
+                <span class="badge badge--ghost">EVENT</span>
+                <span class="font-headline font-semibold text-[0.8rem] text-on-surface">Entity Resolved</span>
+              </div>
+              <span class="font-mono text-[0.6rem] text-outline">14:21:30</span>
+            </div>
+            <p class="text-[0.75rem] text-on-surface-variant leading-relaxed">Unknown face assigned entity ID <span class="text-primary font-medium">UNK-0042</span>. No match found in active gallery (searched 96 embeddings). Persist decision: review.</p>
+          </div>
+        </div>
+
+        <!-- Timeline Entry: First Detection -->
+        <div class="relative pl-10">
+          <div class="timeline-node timeline-node--event" style="left: 32px; top: 4px;"></div>
+          <div class="bg-surface-container p-4 hover:bg-surface-high transition-colors">
+            <div class="flex items-center justify-between mb-2">
+              <div class="flex items-center gap-2">
+                <span class="badge badge--ghost">EVENT</span>
+                <span class="font-headline font-semibold text-[0.8rem] text-on-surface">Detection #1</span>
+              </div>
+              <span class="font-mono text-[0.6rem] text-outline">14:21:28</span>
+            </div>
+            <p class="text-[0.75rem] text-on-surface-variant leading-relaxed">First detection of unknown face. Confidence: 0.65. Quality score: 0.72. No temporal history. Track ID assigned: T007.</p>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ─── RIGHT: Decision Engine + Actions ────────────── -->
+    <div class="bg-surface-low p-6 space-y-6 overflow-y-auto">
+
+      <!-- Decision Engine Controls -->
+      <div>
+        <h3 class="section-header mb-4">Decision Engine</h3>
+        <div class="space-y-3">
+          <div>
+            <label class="font-mono text-[0.6rem] text-outline uppercase block mb-1" for="incident-severity-select">Severity</label>
+            <select id="incident-severity-select" class="w-full bg-surface-high text-white font-mono text-[0.8rem] border-0 px-3 py-2 cursor-pointer focus:ring-1 focus:ring-white">
+              <option value="low">low</option>
+              <option value="medium">medium</option>
+              <option value="high" selected>high</option>
+            </select>
+          </div>
+          <button type="button" id="incident-apply-severity" class="w-full bg-primary text-on-primary py-2.5 font-mono font-bold uppercase tracking-widest text-[0.65rem] hover:bg-on-surface transition-colors cursor-pointer border-0">Apply Severity</button>
+          <button type="button" id="incident-close-btn" class="w-full bg-surface-high text-white py-2.5 font-mono font-bold uppercase tracking-widest text-[0.65rem] hover:bg-surface-bright transition-colors cursor-pointer border-0">Close Incident</button>
+          <p class="text-[0.65rem] font-mono text-outline" id="incident-action-status"></p>
+        </div>
+      </div>
+
+      <!-- Incident Metadata -->
+      <div>
+        <h3 class="section-header mb-4">Incident Metadata</h3>
+        <div class="space-y-2">
+          <div class="bg-surface-container p-3">
+            <span class="stat-label block mb-1">Severity</span>
+            <span class="font-mono text-[0.8rem] text-error" id="meta-severity">HIGH</span>
+          </div>
+          <div class="bg-surface-container p-3">
+            <span class="stat-label block mb-1">Alert Count</span>
+            <span class="font-headline font-bold text-[1rem] text-primary" id="meta-alert-count">2</span>
+          </div>
+          <div class="bg-surface-container p-3">
+            <span class="stat-label block mb-1">Start Time</span>
+            <span class="font-mono text-[0.7rem] text-on-surface-variant" id="meta-start">14:21:45</span>
+          </div>
+          <div class="bg-surface-container p-3">
+            <span class="stat-label block mb-1">Last Updated</span>
+            <span class="font-mono text-[0.7rem] text-on-surface-variant" id="meta-updated">14:22:09</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Actions Audit Log -->
+      <div>
+        <h3 class="section-header mb-4">Actions Audit</h3>
+        <div class="space-y-2" id="actions-log">
+          <div class="bg-surface-container p-3">
+            <div class="flex items-center justify-between mb-1">
+              <span class="font-mono text-[0.6rem] text-primary font-medium uppercase">Log</span>
+              <span class="font-mono text-[0.6rem] text-outline">14:21:45</span>
+            </div>
+            <p class="text-[0.7rem] text-on-surface-variant leading-snug">Action type: log. Trigger: on_create. Status: executed.</p>
+            <span class="font-mono text-[0.55rem] text-outline block mt-1">ACT-0412</span>
+          </div>
+          <div class="bg-surface-container p-3">
+            <div class="flex items-center justify-between mb-1">
+              <span class="font-mono text-[0.6rem] text-primary font-medium uppercase">Email</span>
+              <span class="font-mono text-[0.6rem] text-outline">14:21:45</span>
+            </div>
+            <p class="text-[0.7rem] text-on-surface-variant leading-snug">Action type: email. Trigger: on_create. Status: executed.</p>
+            <span class="font-mono text-[0.55rem] text-outline block mt-1">ACT-0413</span>
+          </div>
+          <div class="bg-surface-container p-3">
+            <div class="flex items-center justify-between mb-1">
+              <span class="font-mono text-[0.6rem] text-primary font-medium uppercase">Alarm</span>
+              <span class="font-mono text-[0.6rem] text-outline">14:21:45</span>
+            </div>
+            <p class="text-[0.7rem] text-on-surface-variant leading-snug">Action type: alarm. Trigger: on_create. Status: executed.</p>
+            <span class="font-mono text-[0.55rem] text-outline block mt-1">ACT-0414</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+
+</main>
+
+</body>
+</html>

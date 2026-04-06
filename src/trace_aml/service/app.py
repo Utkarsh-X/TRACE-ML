@@ -1,7 +1,5 @@
 """FastAPI service bridge for TRACE-AML read models."""
 
-from __future__ import annotations
-
 import json
 from queue import Empty, Full, Queue
 from typing import Any

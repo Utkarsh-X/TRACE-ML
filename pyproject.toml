@@ -41,6 +41,7 @@ trace-aml = "trace_aml.cli:app"
 include-package-data = true
 
 [tool.setuptools.packages.find]
+where = ["src"]
 include = ["trace_aml*"]
 
 [tool.pytest.ini_options]

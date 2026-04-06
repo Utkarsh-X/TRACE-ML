@@ -138,3 +138,22 @@ def test_service_endpoints_cover_snapshot_entity_incident_and_timeline(tmp_path:
 
     missing = client.get("/api/v1/incidents/INC-DOES-NOT-EXIST")
     assert missing.status_code == 404
+
+
+def test_service_sse_stream_endpoint_contract(tmp_path: Path) -> None:
+    settings = _settings(tmp_path)
+    store = VectorStore(settings)
+    _seed(store)
+    publisher = InMemoryEventStreamPublisher()
+    publisher.publish("event.created", {"event_id": "EVT-1"})
+
+    app = create_service_app(settings=settings, store=store, stream_publisher=publisher)
+    client = TestClient(app)
+
+    openapi = client.get("/openapi.json")
+    assert openapi.status_code == 200
+    stream_params = openapi.json()["paths"]["/api/v1/events/stream"]["get"]["parameters"]
+    assert all(param["name"] != "request" for param in stream_params)
+
+    stream_route = openapi.json()["paths"]["/api/v1/events/stream"]["get"]
+    assert stream_route["responses"]["200"]["description"] == "Successful Response"

@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+  <title>TRACE-AML | Database</title>
+
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
+
+  <script>
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "surface-lowest":"#0e0e0e","surface-low":"#1b1b1b","surface":"#131313",
+            "surface-container":"#1f1f1f","surface-high":"#2a2a2a","surface-highest":"#353535",
+            "surface-bright":"#393939","on-surface":"#e2e2e2","on-surface-variant":"#c6c6c6",
+            "outline":"#919191","outline-variant":"#474747","primary":"#ffffff",
+            "on-primary":"#1a1c1c","error":"#ffb4ab","error-container":"#93000a","background":"#131313",
+          },
+          fontFamily: { headline:["Inter"],body:["Inter"],mono:["JetBrains Mono"] },
+          borderRadius: { DEFAULT:"0.125rem", lg:"0.25rem" },
+        },
+      },
+    }
+  </script>
+  <link rel="stylesheet" href="../shared/base.css" />
+
+  <style>
+    .db-grid {
+      display: grid;
+      grid-template-columns: 1fr 280px;
+      height: calc(100vh - 3.5rem);
+      gap: 0;
+    }
+    .db-table th, .db-table td {
+      padding: 0.5rem 0.75rem;
+      text-align: left;
+      white-space: nowrap;
+    }
+    .db-table tbody tr:hover {
+      background-color: #393939;
+    }
+    .db-table tbody tr {
+      transition: background-color 0.1s ease;
+    }
+  </style>
+</head>
+
+<body class="bg-background text-on-surface font-body overflow-hidden">
+
+<!-- TOP NAV -->
+<nav class="fixed top-0 w-full z-50 bg-surface-low flex items-center justify-between px-6 h-14 no-border">
+  <div class="flex items-center gap-8">
+    <a href="../live_ops/index.html" class="text-lg font-black tracking-tighter text-white uppercase font-headline">TRACE-AML</a>
+    <div class="hidden md:flex gap-6 items-center">
+      <a class="font-headline font-medium text-[0.875rem] tracking-tight text-neutral-400 hover:text-white transition-colors" href="../live_ops/index.html">Live Ops</a>
+      <a class="font-headline font-medium text-[0.875rem] tracking-tight text-neutral-400 hover:text-white transition-colors" href="../incidents/index.html">Incidents</a>
+      <a class="font-headline font-medium text-[0.875rem] tracking-tight text-neutral-400 hover:text-white transition-colors" href="../entities/index.html">Entities</a>
+      <a class="font-headline font-medium text-[0.875rem] tracking-tight text-neutral-400 hover:text-white transition-colors" href="../history/index.html">History</a>
+      <a class="font-headline font-medium text-[0.875rem] tracking-tight text-white border-b-2 border-white pb-1" href="./index.html">Database</a>
+      <a class="font-headline font-medium text-[0.875rem] tracking-tight text-neutral-400 hover:text-white transition-colors" href="../settings/index.html">Settings</a>
+    </div>
+  </div>
+  <div class="flex items-center gap-3">
+    <div class="hidden md:flex items-center bg-surface-lowest px-3 py-1.5 gap-2">
+      <span class="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span>
+      <span class="text-[0.6875rem] font-mono text-outline uppercase tracking-widest">System Active</span>
+    </div>
+    <button type="button" class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:bg-surface-high p-2 bg-transparent border-0">notifications</button>
+    <button type="button" class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:bg-surface-high p-2 bg-transparent border-0">settings</button>
+    <div class="w-8 h-8 bg-surface-high flex items-center justify-center">
+      <span class="material-symbols-outlined text-on-surface-variant text-[18px]">person</span>
+    </div>
+  </div>
+</nav>
+
+<!-- SIDE NAV -->
+<aside class="fixed left-0 top-14 h-[calc(100vh-3.5rem)] w-20 bg-surface-low flex flex-col items-center py-4 z-40 no-border">
+  <div class="flex flex-col items-center gap-1 w-full">
+    <a class="flex flex-col items-center gap-1 text-neutral-500 hover:text-neutral-200 w-full py-3 no-underline" href="../live_ops/index.html"><span class="material-symbols-outlined">monitoring</span><span class="font-mono text-[0.55rem] uppercase tracking-widest">Live Ops</span></a>
+    <a class="flex flex-col items-center gap-1 text-neutral-500 hover:text-neutral-200 w-full py-3 no-underline" href="../incidents/index.html"><span class="material-symbols-outlined">timeline</span><span class="font-mono text-[0.55rem] uppercase tracking-widest">Incidents</span></a>
+    <a class="flex flex-col items-center gap-1 text-neutral-500 hover:text-neutral-200 w-full py-3 no-underline" href="../entities/index.html"><span class="material-symbols-outlined">hub</span><span class="font-mono text-[0.55rem] uppercase tracking-widest">Entities</span></a>
+    <a class="flex flex-col items-center gap-1 text-neutral-500 hover:text-neutral-200 w-full py-3 no-underline" href="../history/index.html"><span class="material-symbols-outlined">history</span><span class="font-mono text-[0.55rem] uppercase tracking-widest">History</span></a>
+    <a class="flex flex-col items-center gap-1 text-white bg-surface-high border-l-2 border-white w-full py-3 no-underline" href="./index.html"><span class="material-symbols-outlined">database</span><span class="font-mono text-[0.55rem] uppercase tracking-widest">Database</span></a>
+    <a class="flex flex-col items-center gap-1 text-neutral-500 hover:text-neutral-200 w-full py-3 no-underline" href="../settings/index.html"><span class="material-symbols-outlined">tune</span><span class="font-mono text-[0.55rem] uppercase tracking-widest">Settings</span></a>
+  </div>
+  <div class="mt-auto flex flex-col items-center gap-4 w-full pb-4">
+    <button class="text-neutral-500 hover:text-neutral-200 py-2 bg-transparent border-0"><span class="material-symbols-outlined">help_outline</span></button>
+    <button class="text-neutral-500 hover:text-neutral-200 py-2 bg-transparent border-0"><span class="material-symbols-outlined">logout</span></button>
+  </div>
+</aside>
+
+<!-- MAIN CANVAS — DATABASE -->
+<main class="pl-20 pt-14 h-screen w-full">
+  <div class="db-grid">
+
+    <!-- CENTER: Data Table -->
+    <section class="bg-surface p-6 flex flex-col overflow-hidden">
+
+      <header class="flex justify-between items-start mb-5 flex-shrink-0">
+        <div>
+          <span class="flex items-center gap-2 mb-1">
+            <span class="w-1 h-1 bg-primary inline-block"></span>
+            <span class="font-mono text-[0.6875rem] uppercase tracking-[0.2em] text-outline">Database Explorer</span>
+          </span>
+          <h1 class="text-3xl font-headline font-bold text-white tracking-tight uppercase">Entity Registry</h1>
+        </div>
+        <div class="flex items-center gap-2">
+          <input type="text" placeholder="Search entities..." class="bg-surface-high font-mono text-[0.75rem] text-white border-0 px-3 py-2 w-56 placeholder-outline-variant focus:ring-1 focus:ring-white" id="db-search" />
+          <button class="px-3 py-2 bg-surface-high text-on-surface-variant font-mono text-[0.65rem] uppercase hover:bg-surface-bright cursor-pointer border-0" id="db-refresh">Refresh</button>
+        </div>
+      </header>
+
+      <!-- Data Table -->
+      <div class="flex-1 overflow-auto">
+        <table class="db-table w-full">
+          <thead>
+            <tr class="bg-surface-container">
+              <th class="font-mono text-[0.6rem] text-outline uppercase tracking-widest font-medium">Entity ID</th>
+              <th class="font-mono text-[0.6rem] text-outline uppercase tracking-widest font-medium">Name</th>
+              <th class="font-mono text-[0.6rem] text-outline uppercase tracking-widest font-medium">Category</th>
+              <th class="font-mono text-[0.6rem] text-outline uppercase tracking-widest font-medium">Status</th>
+              <th class="font-mono text-[0.6rem] text-outline uppercase tracking-widest font-medium">Embeddings</th>
+              <th class="font-mono text-[0.6rem] text-outline uppercase tracking-widest font-medium">Score</th>
+              <th class="font-mono text-[0.6rem] text-outline uppercase tracking-widest font-medium">Updated</th>
+            </tr>
+          </thead>
+          <tbody class="text-[0.75rem]">
+            <tr class="bg-surface cursor-pointer">
+              <td class="font-mono text-primary">ENT-KN-0001</td>
+              <td class="text-on-surface">Mikhail Volkov</td>
+              <td><span class="badge badge--filled">CRIMINAL</span></td>
+              <td class="text-primary">active</td>
+              <td class="font-mono text-on-surface-variant">24</td>
+              <td class="font-mono text-on-surface-variant">0.94</td>
+              <td class="font-mono text-outline text-[0.65rem]">2026-04-06T14:22:09Z</td>
+            </tr>
+            <tr class="bg-surface-container cursor-pointer">
+              <td class="font-mono text-primary">ENT-KN-0002</td>
+              <td class="text-on-surface">Elena Vasquez</td>
+              <td><span class="badge badge--ghost">POI</span></td>
+              <td class="text-primary">active</td>
+              <td class="font-mono text-on-surface-variant">18</td>
+              <td class="font-mono text-on-surface-variant">0.88</td>
+              <td class="font-mono text-outline text-[0.65rem]">2026-04-06T13:05:22Z</td>
+            </tr>
+            <tr class="bg-surface cursor-pointer">
+              <td class="font-mono text-primary">ENT-KN-0003</td>
+              <td class="text-on-surface">Sarah Chen</td>
+              <td><span class="badge badge--ghost">POI</span></td>
+              <td class="text-primary">active</td>
+              <td class="font-mono text-on-surface-variant">21</td>
+              <td class="font-mono text-on-surface-variant">0.91</td>
+              <td class="font-mono text-outline text-[0.65rem]">2026-04-06T14:20:58Z</td>
+            </tr>
+            <tr class="bg-surface-container cursor-pointer">
+              <td class="font-mono text-primary">ENT-KN-0004</td>
+              <td class="text-on-surface">James McAllister</td>
+              <td><span class="badge badge--filled">CRIMINAL</span></td>
+              <td class="text-on-surface-variant">ready</td>
+              <td class="font-mono text-on-surface-variant">12</td>
+              <td class="font-mono text-on-surface-variant">0.82</td>
+              <td class="font-mono text-outline text-[0.65rem]">2026-04-05T09:14:00Z</td>
+            </tr>
+            <tr class="bg-surface cursor-pointer">
+              <td class="font-mono text-error">UNK-0042</td>
+              <td class="text-on-surface-variant">—</td>
+              <td><span class="badge badge--error">UNKNOWN</span></td>
+              <td class="text-error">flagged</td>
+              <td class="font-mono text-on-surface-variant">0</td>
+              <td class="font-mono text-on-surface-variant">—</td>
+              <td class="font-mono text-outline text-[0.65rem]">2026-04-06T14:22:09Z</td>
+            </tr>
+            <tr class="bg-surface-container cursor-pointer">
+              <td class="font-mono text-primary">ENT-KN-0005</td>
+              <td class="text-on-surface">Amir Hassan</td>
+              <td><span class="badge badge--ghost">POI</span></td>
+              <td class="text-on-surface-variant">draft</td>
+              <td class="font-mono text-on-surface-variant">6</td>
+              <td class="font-mono text-on-surface-variant">0.45</td>
+              <td class="font-mono text-outline text-[0.65rem]">2026-04-04T16:30:00Z</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Table Footer -->
+      <div class="flex items-center justify-between pt-3 flex-shrink-0">
+        <span class="font-mono text-[0.6rem] text-outline">Showing 6 of 6 entities</span>
+        <div class="flex items-center gap-2">
+          <span class="font-mono text-[0.6rem] text-outline">Rows per page:</span>
+          <select class="bg-surface-high font-mono text-[0.65rem] text-white border-0 px-2 py-1 cursor-pointer">
+            <option>25</option>
+            <option>50</option>
+            <option>100</option>
+          </select>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- RIGHT: Database Health + Query Console -->
+    <section class="bg-surface-low flex flex-col overflow-hidden">
+
+      <!-- Database Health -->
+      <div class="p-4 flex-shrink-0">
+        <h2 class="section-header mb-4">Database Health</h2>
+        <div class="space-y-2">
+          <div class="bg-surface-container p-3 flex items-center justify-between">
+            <span class="stat-label">Entities</span>
+            <span class="font-headline font-bold text-[1rem] text-primary">6</span>
+          </div>
+          <div class="bg-surface-container p-3 flex items-center justify-between">
+            <span class="stat-label">Embeddings</span>
+            <span class="font-headline font-bold text-[1rem] text-primary">81</span>
+          </div>
+          <div class="bg-surface-container p-3 flex items-center justify-between">
+            <span class="stat-label">Active Gallery</span>
+            <span class="font-headline font-bold text-[1rem] text-primary">63</span>
+          </div>
+          <div class="bg-surface-container p-3 flex items-center justify-between">
+            <span class="stat-label">Detections</span>
+            <span class="font-headline font-bold text-[1rem] text-primary">1,247</span>
+          </div>
+          <div class="bg-surface-container p-3 flex items-center justify-between">
+            <span class="stat-label">Alerts</span>
+            <span class="font-headline font-bold text-[1rem] text-primary">89</span>
+          </div>
+          <div class="bg-surface-container p-3 flex items-center justify-between">
+            <span class="stat-label">Incidents</span>
+            <span class="font-headline font-bold text-[1rem] text-primary">18</span>
+          </div>
+          <div class="bg-surface-container p-3 flex items-center justify-between">
+            <span class="stat-label">Storage</span>
+            <span class="font-mono text-[0.8rem] text-on-surface-variant">142 MB</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Query Console -->
+      <div class="p-4 flex-1 flex flex-col min-h-0">
+        <div class="flex items-center justify-between mb-2 flex-shrink-0">
+          <div class="flex items-center gap-2">
+            <span class="status-dot status-dot--active"></span>
+            <h2 class="section-header">Query Console</h2>
+          </div>
+        </div>
+        <div class="terminal-block flex-1 min-h-0" id="query-console">
+<span class="log-type">&gt;</span> SELECT count(*) FROM persons WHERE lifecycle_state='active'
+<span class="log-time">→</span> 3
+
+<span class="log-type">&gt;</span> SELECT count(*) FROM embeddings
+<span class="log-time">→</span> 81
+
+<span class="log-type">&gt;</span> SELECT person_id, name, lifecycle_state FROM persons
+<span class="log-time">→</span> ENT-KN-0001 | Mikhail Volkov  | active
+<span class="log-time">→</span> ENT-KN-0002 | Elena Vasquez   | active
+<span class="log-time">→</span> ENT-KN-0003 | Sarah Chen      | active
+<span class="log-time">→</span> ENT-KN-0004 | James McAllister| ready
+<span class="log-time">→</span> ENT-KN-0005 | Amir Hassan     | draft
+<span class="log-time">→</span> UNK-0042    | —               | flagged
+
+<span class="log-type">&gt;</span> SHOW TABLE STATUS
+<span class="log-time">→</span> persons:    6 rows
+<span class="log-time">→</span> embeddings: 81 rows
+<span class="log-time">→</span> detections: 1,247 rows
+<span class="log-time">→</span> alerts:     89 rows
+<span class="log-time">→</span> incidents:  18 rows
+<span class="log-time">→</span> actions:    42 rows
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+</main>
+
+</body>
+</html>
