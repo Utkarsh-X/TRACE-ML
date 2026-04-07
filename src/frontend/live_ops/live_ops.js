@@ -10,8 +10,8 @@
 (function () {
   "use strict";
 
-  var SNAPSHOT_INTERVAL = 3000;
-  var OVERLAY_INTERVAL = 200;
+  var SNAPSHOT_INTERVAL = 5000;
+  var OVERLAY_INTERVAL = 2000;
   var _snapshotTimer = null;
   var _overlayTimer = null;
   var _cameraActive = false;
