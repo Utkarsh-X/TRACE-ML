@@ -46,7 +46,7 @@
     </div>
   </div>
   <div class="flex items-center gap-3">
-    <div class="hidden md:flex items-center bg-surface-lowest px-3 py-1.5 gap-2">
+    <div class="hidden md:flex items-center bg-surface-lowest px-3 py-1.5 gap-2" id="connection-badge">
       <span class="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span>
       <span class="text-[0.6875rem] font-mono text-outline uppercase tracking-widest">System Active</span>
     </div>
@@ -259,6 +259,11 @@
 
   </div>
 </main>
+
+<!-- Service Layer -->
+<script src="../shared/trace_client.js"></script>
+<script src="../shared/trace_render.js"></script>
+<script src="./entities.js"></script>
 
 </body>
 </html>

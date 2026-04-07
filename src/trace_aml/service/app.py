@@ -247,4 +247,23 @@ def create_service_app(
 
         return StreamingResponse(_iterator(), media_type="text/event-stream")
 
+    # ── Static frontend mount ──
+    # Serve the frontend UI from /ui/ so both API and UI run on the same port.
+    # API routes are registered first and take priority over the static mount.
+    import importlib.resources
+    from pathlib import Path
+
+    from fastapi.responses import RedirectResponse
+    from fastapi.staticfiles import StaticFiles
+
+    # Locate frontend directory relative to the package
+    _frontend_dir = Path(__file__).resolve().parent.parent.parent / "frontend"
+    if _frontend_dir.is_dir():
+        @app.get("/ui")
+        @app.get("/ui/")
+        def _ui_redirect() -> RedirectResponse:
+            return RedirectResponse(url="/ui/live_ops/index.html")
+
+        app.mount("/ui", StaticFiles(directory=str(_frontend_dir), html=True), name="frontend")
+
     return app

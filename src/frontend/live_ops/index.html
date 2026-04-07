@@ -93,9 +93,9 @@
     </div>
   </div>
   <div class="flex items-center gap-3">
-    <div class="hidden md:flex items-center bg-surface-lowest px-3 py-1.5 gap-2">
+    <div class="hidden md:flex items-center bg-surface-lowest px-3 py-1.5 gap-2" id="connection-badge">
       <span class="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span>
-      <span class="text-[0.6875rem] font-mono text-outline uppercase tracking-widest" id="system-protocol-status">System Active</span>
+      <span class="text-[0.6875rem] font-mono text-outline uppercase tracking-widest">System Active</span>
     </div>
     <button type="button" class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:bg-surface-high p-2 bg-transparent border-0" id="nav-btn-notifications" aria-label="Notifications" title="Notifications">notifications</button>
     <button type="button" class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:bg-surface-high p-2 bg-transparent border-0" id="nav-btn-settings" aria-label="Settings" title="Settings">settings</button>
@@ -187,7 +187,7 @@
             <h2 class="section-header">Active Entities</h2>
             <span class="font-mono text-[0.6rem] text-outline" id="entity-count">--</span>
           </div>
-          <div class="flex-1 overflow-y-auto space-y-2" id="entity-list">
+          <div class="flex-1 overflow-y-auto space-y-2" id="active-entities-root">
             <!-- Entity Card -->
             <div class="bg-surface-high p-3 hover:bg-surface-bright cursor-pointer transition-colors group">
               <div class="flex items-center justify-between mb-1">
@@ -227,12 +227,12 @@
           <div class="flex items-center justify-between mb-3">
             <h2 class="section-header">Recent Timeline</h2>
             <div class="flex items-center gap-2">
-              <button class="px-2 py-0.5 text-[0.6rem] font-mono bg-surface-high text-on-surface-variant hover:bg-surface-bright cursor-pointer border-0">All</button>
-              <button class="px-2 py-0.5 text-[0.6rem] font-mono text-outline hover:text-on-surface-variant cursor-pointer bg-transparent border-0">Events</button>
-              <button class="px-2 py-0.5 text-[0.6rem] font-mono text-outline hover:text-on-surface-variant cursor-pointer bg-transparent border-0">Alerts</button>
+              <button class="px-2 py-0.5 text-[0.6rem] font-mono bg-surface-high text-white border-b-2 border-white cursor-pointer border-0" data-timeline-filter="all">All</button>
+              <button class="px-2 py-0.5 text-[0.6rem] font-mono text-outline hover:text-on-surface-variant cursor-pointer bg-transparent border-0" data-timeline-filter="events">Events</button>
+              <button class="px-2 py-0.5 text-[0.6rem] font-mono text-outline hover:text-on-surface-variant cursor-pointer bg-transparent border-0" data-timeline-filter="alerts">Alerts</button>
             </div>
           </div>
-          <div class="flex-1 overflow-y-auto space-y-1.5" id="timeline-list">
+          <div class="flex-1 overflow-y-auto space-y-1.5" id="recent-timeline-root">
             <!-- Timeline Items -->
             <div class="flex items-start gap-3 p-2 hover:bg-surface-high transition-colors">
               <span class="font-mono text-[0.6rem] text-outline whitespace-nowrap mt-0.5">14:22:09</span>
@@ -283,8 +283,8 @@
           <p class="font-mono text-[0.7rem] text-outline">Camera feed offline</p>
           <p class="font-mono text-[0.6rem] text-outline-variant mt-1">Click "Enable Camera" to start</p>
         </div>
-        <!-- Video element (hidden until enabled) -->
-        <video id="camera-feed" class="hidden w-full h-full object-contain" autoplay muted playsinline></video>
+        <!-- MJPEG feed image (hidden until enabled) -->
+        <img id="camera-feed" class="w-full h-full object-contain" style="display:none" alt="Live camera feed" />
         <!-- Detection overlay canvas -->
         <canvas id="detection-overlay" class="hidden absolute inset-0 w-full h-full pointer-events-none"></canvas>
         <!-- Corner brackets (aesthetic, from mockup) -->
@@ -297,19 +297,19 @@
         <div class="flex items-center gap-8">
           <div class="flex items-center gap-2">
             <span class="stat-label">Entities</span>
-            <span class="font-headline font-bold text-[1rem] text-primary" id="stat-entities">--</span>
+            <span class="font-headline font-bold text-[1rem] text-primary" id="health-entities">--</span>
           </div>
           <div class="flex items-center gap-2">
             <span class="stat-label">Incidents</span>
-            <span class="font-headline font-bold text-[1rem] text-primary" id="stat-incidents">--</span>
+            <span class="font-headline font-bold text-[1rem] text-primary" id="health-incidents">--</span>
           </div>
           <div class="flex items-center gap-2">
             <span class="stat-label">Alerts</span>
-            <span class="font-headline font-bold text-[1rem] text-primary" id="stat-alerts">--</span>
+            <span class="font-headline font-bold text-[1rem] text-primary" id="health-alerts">--</span>
           </div>
           <div class="flex items-center gap-2">
-            <span class="stat-label">Events</span>
-            <span class="font-headline font-bold text-[1rem] text-primary" id="stat-events">--</span>
+            <span class="stat-label">Detections</span>
+            <span class="font-headline font-bold text-[1rem] text-primary" id="health-detections">--</span>
           </div>
         </div>
         <div class="flex items-center gap-4">
@@ -317,7 +317,7 @@
             <span class="status-dot status-dot--active"></span>
             <span class="font-mono text-[0.6rem] text-on-surface-variant uppercase">Pipeline Active</span>
           </div>
-          <span class="font-mono text-[0.6rem] text-outline" id="health-latency">Latency: -- ms</span>
+          <span class="font-mono text-[0.6rem] text-outline" id="health-latency">-- ms</span>
         </div>
       </div>
 
@@ -332,7 +332,7 @@
           <h2 class="section-header">Alert Stream</h2>
           <span class="badge badge--error" id="alert-badge">Critical (2)</span>
         </div>
-        <div class="space-y-3 max-h-[200px] overflow-y-auto" id="alert-stream">
+        <div class="space-y-3 max-h-[200px] overflow-y-auto" id="alert-stream-root">
           <!-- Alert Card -->
           <div class="bg-surface-container p-3">
             <div class="flex items-center justify-between mb-1">
@@ -362,7 +362,7 @@
       <!-- Incident Updates -->
       <div class="p-4 flex-1 min-h-0 border-b border-outline-variant/10">
         <h2 class="section-header mb-3">Incident Updates</h2>
-        <div class="space-y-3 overflow-y-auto h-full" id="incident-list">
+        <div class="space-y-3 overflow-y-auto h-full" id="incident-updates-root">
           <div class="bg-surface-container p-3 hover:bg-surface-high cursor-pointer transition-colors">
             <div class="flex items-center gap-2 mb-1">
               <span class="w-1.5 h-1.5 bg-primary inline-block"></span>
@@ -431,6 +431,11 @@
   setInterval(updateClock, 1000);
   updateClock();
 </script>
+
+<!-- Service Layer -->
+<script src="../shared/trace_client.js"></script>
+<script src="../shared/trace_render.js"></script>
+<script src="./live_ops.js"></script>
 
 </body>
 </html>
