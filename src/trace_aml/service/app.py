@@ -230,18 +230,26 @@ def create_service_app(
         unsubscribe = publisher.subscribe(_listener)
 
         async def _iterator():
+            import asyncio
             try:
                 if backfill > 0:
                     for event in publisher.recent(limit=backfill):
                         yield _event_to_sse(event)
+                heartbeat_counter = 0.0
                 while True:
                     if await request.is_disconnected():
                         break
                     try:
-                        event = queue.get(timeout=float(heartbeat_sec))
+                        event = queue.get_nowait()
                         yield _event_to_sse(event)
+                        heartbeat_counter = 0.0
                     except Empty:
-                        yield ": keepalive\n\n"
+                        # Non-blocking sleep — yields control to event loop
+                        await asyncio.sleep(0.25)
+                        heartbeat_counter += 0.25
+                        if heartbeat_counter >= heartbeat_sec:
+                            yield ": keepalive\n\n"
+                            heartbeat_counter = 0.0
             finally:
                 unsubscribe()
 

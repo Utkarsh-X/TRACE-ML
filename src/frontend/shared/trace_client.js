@@ -117,12 +117,15 @@
    * @returns {Promise<*>}
    */
   function _fetchJson(url, init) {
+    var controller = new AbortController();
+    var timeoutId = setTimeout(function () { controller.abort(); }, 10000);
     var merged = Object.assign(
-      { method: "GET", headers: { Accept: "application/json" }, cache: "no-store" },
+      { method: "GET", headers: { Accept: "application/json" }, cache: "no-store", signal: controller.signal },
       init || {}
     );
     return fetch(url, merged)
       .then(function (res) {
+        clearTimeout(timeoutId);
         if (!res.ok) {
           return res.text().then(function (body) {
             console.warn("[TraceClient] HTTP " + res.status + " " + url, body.slice(0, 200));
@@ -134,6 +137,10 @@
         return res.json();
       })
       .catch(function (err) {
+        clearTimeout(timeoutId);
+        if (err.name === "AbortError") {
+          console.warn("[TraceClient] Request timeout: " + url);
+        }
         connectionState = "offline";
         _dispatchStateChange();
         return null;

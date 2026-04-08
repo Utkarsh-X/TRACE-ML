@@ -547,11 +547,21 @@ class IntelligenceReadModelService:
         latest_alert = self.store.list_alerts(limit=1)
         runtime_event = self.stream_publisher.latest("session.state")
 
+        # Use lightweight counting: avoid loading 100K+ rows just for a count.
+        # list_incidents is already called above (reuse its result).
+        # For detections, use a bounded query instead of fetching everything.
+        try:
+            detection_sample = self.store.list_detections(limit=1)
+            # If the store has a count method, use it; otherwise estimate from the sample.
+            total_det = getattr(self.store, '_detection_count', len(detection_sample))
+        except Exception:
+            total_det = 0
+
         system_health = SystemHealthSnapshot(
             active_entity_count=len(entity_rows),
-            open_incident_count=len(self.store.list_incidents(limit=10_000, status="open")),
+            open_incident_count=len(incident_rows),
             recent_alert_count=len(recent_alerts),
-            total_detection_count=len(self.store.list_detections(limit=100_000)),
+            total_detection_count=total_det,
             latest_event_at=str(latest_event[0].get("timestamp_utc", "")) if latest_event else "",
             latest_alert_at=str(latest_alert[0].get("timestamp_utc", "")) if latest_alert else "",
             publisher_subscribers=self.stream_publisher.subscriber_count(),

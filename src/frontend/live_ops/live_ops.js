@@ -11,9 +11,11 @@
   "use strict";
 
   var SNAPSHOT_INTERVAL = 5000;
-  var OVERLAY_INTERVAL = 2000;
+  var TIMELINE_INTERVAL = 8000;
   var _snapshotTimer = null;
-  var _overlayTimer = null;
+  var _timelineTimer = null;
+  var _snapshotInFlight = false;
+  var _timelineInFlight = false;
   var _cameraActive = false;
 
   /* ─── DOM references ─── */
@@ -23,6 +25,19 @@
 
   function renderSnapshot(snap) {
     if (!snap) return;
+
+    // ── Footer stats: set FIRST, unconditionally, with try/catch ──
+    try {
+      var h = snap.system_health || {};
+      var hEnt = document.getElementById("health-entities");
+      var hInc = document.getElementById("health-incidents");
+      var hAlr = document.getElementById("health-alerts");
+      var hDet = document.getElementById("health-detections");
+      if (hEnt) hEnt.textContent = String(h.active_entity_count != null ? h.active_entity_count : (snap.active_entities || []).length);
+      if (hInc) hInc.textContent = String(h.open_incident_count != null ? h.open_incident_count : (snap.active_incidents || []).length);
+      if (hAlr) hAlr.textContent = String(h.recent_alert_count != null ? h.recent_alert_count : (snap.recent_alerts || []).length);
+      if (hDet) hDet.textContent = String(h.total_detection_count || 0);
+    } catch (e) { console.warn("[LiveOps] footer stats error:", e); }
 
     // Active entities
     var entRoot = $("active-entities-root");
@@ -74,11 +89,14 @@
       }
     }
 
-    // Recent timeline (center panel) — fetched separately
-    // renderTimeline handled via pollTimeline()
-
-    // System health
-    renderHealth(snap.system_health);
+    // FPS from health
+    try {
+      var fpsEl = document.getElementById("health-fps");
+      if (fpsEl) {
+        var rt = (snap.system_health && snap.system_health.runtime) || {};
+        fpsEl.textContent = (typeof rt.fps === "number" && rt.fps > 0) ? rt.fps.toFixed(1) : "—";
+      }
+    } catch (e) { /* ignore */ }
   }
 
   /** Render the Recent Timeline center panel from global timeline data */
@@ -162,9 +180,12 @@
   /* ─── Polling loops ─── */
 
   function pollSnapshot() {
+    if (_snapshotInFlight) return; // prevent request pileup
+    _snapshotInFlight = true;
     var t0 = performance.now();
     TraceClient.liveSnapshot({ entity_limit: 12, incident_limit: 6, alert_limit: 10 })
       .then(function (snap) {
+        _snapshotInFlight = false;
         // Measure and display latency
         var latency = Math.round(performance.now() - t0);
         var latEl = $("health-latency");
@@ -172,25 +193,26 @@
 
         _lastSnapshotData = snap;
         renderSnapshot(snap);
-      });
-  }
 
-  function pollOverlay() {
-    TraceClient.liveOverlay().then(function (data) {
-      // Update FPS if available
-      if (data && data.fps) {
-        var el = $("health-fps");
-        if (el) el.textContent = data.fps.toFixed(1);
-      }
-    });
+        // If snapshot's system_health was empty, fetch health directly
+        if (snap && (!snap.system_health || !snap.system_health.active_entity_count)) {
+          TraceClient.health().then(function (h) {
+            if (h) renderHealth(h);
+          });
+        }
+      })
+      .catch(function () { _snapshotInFlight = false; });
   }
 
   function pollTimeline() {
+    if (_timelineInFlight) return;
+    _timelineInFlight = true;
     TraceClient.globalTimeline({ limit: 20 }).then(function (items) {
+      _timelineInFlight = false;
       if (!items) return;
       _lastTimelineData = items;
       renderTimeline(items);
-    });
+    }).catch(function () { _timelineInFlight = false; });
   }
 
   /* ─── Camera feed ─── */
@@ -305,10 +327,14 @@
       pollSnapshot();
       pollTimeline();
 
-      // Start polling
+      // Also load health directly as a fallback
+      TraceClient.health().then(function (h) {
+        if (h) renderHealth(h);
+      });
+
+      // Start polling (just 2 loops — snapshot and timeline)
       _snapshotTimer = setInterval(pollSnapshot, SNAPSHOT_INTERVAL);
-      _overlayTimer = setInterval(pollOverlay, OVERLAY_INTERVAL);
-      setInterval(pollTimeline, 5000); // Timeline every 5s
+      _timelineTimer = setInterval(pollTimeline, TIMELINE_INTERVAL);
 
       // Connect SSE
       initSSE();
@@ -319,11 +345,11 @@
       if (state === "online" && !_snapshotTimer) {
         pollSnapshot();
         _snapshotTimer = setInterval(pollSnapshot, SNAPSHOT_INTERVAL);
-        _overlayTimer = setInterval(pollOverlay, OVERLAY_INTERVAL);
+        _timelineTimer = setInterval(pollTimeline, TIMELINE_INTERVAL);
       }
       if (state === "offline") {
         if (_snapshotTimer) { clearInterval(_snapshotTimer); _snapshotTimer = null; }
-        if (_overlayTimer) { clearInterval(_overlayTimer); _overlayTimer = null; }
+        if (_timelineTimer) { clearInterval(_timelineTimer); _timelineTimer = null; }
       }
     });
   }
@@ -339,6 +365,6 @@
   window.addEventListener("beforeunload", function () {
     TraceClient.disconnectSSE();
     if (_snapshotTimer) clearInterval(_snapshotTimer);
-    if (_overlayTimer) clearInterval(_overlayTimer);
+    if (_timelineTimer) clearInterval(_timelineTimer);
   });
 })();
