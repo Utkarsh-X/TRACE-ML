@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+  <title>TRACE-AML | Enrollment</title>
+  <meta name="description" content="TRACE-AML Person Enrollment — register persons, upload reference images, and trigger embedding training." />
+
+  <link rel="stylesheet" href="../shared/tailwind-compiled.css" />
+  <link rel="stylesheet" href="../shared/base.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+
+  <style>
+    .enroll-grid {
+      display: grid;
+      grid-template-columns: 340px 1fr 280px;
+      height: calc(100vh - 3.5rem);
+      gap: 0;
+    }
+    .enroll-left { grid-column: 1; overflow-y: auto; }
+    .enroll-center { grid-column: 2; overflow-y: auto; }
+    .enroll-right { grid-column: 3; overflow-y: auto; }
+
+    /* Drop zone styling */
+    .drop-zone {
+      border: 2px dashed rgba(255,255,255,0.15);
+      transition: border-color 0.2s, background-color 0.2s;
+      cursor: pointer;
+      min-height: 200px;
+    }
+    .drop-zone.drag-over {
+      border-color: var(--md-primary);
+      background-color: rgba(0, 255, 200, 0.05);
+    }
+    .drop-zone:hover {
+      border-color: rgba(255,255,255,0.3);
+    }
+
+    /* Thumbnail grid */
+    .thumb-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+      gap: 8px;
+    }
+    .thumb-grid img {
+      width: 100%;
+      aspect-ratio: 1;
+      object-fit: cover;
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+
+    /* Form inputs */
+    .enroll-input {
+      width: 100%;
+      background: var(--md-surface-high, #2a2a2a);
+      border: 1px solid rgba(255,255,255,0.1);
+      color: white;
+      padding: 8px 12px;
+      font-family: inherit;
+      font-size: 0.8rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .enroll-input:focus {
+      border-color: var(--md-primary);
+    }
+    .enroll-input::placeholder {
+      color: rgba(255,255,255,0.3);
+    }
+    select.enroll-input {
+      appearance: none;
+      -webkit-appearance: none;
+      cursor: pointer;
+    }
+
+    /* Person list cards */
+    .person-card {
+      padding: 10px 14px;
+      cursor: pointer;
+      transition: background-color 0.15s;
+    }
+    .person-card:hover {
+      background: var(--md-surface-high, #2a2a2a);
+    }
+    .person-card.active {
+      background: var(--md-surface-high, #2a2a2a);
+      border-left: 2px solid var(--md-primary);
+    }
+
+    /* Action buttons */
+    .btn-primary {
+      background: var(--md-primary);
+      color: var(--md-on-primary, #000);
+      padding: 10px 20px;
+      font-weight: 600;
+      font-size: 0.8rem;
+      font-family: inherit;
+      border: 0;
+      cursor: pointer;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      transition: opacity 0.15s;
+    }
+    .btn-primary:hover { opacity: 0.85; }
+    .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .btn-secondary {
+      background: var(--md-surface-high, #2a2a2a);
+      color: var(--md-on-surface-variant, #ccc);
+      padding: 10px 20px;
+      font-weight: 600;
+      font-size: 0.8rem;
+      font-family: inherit;
+      border: 1px solid rgba(255,255,255,0.1);
+      cursor: pointer;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      transition: background-color 0.15s;
+    }
+    .btn-secondary:hover { background: var(--md-surface-bright, #333); }
+
+    /* Lifecycle badge colors */
+    .lc-active { color: #00ffcc; }
+    .lc-ready { color: #facc15; }
+    .lc-draft { color: #888; }
+    .lc-blocked { color: #ff4444; }
+  </style>
+</head>
+
+<body class="bg-background text-on-surface font-body overflow-hidden">
+
+<!-- TOP NAV -->
+<nav class="fixed top-0 w-full z-50 bg-surface-low flex items-center justify-between px-6 h-14 no-border" id="top-nav">
+  <div class="flex items-center gap-8">
+    <a href="../live_ops/index.html" class="text-lg font-black tracking-tighter text-white uppercase font-headline hover:text-primary/80 transition-colors">TRACE-AML</a>
+    <div class="hidden md:flex gap-6 items-center">
+      <a class="font-headline font-medium text-[0.875rem] tracking-tight text-neutral-400 hover:text-white transition-colors" href="../live_ops/index.html">Live Ops</a>
+      <a class="font-headline font-medium text-[0.875rem] tracking-tight text-neutral-400 hover:text-white transition-colors" href="../incidents/index.html">Incidents</a>
+      <a class="font-headline font-medium text-[0.875rem] tracking-tight text-neutral-400 hover:text-white transition-colors" href="../entities/index.html">Entities</a>
+      <a class="font-headline font-medium text-[0.875rem] tracking-tight text-neutral-400 hover:text-white transition-colors" href="../history/index.html">History</a>
+      <a class="font-headline font-medium text-[0.875rem] tracking-tight text-neutral-400 hover:text-white transition-colors" href="../database/index.html">Database</a>
+      <a class="font-headline font-medium text-[0.875rem] tracking-tight text-white border-b-2 border-white pb-1" href="./index.html">Enrollment</a>
+      <a class="font-headline font-medium text-[0.875rem] tracking-tight text-neutral-400 hover:text-white transition-colors" href="../settings/index.html">Settings</a>
+    </div>
+  </div>
+  <div class="flex items-center gap-3">
+    <div class="hidden md:flex items-center bg-surface-lowest px-3 py-1.5 gap-2">
+      <span class="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span>
+      <span class="text-[0.6875rem] font-mono text-outline uppercase tracking-widest">System Active</span>
+    </div>
+  </div>
+</nav>
+
+<!-- SIDE NAV -->
+<aside class="fixed left-0 top-14 h-[calc(100vh-3.5rem)] w-20 bg-surface-low flex flex-col items-center py-4 z-40 no-border">
+  <div class="flex flex-col items-center gap-1 w-full">
+    <a class="flex flex-col items-center gap-1 cursor-pointer text-neutral-500 hover:text-neutral-200 w-full py-3 no-underline" href="../live_ops/index.html" title="Live Ops">
+      <span class="material-symbols-outlined">monitoring</span>
+      <span class="font-mono text-[0.55rem] uppercase tracking-widest">Live Ops</span>
+    </a>
+    <a class="flex flex-col items-center gap-1 cursor-pointer text-neutral-500 hover:text-neutral-200 w-full py-3 no-underline" href="../incidents/index.html" title="Incidents">
+      <span class="material-symbols-outlined">timeline</span>
+      <span class="font-mono text-[0.55rem] uppercase tracking-widest">Incidents</span>
+    </a>
+    <a class="flex flex-col items-center gap-1 cursor-pointer text-neutral-500 hover:text-neutral-200 w-full py-3 no-underline" href="../entities/index.html" title="Entities">
+      <span class="material-symbols-outlined">hub</span>
+      <span class="font-mono text-[0.55rem] uppercase tracking-widest">Entities</span>
+    </a>
+    <a class="flex flex-col items-center gap-1 cursor-pointer text-neutral-500 hover:text-neutral-200 w-full py-3 no-underline" href="../history/index.html" title="History">
+      <span class="material-symbols-outlined">history</span>
+      <span class="font-mono text-[0.55rem] uppercase tracking-widest">History</span>
+    </a>
+    <a class="flex flex-col items-center gap-1 cursor-pointer text-neutral-500 hover:text-neutral-200 w-full py-3 no-underline" href="../database/index.html" title="Database">
+      <span class="material-symbols-outlined">database</span>
+      <span class="font-mono text-[0.55rem] uppercase tracking-widest">Database</span>
+    </a>
+    <!-- ENROLLMENT (ACTIVE) -->
+    <a class="flex flex-col items-center gap-1 cursor-pointer text-white bg-surface-high border-l-2 border-white w-full py-3 no-underline hover:text-white" href="./index.html" title="Enrollment">
+      <span class="material-symbols-outlined">person_add</span>
+      <span class="font-mono text-[0.55rem] uppercase tracking-widest">Enroll</span>
+    </a>
+    <a class="flex flex-col items-center gap-1 cursor-pointer text-neutral-500 hover:text-neutral-200 w-full py-3 no-underline" href="../settings/index.html" title="Settings">
+      <span class="material-symbols-outlined">tune</span>
+      <span class="font-mono text-[0.55rem] uppercase tracking-widest">Settings</span>
+    </a>
+  </div>
+</aside>
+
+<!-- MAIN -->
+<main class="pl-20 pt-14 h-screen w-full">
+  <div class="enroll-grid">
+
+    <!-- LEFT: Person List -->
+    <section class="enroll-left bg-surface-low p-4 flex flex-col border-r border-outline-variant/10">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="section-header">Registered Persons</h2>
+        <span class="font-mono text-[0.6rem] text-outline" id="person-count">--</span>
+      </div>
+      <div class="flex-1 overflow-y-auto space-y-1" id="person-list-root">
+        <div class="text-center py-8 text-outline text-[0.75rem]">Loading...</div>
+      </div>
+    </section>
+
+    <!-- CENTER: Enrollment Form + Image Upload -->
+    <section class="enroll-center bg-surface p-6 flex flex-col gap-6">
+      <!-- Header -->
+      <header>
+        <span class="flex items-center gap-2 mb-1">
+          <span class="w-1 h-1 bg-primary inline-block"></span>
+          <span class="text-[0.6875rem] font-mono uppercase tracking-[0.2em] text-outline">Person Enrollment</span>
+        </span>
+        <h1 class="text-2xl font-headline font-bold text-white tracking-tight leading-none uppercase">Register New Person</h1>
+      </header>
+
+      <!-- Form -->
+      <div class="grid grid-cols-2 gap-4">
+        <div class="col-span-2">
+          <label class="stat-label mb-1 block">Full Name *</label>
+          <input type="text" id="enroll-name" class="enroll-input" placeholder="Enter person's full name" required />
+        </div>
+        <div>
+          <label class="stat-label mb-1 block">Category *</label>
+          <select id="enroll-category" class="enroll-input">
+            <option value="criminal">Criminal</option>
+            <option value="missing">Missing</option>
+            <option value="employee">Employee</option>
+            <option value="vip">VIP</option>
+          </select>
+        </div>
+        <div>
+          <label class="stat-label mb-1 block">Severity</label>
+          <select id="enroll-severity" class="enroll-input">
+            <option value="">-- None --</option>
+            <option value="1-low">Low</option>
+            <option value="2-medium">Medium</option>
+            <option value="3-high">High</option>
+          </select>
+        </div>
+        <div>
+          <label class="stat-label mb-1 block">Date of Birth</label>
+          <input type="text" id="enroll-dob" class="enroll-input" placeholder="YYYY-MM-DD" />
+        </div>
+        <div>
+          <label class="stat-label mb-1 block">Gender</label>
+          <select id="enroll-gender" class="enroll-input">
+            <option value="">-- Select --</option>
+            <option value="male">Male</option>
+            <option value="female">Female</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+        <div>
+          <label class="stat-label mb-1 block">City</label>
+          <input type="text" id="enroll-city" class="enroll-input" placeholder="Last known city" />
+        </div>
+        <div>
+          <label class="stat-label mb-1 block">Country</label>
+          <input type="text" id="enroll-country" class="enroll-input" placeholder="Country" />
+        </div>
+        <div class="col-span-2">
+          <label class="stat-label mb-1 block">Notes</label>
+          <textarea id="enroll-notes" class="enroll-input" rows="2" placeholder="Additional notes..."></textarea>
+        </div>
+      </div>
+
+      <!-- Image Upload Zone -->
+      <div>
+        <label class="stat-label mb-2 block">Reference Images</label>
+        <div class="drop-zone flex flex-col items-center justify-center p-8" id="drop-zone">
+          <span class="material-symbols-outlined text-outline-variant text-[36px] mb-2">cloud_upload</span>
+          <p class="font-mono text-[0.75rem] text-outline mb-1">Drag & drop images here</p>
+          <p class="font-mono text-[0.6rem] text-outline-variant">or click to browse (JPG, PNG, BMP)</p>
+          <input type="file" id="file-input" accept="image/jpeg,image/png,image/bmp" multiple style="display:none" />
+        </div>
+        <div class="thumb-grid mt-3" id="thumb-preview"></div>
+        <p class="font-mono text-[0.6rem] text-outline mt-2" id="file-count">0 images selected</p>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="flex items-center gap-3">
+        <button type="button" class="btn-primary" id="btn-create-upload" disabled>Create & Upload</button>
+        <button type="button" class="btn-secondary" id="btn-clear-form">Clear</button>
+        <span class="font-mono text-[0.7rem] text-outline ml-auto" id="enroll-status"></span>
+      </div>
+    </section>
+
+    <!-- RIGHT: Training & Status -->
+    <section class="enroll-right bg-surface-low p-4 flex flex-col gap-4 border-l border-outline-variant/10">
+      <!-- Training Panel -->
+      <div>
+        <h2 class="section-header mb-3">Embedding Training</h2>
+        <button type="button" class="btn-primary w-full mb-3" id="btn-train-rebuild">Rebuild All Embeddings</button>
+        <div class="bg-surface-container p-3 space-y-2" id="train-status-panel">
+          <div class="flex justify-between">
+            <span class="stat-label">Status</span>
+            <span class="font-mono text-[0.7rem]" id="train-running">Idle</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="stat-label">Last Run</span>
+            <span class="font-mono text-[0.65rem] text-outline" id="train-last-run">—</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="stat-label">Embeddings</span>
+            <span class="font-mono text-[0.7rem] text-primary" id="train-embeddings">—</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="stat-label">Active</span>
+            <span class="font-mono text-[0.7rem] lc-active" id="train-active">—</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="stat-label">Ready</span>
+            <span class="font-mono text-[0.7rem] lc-ready" id="train-ready">—</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="stat-label">Blocked</span>
+            <span class="font-mono text-[0.7rem] lc-blocked" id="train-blocked">—</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Selected Person Detail -->
+      <div>
+        <h2 class="section-header mb-3">Person Detail</h2>
+        <div class="bg-surface-container p-3 space-y-2" id="person-detail-panel">
+          <p class="text-[0.75rem] text-outline text-center py-4">Select a person from the list</p>
+        </div>
+      </div>
+    </section>
+
+  </div>
+</main>
+
+<script src="../shared/trace_client.js"></script>
+<script src="../shared/trace_render.js"></script>
+<script src="./enrollment.js"></script>
+
+</body>
+</html>

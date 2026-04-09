@@ -3,15 +3,16 @@
 Endpoints for person CRUD, image upload, and embedding training —
 the service-layer equivalent of CLI ``person add``, ``person capture``,
 ``train rebuild``, etc.
-"""
 
-from __future__ import annotations
+Note: ``from __future__ import annotations`` is intentionally omitted —
+FastAPI needs real type objects at runtime for parameter resolution.
+"""
 
 import shutil
 import threading
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Annotated, Any
+from typing import Annotated, Any, Optional
 
 from pydantic import BaseModel, Field
 
@@ -36,13 +37,13 @@ class PersonCreatePayload(BaseModel):
 
 
 class PersonUpdatePayload(BaseModel):
-    name: str | None = None
-    severity: str | None = None
-    dob: str | None = None
-    gender: str | None = None
-    city: str | None = None
-    country: str | None = None
-    notes: str | None = None
+    name: Optional[str] = None
+    severity: Optional[str] = None
+    dob: Optional[str] = None
+    gender: Optional[str] = None
+    city: Optional[str] = None
+    country: Optional[str] = None
+    notes: Optional[str] = None
 
 
 class TrainRebuildPayload(BaseModel):
@@ -60,7 +61,7 @@ _train_status: dict[str, Any] = {
 }
 
 
-def create_person_router(settings: Settings, store: VectorStore) -> Any:
+def create_person_router(settings: "Settings", store: "VectorStore") -> Any:
     """Build and return a FastAPI APIRouter with all person management routes."""
 
     try:
@@ -73,7 +74,7 @@ def create_person_router(settings: Settings, store: VectorStore) -> Any:
     # ── GET /api/v1/persons ────────────────────────────────────────
 
     @router.get("/persons")
-    def list_persons() -> list[dict[str, Any]]:
+    def list_persons():
         """List all registered persons with enrollment data."""
         rows = store.list_persons()
         result: list[dict[str, Any]] = []
@@ -259,7 +260,7 @@ def create_person_router(settings: Settings, store: VectorStore) -> Any:
     # ── POST /api/v1/train/rebuild ─────────────────────────────────
 
     @router.post("/train/rebuild", status_code=202)
-    def train_rebuild(payload: TrainRebuildPayload | None = None) -> dict[str, Any]:
+    def train_rebuild(payload: Optional[TrainRebuildPayload] = None) -> dict[str, Any]:
         """Trigger embedding rebuild in background thread."""
         with _train_lock:
             if _train_status["running"]:
@@ -267,7 +268,7 @@ def create_person_router(settings: Settings, store: VectorStore) -> Any:
 
         scope = payload.scope if payload else "all"
 
-        def _worker() -> None:
+        def _worker():
             with _train_lock:
                 _train_status["running"] = True
                 _train_status["last_started_at"] = datetime.now(timezone.utc).isoformat()

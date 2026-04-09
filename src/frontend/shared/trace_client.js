@@ -428,6 +428,99 @@
     }
   }
 
+  /* ── Persons ── */
+
+  /**
+   * GET /api/v1/persons
+   * @returns {Promise<Array|null>}
+   */
+  function listPersons() {
+    return _fetchJson(_url("/api/v1/persons"));
+  }
+
+  /**
+   * POST /api/v1/persons
+   * @param {{name:string, category?:string, severity?:string, dob?:string, gender?:string, city?:string, country?:string, notes?:string}} data
+   * @returns {Promise<Object|null>}
+   */
+  function createPerson(data) {
+    return _fetchJsonMethod(_url("/api/v1/persons"), "POST", data);
+  }
+
+  /**
+   * GET /api/v1/persons/{id}
+   * @param {string} personId
+   * @returns {Promise<Object|null>}
+   */
+  function getPerson(personId) {
+    return _fetchJson(_url("/api/v1/persons/" + encodeURIComponent(personId)));
+  }
+
+  /**
+   * PATCH /api/v1/persons/{id}
+   * @param {string} personId
+   * @param {Object} data
+   * @returns {Promise<Object|null>}
+   */
+  function updatePerson(personId, data) {
+    return _fetchJsonMethod(
+      _url("/api/v1/persons/" + encodeURIComponent(personId)),
+      "PATCH",
+      data
+    );
+  }
+
+  /**
+   * DELETE /api/v1/persons/{id}
+   * @param {string} personId
+   * @returns {Promise<Object|null>}
+   */
+  function deletePerson(personId) {
+    return _fetchJsonMethod(
+      _url("/api/v1/persons/" + encodeURIComponent(personId)),
+      "DELETE"
+    );
+  }
+
+  /**
+   * POST /api/v1/persons/{id}/images  (multipart/form-data)
+   * @param {string} personId
+   * @param {FileList|File[]} files
+   * @returns {Promise<Object|null>}
+   */
+  function uploadPersonImages(personId, files) {
+    var formData = new FormData();
+    for (var i = 0; i < files.length; i++) {
+      formData.append("files", files[i]);
+    }
+    var url = _url("/api/v1/persons/" + encodeURIComponent(personId) + "/images");
+    return fetch(url, { method: "POST", body: formData })
+      .then(function (res) {
+        if (!res.ok) return null;
+        return res.json();
+      })
+      .catch(function () { return null; });
+  }
+
+  /* ── Training ── */
+
+  /**
+   * POST /api/v1/train/rebuild
+   * @param {{scope?:string}} [data]
+   * @returns {Promise<Object|null>}
+   */
+  function trainRebuild(data) {
+    return _fetchJsonMethod(_url("/api/v1/train/rebuild"), "POST", data || { scope: "all" });
+  }
+
+  /**
+   * GET /api/v1/train/status
+   * @returns {Promise<Object|null>}
+   */
+  function trainStatus() {
+    return _fetchJson(_url("/api/v1/train/status"));
+  }
+
   /* ───────────────────────── Public API ──────────────────────────── */
 
   global.TraceClient = {
@@ -473,6 +566,18 @@
 
     // Health
     health: health,
+
+    // Persons
+    listPersons: listPersons,
+    createPerson: createPerson,
+    getPerson: getPerson,
+    updatePerson: updatePerson,
+    deletePerson: deletePerson,
+    uploadPersonImages: uploadPersonImages,
+
+    // Training
+    trainRebuild: trainRebuild,
+    trainStatus: trainStatus,
 
     // Utilities
     escapeHtml: escapeHtml,
