@@ -1,4 +1,6 @@
 from pathlib import Path
+import sys
+from types import SimpleNamespace
 
 import pytest
 
@@ -157,3 +159,35 @@ def test_service_sse_stream_endpoint_contract(tmp_path: Path) -> None:
 
     stream_route = openapi.json()["paths"]["/api/v1/events/stream"]["get"]
     assert stream_route["responses"]["200"]["description"] == "Successful Response"
+
+
+def test_service_mjpeg_endpoint_contract(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    settings = _settings(tmp_path)
+    store = VectorStore(settings)
+    publisher = InMemoryEventStreamPublisher()
+
+    class _FakeCapture:
+        def isOpened(self) -> bool:
+            return False
+
+        def set(self, *_args, **_kwargs) -> bool:
+            return True
+
+        def release(self) -> None:
+            return None
+
+    fake_cv2 = SimpleNamespace(
+        VideoCapture=lambda _index: _FakeCapture(),
+        CAP_PROP_FRAME_WIDTH=3,
+        CAP_PROP_FRAME_HEIGHT=4,
+        CAP_PROP_FPS=5,
+        IMWRITE_JPEG_QUALITY=1,
+        imencode=lambda _ext, _frame, _opts: (True, None),
+    )
+    monkeypatch.setitem(sys.modules, "cv2", fake_cv2)
+
+    app = create_service_app(settings=settings, store=store, stream_publisher=publisher)
+    client = TestClient(app)
+    response = client.get("/api/v1/live/mjpeg?fps=5&quality=80")
+    assert response.status_code == 503
+    assert "unavailable" in response.json()["detail"].lower()

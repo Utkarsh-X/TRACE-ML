@@ -78,6 +78,72 @@ def create_service_app(
         """Latest normalized detection boxes from in-process live recognition (if running)."""
         return get_live_overlay()
 
+    @app.get("/api/v1/live/mjpeg")
+    async def live_mjpeg(
+        request: Request,
+        fps: int = Query(default=12, ge=1, le=30),
+        quality: int = Query(default=80, ge=40, le=95),
+    ) -> StreamingResponse:
+        """Stream webcam frames as MJPEG for the Live Ops page camera panel."""
+        try:
+            import cv2
+        except ImportError as exc:
+            raise HTTPException(status_code=503, detail="OpenCV is not available in this runtime") from exc
+
+        cap = cv2.VideoCapture(int(settings.camera.device_index))
+        if not cap.isOpened():
+            raise HTTPException(
+                status_code=503,
+                detail=f"Camera device {settings.camera.device_index} is unavailable",
+            )
+
+        # Best-effort camera hints (drivers may ignore these).
+        cap.set(cv2.CAP_PROP_FRAME_WIDTH, float(settings.camera.width))
+        cap.set(cv2.CAP_PROP_FRAME_HEIGHT, float(settings.camera.height))
+        cap.set(cv2.CAP_PROP_FPS, float(settings.camera.fps))
+
+        async def _iterator():
+            import asyncio
+
+            try:
+                frame_interval = 1.0 / max(1, int(fps))
+                encode_opts = [int(cv2.IMWRITE_JPEG_QUALITY), int(quality)]
+                while True:
+                    if await request.is_disconnected():
+                        break
+
+                    ok, frame = cap.read()
+                    if not ok:
+                        await asyncio.sleep(0.05)
+                        continue
+
+                    encoded_ok, buffer = cv2.imencode(".jpg", frame, encode_opts)
+                    if not encoded_ok:
+                        await asyncio.sleep(0.01)
+                        continue
+
+                    payload = buffer.tobytes()
+                    yield (
+                        b"--frame\r\n"
+                        b"Content-Type: image/jpeg\r\n"
+                        + f"Content-Length: {len(payload)}\r\n\r\n".encode("ascii")
+                        + payload
+                        + b"\r\n"
+                    )
+                    await asyncio.sleep(frame_interval)
+            finally:
+                cap.release()
+
+        return StreamingResponse(
+            _iterator(),
+            media_type="multipart/x-mixed-replace; boundary=frame",
+            headers={
+                "Cache-Control": "no-cache, no-store, must-revalidate",
+                "Pragma": "no-cache",
+                "Connection": "keep-alive",
+            },
+        )
+
     @app.get("/api/v1/live/snapshot")
     def live_snapshot(
         entity_limit: int = Query(default=12, ge=1, le=200),

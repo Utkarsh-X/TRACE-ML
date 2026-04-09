@@ -236,6 +236,14 @@
       // Start: set MJPEG src
       var mjpegUrl = TraceClient.baseUrl + "/api/v1/live/mjpeg";
       if (feedImg) {
+        feedImg.onerror = function () {
+          // Stream unavailable (404/503/etc). Revert UI cleanly.
+          feedImg.style.display = "none";
+          feedImg.src = "";
+          if (placeholder) placeholder.style.display = "";
+          if (btn) btn.textContent = "Enable Camera";
+          _cameraActive = false;
+        };
         feedImg.src = mjpegUrl;
         feedImg.style.display = "block";
       }
