@@ -80,7 +80,7 @@ class IntelligenceReadModelService:
         self,
         store: VectorStore,
         stream_publisher: EventStreamPublisher | None = None,
-        snapshot_ttl_seconds: float = 1.5,
+        snapshot_ttl_seconds: float = 5.0,
     ) -> None:
         self.store = store
         self.stream_publisher = stream_publisher or NullEventStreamPublisher()
@@ -123,11 +123,25 @@ class IntelligenceReadModelService:
             return None
         return self.store.get_person(person_id)
 
-    def _entity_summary_from_row(self, row: dict[str, Any]) -> EntitySummary:
+    def _entity_summary_from_row(
+        self,
+        row: dict[str, Any],
+        *,
+        incidents_by_entity: dict[str, list[dict[str, Any]]] | None = None,
+        alert_count_by_entity: dict[str, int] | None = None,
+    ) -> EntitySummary:
         entity_id = str(row.get("entity_id", ""))
         person = self._entity_person(row)
-        incidents = [r for r in self.store.list_incidents(limit=10_000, status="open") if str(r.get("entity_id", "")) == entity_id]
-        recent_alert_count = len(self.store.list_alerts(limit=10_000, entity_id=entity_id))
+        if incidents_by_entity is not None:
+            open_incident_count = len(incidents_by_entity.get(entity_id, []))
+        else:
+            open_incident_count = len(
+                [r for r in self.store.list_incidents(limit=10_000, status="open") if str(r.get("entity_id", "")) == entity_id]
+            )
+        if alert_count_by_entity is not None:
+            recent_alert_count = alert_count_by_entity.get(entity_id, 0)
+        else:
+            recent_alert_count = len(self.store.list_alerts(limit=10_000, entity_id=entity_id))
         return EntitySummary(
             entity_id=entity_id,
             type=str(row.get("type", "unknown")),
@@ -137,7 +151,7 @@ class IntelligenceReadModelService:
             person_id=str((person or {}).get("person_id", "")),
             created_at=str(row.get("created_at", "")),
             last_seen_at=str(row.get("last_seen_at", "")),
-            open_incident_count=len(incidents),
+            open_incident_count=open_incident_count,
             recent_alert_count=recent_alert_count,
         )
 
@@ -502,12 +516,13 @@ class IntelligenceReadModelService:
                 timeline = [item for item in timeline if item.kind.value in kind_filters]
             return timeline[-limit:] if limit > 0 else timeline
 
+        all_incidents = self.store.list_incidents(limit=10_000)
         events = [row for row in self.store.list_events(limit=100_000) if _within_range(str(row.get("timestamp_utc", "")), start, end)]
         alerts = [row for row in self.store.list_alerts(limit=100_000) if _within_range(str(row.get("timestamp_utc", "")), start, end)]
-        incidents = [row for row in self.store.list_incidents(limit=10_000) if _within_range(str(row.get("start_time", "")), start, end)]
+        incidents = [row for row in all_incidents if _within_range(str(row.get("start_time", "")), start, end)]
         actions = [row for row in self.store.list_actions(limit=100_000) if _within_range(str(row.get("timestamp_utc", "")), start, end)]
         detection_map = self._detection_map()
-        incidents_by_id = {str(row.get("incident_id", "")): row for row in self.store.list_incidents(limit=10_000)}
+        incidents_by_id = {str(row.get("incident_id", "")): row for row in all_incidents}
         items = []
         items.extend(self._timeline_items_for_events(events, detection_map))
         items.extend(self._timeline_items_for_alerts(alerts))
@@ -537,9 +552,30 @@ class IntelligenceReadModelService:
 
         entity_rows = [row for row in self.store.list_entities(limit=100_000) if str(row.get("status", "")) == "active"]
         entity_rows.sort(key=lambda row: str(row.get("last_seen_at", "")), reverse=True)
-        active_entities = [self._entity_summary_from_row(row) for row in entity_rows[:entity_limit]]
 
-        incident_rows = self.store.list_incidents(limit=incident_limit, status="open")
+        # Pre-load incidents and alerts once for all entities (avoids N+1 per-entity queries)
+        all_open_incidents = self.store.list_incidents(limit=10_000, status="open")
+        incidents_by_entity: dict[str, list[dict[str, Any]]] = {}
+        for inc_row in all_open_incidents:
+            eid = str(inc_row.get("entity_id", ""))
+            incidents_by_entity.setdefault(eid, []).append(inc_row)
+
+        all_alerts = self.store.list_alerts(limit=100_000)
+        alert_count_by_entity: dict[str, int] = {}
+        for alert_row in all_alerts:
+            eid = str(alert_row.get("entity_id", ""))
+            alert_count_by_entity[eid] = alert_count_by_entity.get(eid, 0) + 1
+
+        active_entities = [
+            self._entity_summary_from_row(
+                row,
+                incidents_by_entity=incidents_by_entity,
+                alert_count_by_entity=alert_count_by_entity,
+            )
+            for row in entity_rows[:entity_limit]
+        ]
+
+        incident_rows = all_open_incidents[:incident_limit]
         active_incidents = [self._incident_summary_from_row(row) for row in incident_rows]
 
         recent_alerts = self.get_recent_alerts(alert_limit)

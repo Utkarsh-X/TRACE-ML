@@ -17,6 +17,7 @@
   var _snapshotInFlight = false;
   var _timelineInFlight = false;
   var _cameraActive = false;
+  var _lastSnapshotData = null;
 
   /* ─── DOM references ─── */
   function $(id) { return document.getElementById(id); }
