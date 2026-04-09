@@ -87,17 +87,18 @@
     el = $("stat-incident-count");
     if (el) el.textContent = String(stats.incident_count || 0);
 
+    // Profile stats don't include avg_confidence — use recent_alert_count
     el = $("stat-avg-conf");
-    if (el) {
-      var conf = stats.avg_confidence || stats.confidence;
-      el.textContent = typeof conf === "number" ? conf.toFixed(2) : "\u2014";
-    }
+    if (el) el.textContent = String(stats.recent_alert_count || 0);
 
+    // Confidence overlay: use enrollment_score from linked_person if available
+    var score = (profile.linked_person && typeof profile.linked_person.enrollment_score === "number")
+      ? profile.linked_person.enrollment_score
+      : null;
     el = $("entity-confidence");
-    if (el) {
-      var c = stats.avg_confidence || stats.confidence;
-      el.textContent = typeof c === "number" ? c.toFixed(2) : "\u2014";
-    }
+    if (el) el.textContent = score !== null ? (score * 100).toFixed(1) + "%" : "—";
+    var bar = $("entity-confidence-bar");
+    if (bar) bar.style.width = score !== null ? (score * 100).toFixed(1) + "%" : "0%";
   }
 
   function renderTimeline(timeline) {

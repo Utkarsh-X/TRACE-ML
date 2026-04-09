@@ -246,18 +246,22 @@
    */
   function tableRow(entity, idx) {
     var bgClass = idx % 2 === 0 ? "bg-surface" : "bg-surface-container";
-    var idClass = entity.type === "unknown" ? "text-error" : "text-primary";
-    var catLabel = esc(String(entity.category || "unknown").toUpperCase());
-    var catBadge = entity.category === "criminal" ? badge("filled", catLabel) : (entity.type === "unknown" ? badge("error", "UNKNOWN") : badge("ghost", catLabel));
+    var cat = String(entity.category || "unknown").toLowerCase();
+    var idClass = cat === "unknown" ? "text-error" : "text-primary";
+    var catLabel = cat.toUpperCase();
+    var catBadge = cat === "criminal" ? badge("filled", catLabel) : (cat === "unknown" ? badge("error", catLabel) : badge("ghost", catLabel));
     var statusClass = entity.status === "active" ? "text-primary" : "text-on-surface-variant";
+    var alerts = entity.recent_alert_count != null ? String(entity.recent_alert_count) : "0";
+    var incidents = entity.open_incident_count != null ? String(entity.open_incident_count) : "0";
+    var updated = entity.last_seen_at ? fmtDateTime(entity.last_seen_at) : "—";
     return '<tr class="' + bgClass + ' cursor-pointer">'
       + '<td class="font-mono ' + idClass + '">' + esc(entity.entity_id) + "</td>"
       + '<td class="text-on-surface">' + esc(entity.name || "—") + "</td>"
       + "<td>" + catBadge + "</td>"
       + '<td class="' + statusClass + '">' + esc(entity.status) + "</td>"
-      + '<td class="font-mono text-on-surface-variant">' + esc(entity.person_id ? "—" : "0") + "</td>"
-      + '<td class="font-mono text-on-surface-variant">—</td>'
-      + '<td class="font-mono text-outline text-[0.65rem]">' + esc(entity.last_seen_at || "—") + "</td>"
+      + '<td class="font-mono text-on-surface-variant">' + alerts + "</td>"
+      + '<td class="font-mono text-on-surface-variant">' + incidents + "</td>"
+      + '<td class="font-mono text-outline text-[0.65rem]">' + updated + "</td>"
       + "</tr>";
   }
 

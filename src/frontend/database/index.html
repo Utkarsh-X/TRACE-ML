@@ -106,8 +106,8 @@
               <th class="font-mono text-[0.6rem] text-outline uppercase tracking-widest font-medium">Name</th>
               <th class="font-mono text-[0.6rem] text-outline uppercase tracking-widest font-medium">Category</th>
               <th class="font-mono text-[0.6rem] text-outline uppercase tracking-widest font-medium">Status</th>
-              <th class="font-mono text-[0.6rem] text-outline uppercase tracking-widest font-medium">Embeddings</th>
-              <th class="font-mono text-[0.6rem] text-outline uppercase tracking-widest font-medium">Score</th>
+              <th class="font-mono text-[0.6rem] text-outline uppercase tracking-widest font-medium">Alerts</th>
+              <th class="font-mono text-[0.6rem] text-outline uppercase tracking-widest font-medium">Incidents</th>
               <th class="font-mono text-[0.6rem] text-outline uppercase tracking-widest font-medium">Updated</th>
             </tr>
           </thead>
@@ -194,31 +194,23 @@
         <div class="space-y-2">
           <div class="bg-surface-container p-3 flex items-center justify-between">
             <span class="stat-label">Entities</span>
-            <span class="font-headline font-bold text-[1rem] text-primary">6</span>
-          </div>
-          <div class="bg-surface-container p-3 flex items-center justify-between">
-            <span class="stat-label">Embeddings</span>
-            <span class="font-headline font-bold text-[1rem] text-primary">81</span>
-          </div>
-          <div class="bg-surface-container p-3 flex items-center justify-between">
-            <span class="stat-label">Active Gallery</span>
-            <span class="font-headline font-bold text-[1rem] text-primary">63</span>
+            <span class="font-headline font-bold text-[1rem] text-primary" id="db-stat-entities">—</span>
           </div>
           <div class="bg-surface-container p-3 flex items-center justify-between">
             <span class="stat-label">Detections</span>
-            <span class="font-headline font-bold text-[1rem] text-primary">1,247</span>
+            <span class="font-headline font-bold text-[1rem] text-primary" id="db-stat-detections">—</span>
           </div>
           <div class="bg-surface-container p-3 flex items-center justify-between">
             <span class="stat-label">Alerts</span>
-            <span class="font-headline font-bold text-[1rem] text-primary">89</span>
+            <span class="font-headline font-bold text-[1rem] text-primary" id="db-stat-alerts">—</span>
           </div>
           <div class="bg-surface-container p-3 flex items-center justify-between">
             <span class="stat-label">Incidents</span>
-            <span class="font-headline font-bold text-[1rem] text-primary">18</span>
+            <span class="font-headline font-bold text-[1rem] text-primary" id="db-stat-incidents">—</span>
           </div>
           <div class="bg-surface-container p-3 flex items-center justify-between">
             <span class="stat-label">Storage</span>
-            <span class="font-mono text-[0.8rem] text-on-surface-variant">142 MB</span>
+            <span class="font-mono text-[0.8rem] text-on-surface-variant" id="db-stat-storage">—</span>
           </div>
         </div>
       </div>

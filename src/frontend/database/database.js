@@ -18,6 +18,9 @@
       _allEntities = list;
       renderTable(list);
       updateFooter(list.length, list.length);
+      // Update entity count stat immediately — avoids race with loadHealth()
+      var el = document.getElementById('db-stat-entities');
+      if (el) el.textContent = String(list.length);
     });
   }
 
@@ -49,33 +52,20 @@
   function loadHealth() {
     TraceClient.health().then(function (health) {
       if (!health) return;
-      // Update health stats in sidebar by finding the stat elements
-      var statsEls = document.querySelectorAll("#db-health-root .font-headline, section:last-child .font-headline");
+      var el;
+      // Entity count: use active_entity_count from health (reliable, no race condition)
+      // loadEntities() will also update this independently with the exact loaded count
+      el = document.getElementById('db-stat-entities');
+      if (el && el.textContent === '—') el.textContent = String(health.active_entity_count || 0);
 
-      // We'll update via known structure
-      var mapping = {
-        "active_entity_count": null,
-        "total_detection_count": null,
-        "recent_alert_count": null,
-        "open_incident_count": null,
-      };
+      el = document.getElementById('db-stat-detections');
+      if (el) el.textContent = String(health.total_detection_count || 0);
 
-      // Also update with entity count from loaded data
-      var entityCountEl = document.querySelector("section:last-child");
-      if (!entityCountEl) return;
+      el = document.getElementById('db-stat-alerts');
+      if (el) el.textContent = String(health.recent_alert_count || 0);
 
-      var statItems = entityCountEl.querySelectorAll(".bg-surface-container");
-      statItems.forEach(function (item) {
-        var label = item.querySelector(".stat-label");
-        var value = item.querySelector(".font-headline, .font-mono");
-        if (!label || !value) return;
-        var labelText = label.textContent.trim().toLowerCase();
-
-        if (labelText === "entities") value.textContent = String(_allEntities.length);
-        else if (labelText === "detections") value.textContent = String(health.total_detection_count || 0);
-        else if (labelText === "alerts") value.textContent = String(health.recent_alert_count || 0);
-        else if (labelText === "incidents") value.textContent = String(health.open_incident_count || 0);
-      });
+      el = document.getElementById('db-stat-incidents');
+      if (el) el.textContent = String(health.open_incident_count || 0);
     });
   }
 

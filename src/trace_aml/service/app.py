@@ -59,6 +59,12 @@ def create_service_app(
         allow_headers=["*"],
     )
 
+    # ── Person management & training routes ──
+    from trace_aml.service.person_api import create_person_router
+
+    person_router = create_person_router(settings, store)
+    app.include_router(person_router)
+
     @app.get("/")
     def root() -> dict[str, Any]:
         return {
@@ -84,23 +90,33 @@ def create_service_app(
         fps: int = Query(default=12, ge=1, le=30),
         quality: int = Query(default=80, ge=40, le=95),
     ) -> StreamingResponse:
-        """Stream webcam frames as MJPEG for the Live Ops page camera panel."""
+        """Stream webcam frames as MJPEG for the Live Ops page camera panel.
+
+        When the recognition pipeline is active (``service run --live``), frames
+        are read from the shared ``CameraCapture`` buffer — no second camera is
+        opened.  When recognition is *not* running, falls back to opening its
+        own ``cv2.VideoCapture`` for a raw (no-detection) preview stream.
+        """
         try:
             import cv2
         except ImportError as exc:
             raise HTTPException(status_code=503, detail="OpenCV is not available in this runtime") from exc
 
-        cap = cv2.VideoCapture(int(settings.camera.device_index))
-        if not cap.isOpened():
-            raise HTTPException(
-                status_code=503,
-                detail=f"Camera device {settings.camera.device_index} is unavailable",
-            )
+        from trace_aml.pipeline.capture import CameraCapture
 
-        # Best-effort camera hints (drivers may ignore these).
-        cap.set(cv2.CAP_PROP_FRAME_WIDTH, float(settings.camera.width))
-        cap.set(cv2.CAP_PROP_FRAME_HEIGHT, float(settings.camera.height))
-        cap.set(cv2.CAP_PROP_FPS, float(settings.camera.fps))
+        use_shared = CameraCapture.is_active()
+        own_cap: cv2.VideoCapture | None = None
+
+        if not use_shared:
+            own_cap = cv2.VideoCapture(int(settings.camera.device_index))
+            if not own_cap.isOpened():
+                raise HTTPException(
+                    status_code=503,
+                    detail=f"Camera device {settings.camera.device_index} is unavailable",
+                )
+            own_cap.set(cv2.CAP_PROP_FRAME_WIDTH, float(settings.camera.width))
+            own_cap.set(cv2.CAP_PROP_FRAME_HEIGHT, float(settings.camera.height))
+            own_cap.set(cv2.CAP_PROP_FPS, float(settings.camera.fps))
 
         async def _iterator():
             import asyncio
@@ -108,12 +124,24 @@ def create_service_app(
             try:
                 frame_interval = 1.0 / max(1, int(fps))
                 encode_opts = [int(cv2.IMWRITE_JPEG_QUALITY), int(quality)]
+                _last_idx = -1
                 while True:
                     if await request.is_disconnected():
                         break
 
-                    ok, frame = cap.read()
-                    if not ok:
+                    frame = None
+                    if use_shared:
+                        packet = CameraCapture.get_latest_frame()
+                        if packet is not None and packet.frame_index != _last_idx:
+                            frame = packet.frame
+                            _last_idx = packet.frame_index
+                    else:
+                        assert own_cap is not None
+                        ok, f = own_cap.read()
+                        if ok:
+                            frame = f
+
+                    if frame is None:
                         await asyncio.sleep(0.05)
                         continue
 
@@ -132,7 +160,8 @@ def create_service_app(
                     )
                     await asyncio.sleep(frame_interval)
             finally:
-                cap.release()
+                if own_cap is not None:
+                    own_cap.release()
 
         return StreamingResponse(
             _iterator(),

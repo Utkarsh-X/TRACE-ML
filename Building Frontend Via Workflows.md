@@ -3199,3 +3199,55 @@ Found the **real root cause**! The SSE endpoint at line 241 uses `queue.get(time
 Let me fix this by replacing the blocking queue with async polling:
 
 *Edited relevant file*
+
+
+
+Let me verify the actual current state:
+
+Viewed app.py:228-260
+Viewed read_models.py:524-575
+
+Both fixes are confirmed in the files. Now let me check the snapshot TTL value and the rest of the snapshot function:
+
+Viewed read_models.py:575-625
+Searched for "snapshot_ttl_seconds"
+
+snapshot_ttl_seconds isn't being set anywhere — let me find where IntelligenceReadModelService is instantiated:
+
+Searched for "snapshot_ttl"
+Searched for "IntelligenceReadModelService"
+
+Good — snapshot_ttl_seconds defaults to 5.0 already in the constructor. But app.py line 47 creates it as IntelligenceReadModelService(store, publisher) — using the default 5s TTL. ✅
+
+However, the read_models instance is **recreated on every request** (it's a function-level local variable). Let me check:
+
+Viewed app.py:44-55
+
+read_models is created **once** inside create_service_app() (not per-request), so the 5s TTL cache IS shared across all requests. ✅
+
+Now let me start the server fresh and do a definitive test:
+
+Ran command: $p = Get-NetTCPConnection -LocalPort 8080 -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess -Unique; if ($p) { Stop-Process -Id $p -Force; Start-Sleep 2 }; py -m trace_aml service run --port 8080
+
+Server is up with no browser tabs connected. Now measure the real latency cold:
+
+Ran command: $sw=[System.Diagnostics.Stopwatch]::StartNew(); $r=Invoke-WebRequest "http://127.0.0.1:8080/api/v1/live/snapshot?entity_limit=12&incident_limit=6&alert_limit=10" -TimeoutSec 15 -UseBasicParsing; $sw.Stop(); "COLD: $($sw.ElapsedMilliseconds)ms | status=$($r.StatusCode)"; $j=$r.Content|ConvertFrom-Json; "system_health: entities=$($j.system_health.active_entity_count) incidents=$($j.system_health.open_incident_count) alerts=$($j.system_health.recent_alert_count) detections=$($j.system_health.total_detection_count)"; $sw2=[System.Diagnostics.Stopwatch]::StartNew(); Invoke-WebRequest "http://127.0.0.1:8080/api/v1/live/snapshot?entity_limit=12&incident_limit=6&alert_limit=10" -TimeoutSec 5 -UseBasicParsing|Out-Null; $sw2.Stop(); "HOT (cache): $($sw2.ElapsedMilliseconds)ms"
+
+**490ms cold → 15ms cached**. Footer stats: entities=27, incidents=6, alerts=10, detections=1. Now open the browser and verify it all works end-to-end:
+
+Browser task: "Final End-to-End Test"
+
+Let me verify the screenshots directly:
+
+Browser task: "Screenshot Grab"
+Viewed current_settings_page_1775712009061.png
+
+Settings page is loading. Let me look at the Live Ops screenshot:
+
+Listed directory 083b6776-835f-4c04-9cc0-ce62d31d88ca
+
+There's a final_full_test_1775711914979.webp from the subagent that was running. Let me view it:
+
+Viewed final_full_test_1775711914979.webp
+
+

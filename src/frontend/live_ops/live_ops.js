@@ -216,21 +216,36 @@
     }).catch(function () { _timelineInFlight = false; });
   }
 
-  /* ─── Camera feed ─── */
+  /* ─── Camera feed + Detection overlay ─── */
+
+  var _overlayTimer = null;
+
+  var OVERLAY_COLORS = {
+    accept:  "rgba(0, 255, 120, 0.85)",
+    review:  "rgba(255, 200, 0, 0.85)",
+    reject:  "rgba(255, 60, 60, 0.85)"
+  };
 
   function toggleCamera() {
     var feedImg = $("camera-feed");
     var placeholder = $("camera-placeholder");
     var btn = $("btn-enable-camera");
+    var canvas = $("detection-overlay");
 
     if (_cameraActive) {
-      // Stop: clear the MJPEG src
+      // Stop: clear the MJPEG src and overlay
       if (feedImg) {
         feedImg.src = "";
         feedImg.style.display = "none";
       }
       if (placeholder) placeholder.style.display = "";
       if (btn) btn.textContent = "Enable Camera";
+      stopOverlayPoll();
+      if (canvas) {
+        canvas.classList.add("hidden");
+        var ctx = canvas.getContext("2d");
+        if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
+      }
       _cameraActive = false;
     } else {
       // Start: set MJPEG src
@@ -242,6 +257,7 @@
           feedImg.src = "";
           if (placeholder) placeholder.style.display = "";
           if (btn) btn.textContent = "Enable Camera";
+          stopOverlayPoll();
           _cameraActive = false;
         };
         feedImg.src = mjpegUrl;
@@ -249,7 +265,108 @@
       }
       if (placeholder) placeholder.style.display = "none";
       if (btn) btn.textContent = "Disable Camera";
+      if (canvas) canvas.classList.remove("hidden");
       _cameraActive = true;
+      startOverlayPoll();
+    }
+  }
+
+  function startOverlayPoll() {
+    if (_overlayTimer) return;
+    pollOverlay();
+    _overlayTimer = setInterval(pollOverlay, 200); // ~5fps
+  }
+
+  function stopOverlayPoll() {
+    if (_overlayTimer) {
+      clearInterval(_overlayTimer);
+      _overlayTimer = null;
+    }
+  }
+
+  function pollOverlay() {
+    TraceClient.liveOverlay().then(function (data) {
+      drawOverlay(data);
+    }).catch(function () {
+      // silently ignore — overlay not available
+    });
+  }
+
+  function drawOverlay(data) {
+    var canvas = $("detection-overlay");
+    var feedImg = $("camera-feed");
+    if (!canvas || !feedImg) return;
+
+    // Match canvas size to rendered image size
+    var rect = feedImg.getBoundingClientRect();
+    if (rect.width < 1 || rect.height < 1) return;
+    canvas.width = rect.width;
+    canvas.height = rect.height;
+
+    var ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    if (!data || !data.active || !data.boxes || data.boxes.length === 0) {
+      // Update FPS display from overlay when available
+      var fpsEl = $("camera-fps");
+      if (fpsEl && data && data.fps) {
+        fpsEl.textContent = data.fps.toFixed(1) + " FPS";
+      }
+      return;
+    }
+
+    // Update FPS from pipeline
+    var fpsEl2 = $("camera-fps");
+    if (fpsEl2) fpsEl2.textContent = data.fps.toFixed(1) + " FPS";
+
+    var cw = canvas.width;
+    var ch = canvas.height;
+
+    for (var i = 0; i < data.boxes.length; i++) {
+      var box = data.boxes[i];
+      var x = box.x * cw;
+      var y = box.y * ch;
+      var w = box.w * cw;
+      var h = box.h * ch;
+      var decision = String(box.decision || "reject").toLowerCase();
+      var color = OVERLAY_COLORS[decision] || OVERLAY_COLORS.reject;
+
+      // Draw bounding box
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 2;
+      ctx.strokeRect(x, y, w, h);
+
+      // Draw corner brackets (tactical look)
+      var bracketLen = Math.max(8, Math.min(w, h) * 0.15);
+      ctx.lineWidth = 3;
+      // Top-left
+      ctx.beginPath(); ctx.moveTo(x, y + bracketLen); ctx.lineTo(x, y); ctx.lineTo(x + bracketLen, y); ctx.stroke();
+      // Top-right
+      ctx.beginPath(); ctx.moveTo(x + w - bracketLen, y); ctx.lineTo(x + w, y); ctx.lineTo(x + w, y + bracketLen); ctx.stroke();
+      // Bottom-left
+      ctx.beginPath(); ctx.moveTo(x, y + h - bracketLen); ctx.lineTo(x, y + h); ctx.lineTo(x + bracketLen, y + h); ctx.stroke();
+      // Bottom-right
+      ctx.beginPath(); ctx.moveTo(x + w - bracketLen, y + h); ctx.lineTo(x + w, y + h); ctx.lineTo(x + w, y + h - bracketLen); ctx.stroke();
+
+      // Label: decision + name + confidence
+      var label = decision.toUpperCase() + " " + (box.label || "Unknown") + " " + (box.confidence || 0).toFixed(1) + "%";
+      ctx.font = "bold 11px 'JetBrains Mono', monospace";
+      var textW = ctx.measureText(label).width;
+      // Label background
+      ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
+      ctx.fillRect(x, Math.max(0, y - 20), textW + 8, 18);
+      // Label text
+      ctx.fillStyle = color;
+      ctx.fillText(label, x + 4, Math.max(13, y - 6));
+
+      // Track ID below box
+      if (box.track_id) {
+        var trackLabel = box.track_id;
+        ctx.font = "10px 'JetBrains Mono', monospace";
+        ctx.fillStyle = "rgba(200, 200, 200, 0.7)";
+        ctx.fillText(trackLabel, x, y + h + 14);
+      }
     }
   }
 

@@ -809,9 +809,9 @@ def service_run(
     host: str = typer.Option("127.0.0.1", help="Bind host"),
     port: int = typer.Option(8080, help="Bind port"),
     live: bool = typer.Option(
-        False,
-        "--live",
-        help="Run webcam recognition in-process (same SSE stream as the API; do not run 'recognize live' separately).",
+        True,
+        "--live/--no-live",
+        help="Run webcam recognition in-process (default: enabled). Use --no-live for raw MJPEG only.",
     ),
 ) -> None:
     """Run TRACE-AML service API for UI integration."""

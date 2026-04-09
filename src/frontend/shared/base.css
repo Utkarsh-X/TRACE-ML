@@ -183,3 +183,18 @@ html, body {
 a, button {
   transition: all 0.15s ease;
 }
+
+/* Keep navigation links clean on every page.
+   Active-tab indicator is done via border classes in HTML, not text-decoration. */
+nav a,
+nav a:hover,
+nav a:focus,
+nav a:active,
+nav a:visited,
+aside a,
+aside a:hover,
+aside a:focus,
+aside a:active,
+aside a:visited {
+  text-decoration: none !important;
+}
