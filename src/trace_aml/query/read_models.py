@@ -363,14 +363,15 @@ class IntelligenceReadModelService:
     def list_incidents(
         self,
         limit: int = 200,
+        skip: int = 0,
         status: str | None = None,
         entity_id: str | None = None,
     ) -> list[IncidentSummary]:
-        rows = self.store.list_incidents(limit=max(limit, 10_000), status=status or None)
+        rows = self.store.list_incidents(limit=max(limit + skip, 10_000), status=status or None)
         if entity_id:
             rows = [row for row in rows if str(row.get("entity_id", "")) == entity_id]
         rows.sort(key=lambda row: str(row.get("last_seen_time", "")), reverse=True)
-        return [self._incident_summary_from_row(row) for row in rows[:limit]]
+        return [self._incident_summary_from_row(row) for row in rows[skip : skip + limit]]
 
     def list_actions(
         self,
@@ -705,12 +706,14 @@ def list_entities(
 def list_incidents(
     store: VectorStore,
     limit: int = 200,
+    skip: int = 0,
     status: str | None = None,
     entity_id: str | None = None,
     stream_publisher: EventStreamPublisher | None = None,
 ) -> list[IncidentSummary]:
     return IntelligenceReadModelService(store, stream_publisher).list_incidents(
         limit=limit,
+        skip=skip,
         status=status,
         entity_id=entity_id,
     )

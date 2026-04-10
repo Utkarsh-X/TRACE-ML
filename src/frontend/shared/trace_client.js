@@ -313,7 +313,7 @@
 
   /**
    * GET /api/v1/incidents
-   * @param {{limit?:number, status?:string, entity_id?:string}} [opts]
+   * @param {{limit?:number, skip?:number, status?:string, entity_id?:string}} [opts]
    * @returns {Promise<Array|null>}
    */
   function incidents(opts) {

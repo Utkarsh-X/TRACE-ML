@@ -253,12 +253,14 @@ def create_service_app(
 
     @app.get("/api/v1/incidents")
     def incidents(
-        limit: int = Query(default=200, ge=1, le=5000),
+        limit: int = Query(default=20, ge=1, le=5000),
+        skip: int = Query(default=0, ge=0),
         status: str = Query(default=""),
         entity_id: str = Query(default=""),
     ) -> list[dict[str, Any]]:
         rows = read_models.list_incidents(
             limit=limit,
+            skip=skip,
             status=status or None,
             entity_id=entity_id or None,
         )

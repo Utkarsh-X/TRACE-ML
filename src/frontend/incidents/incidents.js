@@ -1,261 +1,421 @@
 /**
  * Incidents Page Controller
  *
- * - Lists incidents → populates <select>
- * - On select → loads incident detail → renders timeline, entity, alerts, actions
- * - Wires severity change + close incident buttons
+ * Fixes applied vs v1:
+ *  - Arrow nav buttons (prev/next) scroll the card strip; sentinel still lazy-loads more
+ *  - All colors now use design-system tokens (badge--error, badge--ghost, #ffb4ab, etc.)
+ *  - Timeline cards are fully rendered with border, typed dots, proper time + meta layout
+ *  - Trigger alert rows use the app's tonal / border-left pattern
+ *  - Timeline items windowed at 30, "Show older" reveals more from already-fetched data
  */
 (function () {
   "use strict";
 
   function $(id) { return document.getElementById(id); }
 
-  var _currentIncidentId = null;
+  /* ── Constants ──────────────────────────────────── */
+  var PAGE_SIZE     = 20;
+  var TL_PAGE       = 30;
+  var SCROLL_STEP   = 440; // px per arrow click
 
-  /* ─── Incident list ─── */
+  /* ── State ──────────────────────────────────────── */
+  var _currentId  = null;
+  var _offset     = 0;
+  var _done       = false;
+  var _tlAll      = [];
+  var _tlShown    = 0;
 
-  function loadIncidentList() {
-    TraceClient.incidents({ limit: 100 }).then(function (list) {
-      if (!list) return;
-      var sel = $("incident-select");
-      if (!sel) return;
+  /* ════════════════════════════════════════════════
+     CARD STRIP — lazy load + arrow nav
+  ════════════════════════════════════════════════ */
 
-      sel.innerHTML = "";
-      if (list.length === 0) {
-        sel.innerHTML = '<option value="">No incidents</option>';
-        $("incident-load-status").textContent = "0 incidents";
+  function loadCards(initial) {
+    if (_done) return;
+    TraceClient.incidents({ limit: PAGE_SIZE, skip: _offset }).then(function (list) {
+      // Remove skeleton placeholders on first batch
+      if (initial) {
+        ["sk1","sk2","sk3"].forEach(function (id) {
+          var el = $(id);
+          if (el) el.parentNode.removeChild(el);
+        });
+      }
+
+      if (!list || list.length === 0) {
+        _done = true;
+        if (initial) showEmpty();
         return;
       }
 
+      if (list.length < PAGE_SIZE) _done = true;
+      _offset += list.length;
+
+      var strip    = $("card-strip");
+      var sentinel = $("card-sentinel");
       list.forEach(function (inc) {
-        var opt = document.createElement("option");
-        opt.value = inc.incident_id;
-        // Show readable summary in dropdown
-        var shortSummary = (inc.summary || "No summary");
-        if (shortSummary.length > 50) shortSummary = shortSummary.substring(0, 47) + "...";
-        opt.textContent = inc.incident_id + " \u2014 " + shortSummary + " (" + (inc.entity_id || "") + ")";
-        sel.appendChild(opt);
+        strip.insertBefore(buildCard(inc), sentinel);
       });
 
-      $("incident-load-status").textContent = "Loaded " + list.length + " incidents";
+      // Auto-select first card
+      if (initial) {
+        var first = strip.querySelector(".inc-card");
+        if (first) first.click();
+      }
 
-      // Load first incident
-      loadIncident(list[0].incident_id);
+      updateArrows();
     });
   }
 
-  /* ─── Incident detail ─── */
+  function buildCard(inc) {
+    var div = document.createElement("div");
+    div.className = "inc-card";
+    div.setAttribute("data-id", inc.incident_id);
 
-  function loadIncident(incidentId) {
-    if (!incidentId) return;
-    _currentIncidentId = incidentId;
+    var sev       = String(inc.severity || "low");
+    var sevBadge  = sev === "high" ? "badge--error" : "badge--ghost";
+    var status    = String(inc.status  || "open").toUpperCase();
+    /* Show last 8 chars of incident ID so it stays compact */
+    var shortId   = TraceClient.escapeHtml(String(inc.incident_id || "").slice(-8));
+    var summary   = TraceClient.escapeHtml(inc.summary || "Incident");
+    var entityId  = TraceClient.escapeHtml(inc.entity_id || "—");
+    var timeStr   = TraceClient.escapeHtml(TraceClient.formatTime(inc.last_seen_time || inc.start_time));
 
-    TraceClient.incident(incidentId).then(function (detail) {
+    div.innerHTML =
+      '<div class="inc-card__id">' + shortId + '</div>'
+    + '<div class="inc-card__sum">' + summary + '</div>'
+    + '<div class="inc-card__foot">'
+    +   '<span class="inc-card__ent">' + entityId + '</span>'
+    +   '<span class="badge ' + sevBadge + '" style="font-size:0.52rem;padding:1px 5px">' + sev.toUpperCase() + '</span>'
+    + '</div>'
+    + '<div class="inc-card__time mt-1">' + timeStr + ' · ' + status + '</div>';
+
+    div.addEventListener("click", function () {
+      activateCard(div);
+      loadIncident(inc.incident_id);
+    });
+    return div;
+  }
+
+  function activateCard(card) {
+    var strip = $("card-strip");
+    if (strip) {
+      var prev = strip.querySelector(".inc-card.active");
+      if (prev) prev.classList.remove("active");
+    }
+    card.classList.add("active");
+  }
+
+  function showEmpty() {
+    var el = $("no-incidents"); if (el) el.classList.remove("hidden");
+    var b  = $("inc-body");    if (b)  b.classList.add("hidden");
+  }
+
+  /* ── Arrow navigation ───────────────────────────── */
+
+  function updateArrows() {
+    var strip = $("card-strip");
+    var prev  = $("strip-prev");
+    var next  = $("strip-next");
+    if (!strip) return;
+    if (prev) prev.disabled = (strip.scrollLeft <= 0);
+    if (next) next.disabled = _done && (strip.scrollLeft + strip.clientWidth >= strip.scrollWidth - 4);
+  }
+
+  function initArrows() {
+    var strip = $("card-strip");
+    var prev  = $("strip-prev");
+    var next  = $("strip-next");
+    if (!strip || !prev || !next) return;
+
+    prev.addEventListener("click", function () {
+      strip.scrollBy({ left: -SCROLL_STEP, behavior: "smooth" });
+      setTimeout(updateArrows, 350);
+    });
+
+    next.addEventListener("click", function () {
+      strip.scrollBy({ left: SCROLL_STEP, behavior: "smooth" });
+      setTimeout(updateArrows, 350);
+    });
+
+    strip.addEventListener("scroll", updateArrows);
+  }
+
+  /* ── IntersectionObserver for lazy card loading ── */
+
+  function initSentinel() {
+    var sentinel = $("card-sentinel");
+    var strip    = $("card-strip");
+    if (!sentinel || !strip || !("IntersectionObserver" in window)) return;
+
+    var observer = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        if (entry.isIntersecting && !_done) loadCards(false);
+      });
+    }, { root: strip, threshold: 0.1 });
+
+    observer.observe(sentinel);
+  }
+
+  /* ════════════════════════════════════════════════
+     INCIDENT DETAIL
+  ════════════════════════════════════════════════ */
+
+  function loadIncident(id) {
+    if (!id) return;
+    _currentId = id;
+
+    // Show skeleton in timeline while loading
+    var tlEl = $("tl-events");
+    if (tlEl) tlEl.innerHTML =
+      '<div class="skeleton mb-2" style="height:72px;opacity:.35"></div>'
+    + '<div class="skeleton mb-2" style="height:72px;opacity:.2"></div>'
+    + '<div class="skeleton" style="height:72px;opacity:.1"></div>';
+
+    var ph = $("tl-placeholder"); if (ph) ph.style.display = "none";
+    var sm = $("tl-show-more");   if (sm) sm.classList.add("hidden");
+
+    TraceClient.incident(id).then(function (detail) {
       if (!detail) return;
-      renderIncidentHeader(detail.incident);
-      renderEntityProfile(detail.entity);
+      renderHeader(detail.incident);
+      renderEntity(detail.entity);
       renderAlerts(detail.alerts);
       renderTimeline(detail.timeline);
       renderActions(detail.actions);
-      renderMetadata(detail.incident);
+      syncControls(detail.incident);
     });
   }
 
-  function renderIncidentHeader(inc) {
-    var el;
-    el = $("incident-id-label");
-    if (el) el.textContent = "Incident ID: " + inc.incident_id;
+  /* ════════════════════════════════════════════════
+     RENDER HELPERS
+  ════════════════════════════════════════════════ */
 
-    el = $("incident-title");
-    if (el) el.textContent = inc.summary || "Incident " + inc.incident_id;
-
-    el = $("incident-status");
-    if (el) el.textContent = String(inc.status || "open").toUpperCase();
+  function renderHeader(inc) {
+    if (!inc) return;
+    var shortId = String(inc.incident_id || "").slice(-8);
+    setText("inc-id-label",    "Case #" + shortId);
+    setText("inc-title",       inc.summary || ("Incident " + inc.incident_id));
+    var statusEl = $("inc-status");
+    if (statusEl) {
+      statusEl.textContent = String(inc.status || "open").toUpperCase();
+      statusEl.className   = inc.status === "closed"
+        ? "font-mono text-[0.72rem] text-outline"
+        : "font-mono text-[0.72rem] text-primary";
+    }
+    setText("inc-alert-count", String(inc.alert_count || 0));
+    setText("inc-start",       TraceClient.formatTime(inc.start_time));
   }
 
-  function renderEntityProfile(entity) {
-    if (!entity) return;
-    var el;
-    el = $("entity-name");
-    if (el) el.textContent = entity.name || entity.entity_id;
-
-    el = $("entity-id");
-    if (el) el.textContent = "entity_id: " + entity.entity_id;
-
-    el = $("entity-type");
-    if (el) el.textContent = String(entity.type || "unknown").charAt(0).toUpperCase() + String(entity.type || "unknown").slice(1);
-
-    el = $("entity-status");
-    if (el) {
-      el.textContent = String(entity.status || "active").charAt(0).toUpperCase() + String(entity.status || "active").slice(1);
-      el.className = entity.status === "active" ? "font-mono text-[0.8rem] text-primary" : "font-mono text-[0.8rem] text-error";
-    }
-
-    el = $("entity-first-seen");
-    if (el) el.textContent = TraceClient.formatDateTime(entity.created_at) || "\u2014";
-
-    el = $("entity-last-seen");
-    if (el) el.textContent = TraceClient.formatDateTime(entity.last_seen_at) || "\u2014";
-
-    el = $("entity-detections");
-    if (el) el.textContent = String(entity.detection_count || entity.recent_alert_count || 0);
+  function renderEntity(e) {
+    if (!e) return;
+    setText("ent-name",  e.name || e.entity_id || "—");
+    var typeEl = $("ent-type");
+    if (typeEl) typeEl.textContent = String(e.type || e.entity_type || "unknown").toUpperCase();
+    setText("ent-first", TraceClient.formatDateTime(e.created_at)   || "—");
+    setText("ent-last",  TraceClient.formatDateTime(e.last_seen_at) || "—");
+    setText("ent-dets",  String(e.detection_count || e.recent_alert_count || 0));
   }
 
   function renderAlerts(alerts) {
-    var root = $("incident-alerts-root");
+    var root = $("inc-alerts-root");
     if (!root) return;
     if (!alerts || alerts.length === 0) {
-      root.innerHTML = TraceRender.emptyState("No linked alerts");
+      root.innerHTML = '<div class="text-outline font-mono text-[0.62rem] py-3 text-center">No alerts linked</div>';
       return;
     }
-    root.innerHTML = alerts.map(function (a) {
-      return TraceRender.alertRow(a);
+    root.innerHTML = alerts.slice(0, 8).map(function (a) {
+      var sev    = String(a.severity || "low");
+      var type   = TraceClient.escapeHtml(String(a.type || "ALERT").toUpperCase());
+      var reason = TraceClient.escapeHtml(a.reason || "");
+      var time   = TraceClient.escapeHtml(TraceClient.formatTime(a.timestamp_utc));
+      var cnt    = a.event_count ? " · " + a.event_count + " events" : "";
+      return '<div class="alert-row alert-row--' + sev + '">'
+        + '<div class="flex items-center justify-between mb-0.5">'
+        +   '<span class="font-mono text-[0.6rem] font-medium text-on-surface">' + type + '</span>'
+        +   '<span class="font-mono text-[0.55rem] text-outline">' + time + TraceClient.escapeHtml(cnt) + '</span>'
+        + '</div>'
+        + '<p class="text-[0.68rem] text-on-surface-variant leading-snug">' + reason + '</p>'
+        + '</div>';
     }).join("");
   }
 
   function renderTimeline(timeline) {
-    var root = $("incident-timeline-root");
+    _tlAll   = timeline ? timeline.slice().reverse() : [];
+    _tlShown = 0;
+    var root = $("tl-events");
     if (!root) return;
-    if (!timeline || timeline.length === 0) {
-      root.innerHTML = TraceRender.emptyState("No timeline events");
+    root.innerHTML = "";
+
+    if (_tlAll.length === 0) {
+      root.innerHTML = '<div class="text-outline font-mono text-[0.7rem] py-12 text-center">No timeline events</div>';
+      updateTlMore();
       return;
     }
-    // Reverse so newest first
-    var sorted = timeline.slice().reverse();
-    root.innerHTML = sorted.map(function (item) {
-      // Build timeline node entry
-      var kindLabel = String(item.kind || "event").toUpperCase();
-      var nodeClass = "timeline-node--event";
-      if (item.kind === "incident") nodeClass = "timeline-node--incident";
-      else if (item.kind === "alert") nodeClass = "timeline-node--alert";
-      else if (item.kind === "action") nodeClass = "timeline-node--action";
+    appendTlBatch(TL_PAGE);
+    updateTlMore();
+  }
 
-      var badgeKind = item.kind === "incident" ? "filled" : (item.kind === "alert" ? "error" : "ghost");
-      var badgeHtml = TraceRender.badge(badgeKind, kindLabel);
-      var title = TraceClient.escapeHtml(item.title || "");
-      var time = TraceClient.formatTime(item.timestamp_utc);
-      var summary = TraceClient.escapeHtml(item.summary || "");
+  function appendTlBatch(count) {
+    var root  = $("tl-events");
+    if (!root) return;
+    var batch = _tlAll.slice(_tlShown, _tlShown + count);
+    batch.forEach(function (item) {
+      var div = document.createElement("div");
+      div.className = "tl-entry";
+      div.innerHTML = buildTlCard(item);
+      root.appendChild(div);
+    });
+    _tlShown += batch.length;
+    var label = $("tl-count-label");
+    if (label) label.textContent = _tlShown + " / " + _tlAll.length + " events";
+  }
 
-      var meta = [];
-      if (item.entity_id) meta.push("Entity: " + TraceClient.escapeHtml(item.entity_id));
-      if (item.source) meta.push("Source: " + TraceClient.escapeHtml(item.source));
-      if (item.metadata && item.metadata.track_id) meta.push("Track: " + TraceClient.escapeHtml(item.metadata.track_id));
+  function buildTlCard(item) {
+    var kind      = String(item.kind || "event");
+    /* Badge + dot use design-system classes only */
+    var badgeHtml = "";
+    if      (kind === "incident") badgeHtml = '<span class="badge badge--filled">INCIDENT</span>';
+    else if (kind === "alert")    badgeHtml = '<span class="badge badge--error">ALERT</span>';
+    else if (kind === "action")   badgeHtml = '<span class="badge badge--ghost">ACTION</span>';
+    else                          badgeHtml = '<span class="badge badge--ghost">EVENT</span>';
 
-      return '<div class="relative pl-10">'
-        + '<div class="timeline-node ' + nodeClass + '" style="left: 32px; top: 4px;"></div>'
-        + '<div class="bg-surface-container p-4 hover:bg-surface-high transition-colors">'
-        + '<div class="flex items-center justify-between mb-2">'
-        + '<div class="flex items-center gap-2">' + badgeHtml
-        + '<span class="font-headline font-semibold text-[0.8rem] text-primary">' + title + '</span>'
-        + '</div>'
-        + '<span class="font-mono text-[0.6rem] text-outline">' + TraceClient.escapeHtml(time) + '</span>'
-        + '</div>'
-        + '<p class="text-[0.75rem] text-on-surface-variant leading-relaxed">' + summary + '</p>'
-        + (meta.length
-          ? '<div class="mt-2 flex items-center gap-3">'
-            + meta.map(function (m) { return '<span class="font-mono text-[0.6rem] text-outline">' + m + '</span>'; }).join("")
-            + '</div>'
-          : '')
-        + '</div></div>';
-    }).join("");
+    var title   = TraceClient.escapeHtml(item.title   || "");
+    var summary = TraceClient.escapeHtml(item.summary || "");
+    var time    = TraceClient.escapeHtml(TraceClient.formatTime(item.timestamp_utc));
+    var date    = TraceClient.escapeHtml(TraceClient.formatDateTime(item.timestamp_utc).slice(0, 10));
+
+    /* Build meta pills */
+    var meta = [];
+    if (item.entity_id) meta.push("Entity: " + TraceClient.escapeHtml(item.entity_id));
+    if (item.source)    meta.push("Source: " + TraceClient.escapeHtml(item.source));
+    if (item.metadata) {
+      if (item.metadata.track_id)   meta.push("Track: "  + TraceClient.escapeHtml(item.metadata.track_id));
+      if (item.metadata.event_count) meta.push("Events: " + item.metadata.event_count);
+    }
+
+    return '<div class="tl-dot tl-dot--' + kind + '"></div>'
+      + '<div class="tl-card tl-card--' + kind + '">'
+      /* Row 1: badge + title + time */
+      + '<div class="flex items-center justify-between gap-2 mb-1.5">'
+      +   '<div class="flex items-center gap-2 min-w-0">'
+      +     badgeHtml
+      +     '<span class="font-mono text-[0.7rem] font-medium text-on-surface truncate">' + title + '</span>'
+      +   '</div>'
+      +   '<div class="flex-shrink-0 text-right">'
+      +     '<span class="font-mono text-[0.65rem] text-white block">' + time + '</span>'
+      +     '<span class="font-mono text-[0.52rem] text-outline block">' + date + '</span>'
+      +   '</div>'
+      + '</div>'
+      /* Row 2: summary */
+      + (summary
+        ? '<p class="text-[0.7rem] text-on-surface-variant leading-relaxed mb-1.5">' + summary + '</p>'
+        : '')
+      /* Row 3: meta chips */
+      + (meta.length
+        ? '<div class="flex flex-wrap gap-2 mt-1">'
+          + meta.map(function(m){ return '<span class="font-mono text-[0.55rem] text-outline border border-outline-variant/20 px-1.5 py-0.5">' + m + '</span>'; }).join("")
+          + '</div>'
+        : '')
+      + '</div>';
+  }
+
+  function updateTlMore() {
+    var btn = $("tl-show-more");
+    if (!btn) return;
+    if (_tlShown < _tlAll.length) btn.classList.remove("hidden");
+    else btn.classList.add("hidden");
   }
 
   function renderActions(actions) {
-    var root = $("actions-log");
+    var root = $("inc-actions-root");
     if (!root) return;
     if (!actions || actions.length === 0) {
-      root.innerHTML = TraceRender.emptyState("No actions recorded");
+      root.innerHTML = '<div class="text-outline font-mono text-[0.62rem] py-3 text-center">No actions recorded</div>';
       return;
     }
-    root.innerHTML = actions.map(function (a) {
-      return TraceRender.actionRow(a);
+    root.innerHTML = actions.slice(0, 10).map(function (a) {
+      var type  = TraceClient.escapeHtml(String(a.action_type || a.type || "LOG").toUpperCase());
+      var trig  = TraceClient.escapeHtml(a.trigger || "");
+      var time  = TraceClient.escapeHtml(TraceClient.formatTime(a.timestamp_utc));
+      var id    = TraceClient.escapeHtml(String(a.action_id || "").slice(-6));
+      return '<div class="bg-surface-lowest border-l border-outline-variant/20 pl-2.5 pr-2 py-2 mb-1.5">'
+        + '<div class="flex items-center justify-between">'
+        +   '<span class="font-mono text-[0.6rem] text-on-surface font-medium">' + type + '</span>'
+        +   '<span class="font-mono text-[0.55rem] text-outline">' + time + '</span>'
+        + '</div>'
+        + (trig ? '<p class="font-mono text-[0.58rem] text-on-surface-variant mt-0.5">' + trig + '</p>' : '')
+        + '<span class="font-mono text-[0.52rem] text-outline block mt-0.5">' + id + '</span>'
+        + '</div>';
     }).join("");
   }
 
-  function renderMetadata(inc) {
-    var el;
-    el = $("meta-severity");
-    if (el) {
-      el.textContent = String(inc.severity || "low").toUpperCase();
-      el.className = inc.severity === "high" ? "font-mono text-[0.8rem] text-error" : "font-mono text-[0.8rem] text-primary";
-    }
-    el = $("meta-alert-count");
-    if (el) el.textContent = String(inc.alert_count || 0);
-
-    el = $("meta-start");
-    if (el) el.textContent = TraceClient.formatTime(inc.start_time);
-
-    el = $("meta-updated");
-    if (el) el.textContent = TraceClient.formatTime(inc.last_seen_time);
-
-    // Set severity select to current value
-    el = $("incident-severity-select");
+  function syncControls(inc) {
+    var el = $("sev-select");
     if (el) el.value = inc.severity || "low";
+    setText("ctrl-status", "");
   }
 
-  /* ─── Actions ─── */
+  /* ── Utility ──────────────────────────────────── */
+  function setText(id, val) { var el = $(id); if (el) el.textContent = val; }
+
+  function resetStrip() {
+    var strip = $("card-strip");
+    if (!strip) return;
+    var cards = strip.querySelectorAll(".inc-card");
+    cards.forEach(function (c) { c.parentNode.removeChild(c); });
+    _offset = 0; _done = false;
+  }
+
+  /* ════════════════════════════════════════════════
+     CONTROLS wiring
+  ════════════════════════════════════════════════ */
 
   function wireControls() {
-    var sel = $("incident-select");
-    if (sel) {
-      sel.addEventListener("change", function () {
-        loadIncident(sel.value);
+    var applyBtn = $("btn-apply-sev");
+    if (applyBtn) applyBtn.addEventListener("click", function () {
+      if (!_currentId) return;
+      var sev = ($("sev-select") || {}).value || "low";
+      setText("ctrl-status", "Updating…");
+      TraceClient.setSeverity(_currentId, sev).then(function (result) {
+        setText("ctrl-status", result ? ("Severity → " + sev) : "Failed — offline");
       });
-    }
+    });
 
-    var applyBtn = $("incident-apply-severity");
-    if (applyBtn) {
-      applyBtn.addEventListener("click", function () {
-        if (!_currentIncidentId) return;
-        var sevSelect = $("incident-severity-select");
-        var severity = sevSelect ? sevSelect.value : "low";
-        var statusEl = $("incident-action-status");
-        if (statusEl) statusEl.textContent = "Updating severity...";
-
-        TraceClient.setSeverity(_currentIncidentId, severity).then(function (result) {
-          if (result) {
-            if (statusEl) statusEl.textContent = "Severity updated to " + severity;
-            loadIncident(_currentIncidentId);
-          } else {
-            if (statusEl) statusEl.textContent = "Failed — backend offline";
-          }
-        });
+    var closeBtn = $("btn-close-inc");
+    if (closeBtn) closeBtn.addEventListener("click", function () {
+      if (!_currentId) return;
+      setText("ctrl-status", "Closing…");
+      TraceClient.closeIncident(_currentId).then(function (result) {
+        if (result) {
+          setText("ctrl-status", "Closed");
+          resetStrip();
+          loadCards(true);
+        } else {
+          setText("ctrl-status", "Failed — offline");
+        }
       });
-    }
+    });
 
-    var closeBtn = $("incident-close-btn");
-    if (closeBtn) {
-      closeBtn.addEventListener("click", function () {
-        if (!_currentIncidentId) return;
-        var statusEl = $("incident-action-status");
-        if (statusEl) statusEl.textContent = "Closing incident...";
-
-        TraceClient.closeIncident(_currentIncidentId).then(function (result) {
-          if (result) {
-            if (statusEl) statusEl.textContent = "Incident closed";
-            loadIncidentList(); // Refresh list
-          } else {
-            if (statusEl) statusEl.textContent = "Failed — backend offline";
-          }
-        });
-      });
-    }
+    var moreBtn = $("btn-show-more-tl");
+    if (moreBtn) moreBtn.addEventListener("click", function () {
+      appendTlBatch(TL_PAGE);
+      updateTlMore();
+    });
   }
 
-  /* ─── Init ─── */
+  /* ════════════════════════════════════════════════
+     INIT
+  ════════════════════════════════════════════════ */
 
   function init() {
     var mainContent = document.querySelector("main");
     TraceRender.initOfflineUI(mainContent);
+
     wireControls();
+    initArrows();
+    initSentinel();
 
-    TraceClient.probe().then(function (info) {
-      if (info) loadIncidentList();
-    });
-
-    // Nav button wiring
-    var settingsBtn = $("nav-btn-settings");
-    if (settingsBtn) settingsBtn.addEventListener("click", function () { window.location.href = "../settings/index.html"; });
+    // Load cards immediately — no probe() gate
+    loadCards(true);
+    TraceClient.probe(); // fire-and-forget for connection badge
   }
 
   if (document.readyState === "loading") {
