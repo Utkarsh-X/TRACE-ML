@@ -1,102 +1,177 @@
 /**
- * Entities Page Controller
+ * Entities / Subjects Page Controller
  *
- * - Lists entities → populates <select>
- * - On select → loads entity profile → fills header, stats, timeline, linked incidents
+ * Two-view pattern:
+ *   Overview → stat tiles + searchable card grid (default landing)
+ *   Detail   → profile + timeline + incidents (only after user clicks a card)
+ *
+ * No entity is auto-selected on load.
  */
 (function () {
   "use strict";
 
   function $(id) { return document.getElementById(id); }
 
-  /* ─── Entity list ─── */
+  var _allEntities = [];
+
+  /* ─────────────────────────── Overview ─────────────────────────── */
+
+  function showOverview() {
+    $("view-overview").style.display = "block";
+    $("view-detail").style.display   = "none";
+  }
+
+  function showDetail() {
+    $("view-overview").style.display = "none";
+    $("view-detail").style.display   = "block";
+  }
 
   function loadEntityList() {
-    TraceClient.entities({ limit: 200 }).then(function (list) {
-      if (!list) return;
-      var sel = $("entity-select");
-      if (!sel) return;
-
-      sel.innerHTML = "";
-      if (list.length === 0) {
-        sel.innerHTML = '<option value="">No entities</option>';
-        $("entity-load-status").textContent = "0 entities";
-        return;
-      }
-
-      list.forEach(function (ent) {
-        var opt = document.createElement("option");
-        opt.value = ent.entity_id;
-        opt.textContent = ent.entity_id + " — " + (ent.name || "Unknown") + " (" + ent.category + ")";
-        sel.appendChild(opt);
-      });
-
-      $("entity-load-status").textContent = list.length + " entities loaded";
-      loadEntityProfile(list[0].entity_id);
+    TraceClient.entities({ limit: 300 }).then(function (list) {
+      _allEntities = list || [];
+      renderOverviewStats(_allEntities);
+      renderGrid(_allEntities);
     });
   }
 
-  /* ─── Entity profile ─── */
+  function renderOverviewStats(list) {
+    var known   = list.filter(function (e) { return e.entity_type === "known"; }).length;
+    var unknown = list.filter(function (e) { return e.entity_type === "unknown"; }).length;
+    var withInc = list.reduce(function (acc, e) {
+      return acc + (parseInt(e.open_incident_count, 10) || 0);
+    }, 0);
+
+    var t = $("ov-total");    if (t) t.textContent = String(list.length);
+    var k = $("ov-known");    if (k) k.textContent = String(known);
+    var u = $("ov-unknown");  if (u) u.textContent = String(unknown);
+    var i = $("ov-incidents"); if (i) i.textContent = String(withInc);
+  }
+
+  function renderGrid(list) {
+    var grid  = $("entity-grid");
+    var label = $("entity-count-label");
+    if (!grid) return;
+    if (label) label.textContent = list.length + " entit" + (list.length !== 1 ? "ies" : "y");
+
+
+    if (list.length === 0) {
+      grid.innerHTML = '<div class="col-span-full flex flex-col items-center justify-center py-20 text-outline font-mono text-[0.75rem]">'
+        + '<span class="material-symbols-outlined text-[36px] mb-3">person_off</span>'
+        + 'No entities found</div>';
+      return;
+    }
+
+    grid.innerHTML = list.map(function (ent) {
+      var isKnown   = ent.entity_type === "known";
+      var name      = TraceClient.escapeHtml(ent.name || ent.entity_id);
+      var shortId   = TraceClient.escapeHtml(String(ent.entity_id || "").slice(0, 14));
+      var cat       = String(ent.category || (isKnown ? "known" : "unknown")).toLowerCase();
+      var status    = String(ent.status || "").toUpperCase();
+      var lastSeen  = ent.last_seen_at ? TraceClient.formatTime(ent.last_seen_at) : "—";
+      var openInc   = parseInt(ent.open_incident_count, 10) || 0;
+
+      var badgeCls  = "entity-card__badge entity-card__badge--" + (cat === "criminal" ? "criminal" : cat === "vip" ? "vip" : isKnown ? "known" : "unknown");
+      var badgeText = isKnown ? cat.toUpperCase() : "UNKNOWN";
+
+      return '<div class="entity-card" data-entity-id="' + TraceClient.escapeHtml(ent.entity_id) + '">'
+        + '<span class="' + badgeCls + '">' + badgeText + '</span>'
+        + '<div class="flex items-start gap-3">'
+        + '<div class="entity-card__avatar"><span class="material-symbols-outlined text-outline text-[20px]">' + (isKnown ? "person" : "person_off") + '</span></div>'
+        + '<div class="flex-1 min-w-0">'
+        + '<div class="font-headline font-semibold text-[0.9rem] text-white truncate">' + name + '</div>'
+        + '<div class="font-mono text-[0.6rem] text-outline truncate mt-0.5">' + shortId + '</div>'
+        + '</div></div>'
+        + '<div class="mt-4 flex justify-between items-center">'
+        + '<span class="font-mono text-[0.6rem] text-outline">Last seen ' + TraceClient.escapeHtml(lastSeen) + '</span>'
+        + (openInc > 0
+          ? '<span class="font-mono text-[0.6rem] text-error">' + openInc + ' open case' + (openInc > 1 ? 's' : '') + '</span>'
+          : '<span class="font-mono text-[0.6rem] text-outline">No open cases</span>')
+        + '</div></div>';
+    }).join("");
+
+    // Wire click handlers
+    var cards = grid.querySelectorAll(".entity-card");
+    cards.forEach(function (card) {
+      card.addEventListener("click", function () {
+        var eid = card.getAttribute("data-entity-id");
+        if (eid) loadEntityProfile(eid);
+      });
+    });
+  }
+
+  /* ─────────────────────────── Filtering ────────────────────────── */
+
+  function applyFilters() {
+    var search = ($("entity-search") || {}).value || "";
+    var type   = ($("entity-filter") || {}).value || "";
+    var q      = search.toLowerCase();
+
+    var filtered = _allEntities.filter(function (e) {
+      var matchText = (e.name || "").toLowerCase().includes(q)
+        || (e.entity_id || "").toLowerCase().includes(q)
+        || (e.category || "").toLowerCase().includes(q);
+      var matchType = !type || e.entity_type === type;
+      return matchText && matchType;
+    });
+
+    renderGrid(filtered);
+  }
+
+  /* ─────────────────────────── Detail view ──────────────────────── */
 
   function loadEntityProfile(entityId) {
     if (!entityId) return;
+    showDetail();
 
     TraceClient.entityProfile(entityId).then(function (profile) {
-      if (!profile) return;
-      renderHeader(profile.entity);
+      if (!profile) {
+        $("entity-display-name").textContent = "Failed to load";
+        return;
+      }
+      renderHeader(profile.entity || {});
       renderStats(profile);
-      renderTimeline(profile.timeline);
-      renderIncidents(profile.incidents);
+      renderTimeline(profile.timeline || []);
+      renderIncidents(profile.incidents || []);
     });
   }
 
   function renderHeader(entity) {
-    var el;
-    el = $("entity-profile-label");
-    if (el) el.textContent = "Entity Profile // ID: " + entity.entity_id;
+    var label = $("entity-profile-label");
+    if (label) label.textContent = "Entity // " + entity.entity_id;
 
-    el = $("entity-display-name");
-    if (el) el.textContent = entity.name || entity.entity_id;
+    var nameEl = $("entity-display-name");
+    if (nameEl) nameEl.textContent = entity.name || entity.entity_id || "—";
 
-    el = $("entity-status");
-    if (el) el.textContent = String(entity.status || "active").toUpperCase();
+    var statusEl = $("entity-status");
+    if (statusEl) statusEl.textContent = String(entity.status || "active").toUpperCase();
 
-    el = $("entity-type");
-    if (el) el.textContent = String(entity.category || "unknown").toUpperCase();
+    var typeEl = $("entity-type");
+    if (typeEl) typeEl.textContent = String(entity.category || entity.entity_type || "—").toUpperCase();
 
-    el = $("entity-severity");
-    if (el) {
-      var sev = entity.open_incident_count > 0 ? "HIGH" : "LOW";
-      el.textContent = sev;
-      el.className = sev === "HIGH"
+    var sevEl = $("entity-severity");
+    if (sevEl) {
+      var open = parseInt(entity.open_incident_count, 10) || 0;
+      sevEl.textContent = open > 0 ? open + " OPEN" : "NONE";
+      sevEl.className   = open > 0
         ? "text-[0.875rem] text-error uppercase font-medium"
         : "text-[0.875rem] text-on-surface-variant uppercase font-medium";
     }
 
-    el = $("entity-clock");
-    if (el) el.textContent = TraceClient.formatDateTime(entity.last_seen_at) || "\u2014";
+    var clockEl = $("entity-clock");
+    if (clockEl) clockEl.textContent = TraceClient.formatDateTime(entity.last_seen_at) || "—";
   }
 
   function renderStats(profile) {
-    var el;
     var stats = profile.stats || {};
 
-    el = $("stat-appearances");
-    if (el) el.textContent = String(stats.detection_count || 0);
+    var a = $("stat-appearances");    if (a) a.textContent = String(stats.detection_count || 0);
+    var i = $("stat-incident-count"); if (i) i.textContent = String(stats.incident_count || 0);
+    var r = $("stat-avg-conf");       if (r) r.textContent = String(stats.recent_alert_count || 0);
 
-    el = $("stat-incident-count");
-    if (el) el.textContent = String(stats.incident_count || 0);
-
-    // Profile stats don't include avg_confidence — use recent_alert_count
-    el = $("stat-avg-conf");
-    if (el) el.textContent = String(stats.recent_alert_count || 0);
-
-    // Confidence overlay: use enrollment_score from linked_person if available
     var score = (profile.linked_person && typeof profile.linked_person.enrollment_score === "number")
-      ? profile.linked_person.enrollment_score
-      : null;
-    el = $("entity-confidence");
-    if (el) el.textContent = score !== null ? (score * 100).toFixed(1) + "%" : "—";
+      ? profile.linked_person.enrollment_score : null;
+    var confEl = $("entity-confidence");
+    if (confEl) confEl.textContent = score !== null ? (score * 100).toFixed(1) + "%" : "—";
     var bar = $("entity-confidence-bar");
     if (bar) bar.style.width = score !== null ? (score * 100).toFixed(1) + "%" : "0%";
   }
@@ -108,14 +183,13 @@
       root.innerHTML = TraceRender.emptyState("No timeline events");
       return;
     }
-    var sorted = timeline.slice().reverse().slice(0, 20);
+    var sorted = timeline.slice().reverse().slice(0, 25);
     root.innerHTML = sorted.map(function (item) {
       var kindLabel = String(item.kind || "event").toUpperCase();
       var badgeKind = item.kind === "incident" ? "filled" : (item.kind === "alert" ? "error" : "ghost");
       var badgeHtml = TraceRender.badge(badgeKind, kindLabel);
-      var time = TraceClient.formatTime(item.timestamp_utc);
-      var summary = TraceClient.escapeHtml(item.summary || item.title || "");
-
+      var time      = TraceClient.formatTime(item.timestamp_utc);
+      var summary   = TraceClient.escapeHtml(item.summary || item.title || "");
       return '<div class="flex items-start gap-4 p-3 hover:bg-surface-high transition-colors">'
         + '<span class="font-mono text-[0.6rem] text-outline whitespace-nowrap mt-0.5">' + TraceClient.escapeHtml(time) + '</span>'
         + badgeHtml
@@ -128,7 +202,7 @@
     var root = $("entity-incidents-root");
     if (!root) return;
     if (!incidents || incidents.length === 0) {
-      root.innerHTML = TraceRender.emptyState("No linked incidents");
+      root.innerHTML = TraceRender.emptyState("No linked cases");
       return;
     }
     root.innerHTML = incidents.map(function (inc) {
@@ -136,26 +210,33 @@
     }).join("");
   }
 
-  /* ─── Init ─── */
+  /* ─────────────────────────── Init ─────────────────────────────── */
 
   function init() {
     var mainContent = document.querySelector("main");
     TraceRender.initOfflineUI(mainContent);
 
-    var sel = $("entity-select");
-    if (sel) {
-      sel.addEventListener("change", function () {
-        loadEntityProfile(sel.value);
-      });
-    }
+    showOverview();
 
-    TraceClient.probe().then(function (info) {
-      if (info) loadEntityList();
+    // Search + filter wiring
+    var searchEl = $("entity-search");
+    if (searchEl) searchEl.addEventListener("input",  applyFilters);
+    var filterEl = $("entity-filter");
+    if (filterEl) filterEl.addEventListener("change", applyFilters);
+
+    // Back button
+    var backBtn = $("btn-back");
+    if (backBtn) backBtn.addEventListener("click", function () { showOverview(); });
+
+    // Load immediately — no probe() gate so the grid renders without delay.
+    // probe() is still used for connection-status badge but doesn't block data.
+    loadEntityList();
+    TraceClient.probe(); // fire-and-forget for connection badge only
+
+    // Re-render timestamps when timezone changes
+    window.addEventListener("trace:tz-change", function () {
+      if (_allEntities.length) renderGrid(_allEntities);
     });
-
-    // Nav buttons
-    var settingsBtn = $("nav-btn-settings");
-    if (settingsBtn) settingsBtn.addEventListener("click", function () { window.location.href = "../settings/index.html"; });
   }
 
   if (document.readyState === "loading") {

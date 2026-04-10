@@ -68,6 +68,6 @@ config.local.yaml
 *.tmp
 *.temp
 
-# Mockup code
-mockup-code/
+# Inpiration Folder
+color_theme_inpiration/
 

@@ -59,8 +59,38 @@
       .replace(/'/g, "&#39;");
   }
 
+  /* ─────────────────── Timezone preference ─────────────────── */
+  /* Supported: 'UTC' (default), 'IST' (+5:30 = +330 min)        */
+  var TZ_OFFSETS = { UTC: 0, IST: 330 };
+
+  /** Get the active timezone preference from localStorage. */
+  function getTZ() {
+    try { return localStorage.getItem("trace_tz") || "UTC"; } catch (e) { return "UTC"; }
+  }
+
   /**
-   * Format ISO timestamp to HH:MM:SS.
+   * Set the timezone preference and broadcast to the page so all
+   * live-rendered timestamps update without a full reload.
+   * @param {string} tz  'UTC' | 'IST'
+   */
+  function setTZ(tz) {
+    var key = String(tz).toUpperCase();
+    if (!(key in TZ_OFFSETS)) return;
+    try { localStorage.setItem("trace_tz", key); } catch (e) {}
+    // Dispatch a custom event so any page can refresh its clocks.
+    try { window.dispatchEvent(new CustomEvent("trace:tz-change", { detail: key })); } catch (e) {}
+  }
+
+  /** Apply offset minutes to a Date and return the shifted Date. */
+  function _applyTZ(d) {
+    var offsetMin = TZ_OFFSETS[getTZ()] || 0;
+    return new Date(d.getTime() + offsetMin * 60000);
+  }
+
+  /* ─────────────────────────────────────────────────────────── */
+
+  /**
+   * Format ISO timestamp to HH:MM:SS in the selected timezone.
    * @param {string} iso
    * @returns {string}
    */
@@ -68,19 +98,21 @@
     if (!iso) return "--:--:--";
     var d = new Date(iso);
     if (isNaN(d.getTime())) return "--:--:--";
-    return d.toISOString().slice(11, 19);
+    var shifted = _applyTZ(d);
+    return shifted.toISOString().slice(11, 19);
   }
 
   /**
-   * Format ISO timestamp to YYYY-MM-DD HH:MM:SS.
+   * Format ISO timestamp to YYYY-MM-DD HH:MM:SS in the selected timezone.
    * @param {string} iso
    * @returns {string}
    */
   function formatDateTime(iso) {
-    if (!iso) return "—";
+    if (!iso) return "\u2014";
     var d = new Date(iso);
     if (isNaN(d.getTime())) return String(iso);
-    return d.toISOString().replace("T", " ").slice(0, 19);
+    var shifted = _applyTZ(d);
+    return shifted.toISOString().replace("T", " ").slice(0, 19);
   }
 
   /* ───────────────────────── HTTP helpers ────────────────────────── */
@@ -583,5 +615,8 @@
     escapeHtml: escapeHtml,
     formatTime: formatTime,
     formatDateTime: formatDateTime,
+    getTZ: getTZ,
+    setTZ: setTZ,
+
   };
 })(typeof window !== "undefined" ? window : globalThis);

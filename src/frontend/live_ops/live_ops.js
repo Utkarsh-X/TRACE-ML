@@ -398,15 +398,20 @@
     var mainContent = document.querySelector("main");
     TraceRender.initOfflineUI(mainContent);
 
-    // UTC clock ticker
+    // Clock ticker — respects the selected timezone preference
     var clockEl = $("utc-clock");
     if (clockEl) {
       function updateClock() {
+        var tz = TraceClient.getTZ();
         var now = new Date();
-        clockEl.textContent = "UTC " + now.toISOString().slice(11, 19);
+        var offsetMin = tz === "IST" ? 330 : 0;
+        var shifted = new Date(now.getTime() + offsetMin * 60000);
+        clockEl.textContent = tz + " " + shifted.toISOString().slice(11, 19);
       }
       updateClock();
       setInterval(updateClock, 1000);
+      // Re-render immediately when user switches timezone in Settings
+      window.addEventListener("trace:tz-change", updateClock);
     }
     // Wire button handlers
     var refreshBtn = $("btn-refresh-all");

@@ -34,7 +34,6 @@
       <a class="font-headline font-medium text-[0.875rem] tracking-tight text-neutral-400 hover:text-white transition-colors" href="../history/index.html">History</a>
       <a class="font-headline font-medium text-[0.875rem] tracking-tight text-neutral-400 hover:text-white transition-colors" href="../database/index.html">Database</a>
       <a class="font-headline font-medium text-[0.875rem] tracking-tight text-neutral-400 hover:text-white transition-colors" href="../enrollment/index.html">Enrollment</a>
-      <a class="font-headline font-medium text-[0.875rem] tracking-tight text-white border-b-2 border-white pb-1" href="./index.html">Settings</a>
     </div>
   </div>
   <div class="flex items-center gap-3">
@@ -119,8 +118,18 @@
         </div>
       </div>
 
+      <!-- Timezone Preference -->
+      <div class="mt-6 pt-6 border-t border-outline-variant/10">
+        <span class="font-mono text-[0.6rem] text-outline uppercase tracking-widest block mb-2">Display Timezone</span>
+        <select id="tz-select" class="bg-surface-high font-mono text-[0.8rem] text-white border-0 px-3 py-2 w-full cursor-pointer focus:ring-1 focus:ring-white">
+          <option value="UTC">UTC — Coordinated Universal Time</option>
+          <option value="IST">IST — India Standard Time (+5:30)</option>
+        </select>
+        <p class="font-mono text-[0.6rem] text-outline mt-2">Applies to all timestamp displays across the system.</p>
+      </div>
+
       <!-- Version Info -->
-      <div class="mt-8 pt-6 border-t border-outline-variant/10">
+      <div class="mt-6 pt-6 border-t border-outline-variant/10">
         <div class="space-y-2">
           <div class="flex justify-between">
             <span class="font-mono text-[0.6rem] text-outline uppercase">Version</span>
@@ -340,6 +349,18 @@
 <script src="../shared/trace_client.js"></script>
 <script src="../shared/trace_render.js"></script>
 <script src="./settings.js"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    var sel = document.getElementById('tz-select');
+    if (!sel) return;
+    // Set the dropdown to match the saved preference
+    sel.value = TraceClient.getTZ();
+    // Persist on change
+    sel.addEventListener('change', function () {
+      TraceClient.setTZ(sel.value);
+    });
+  });
+</script>
 
 </body>
 </html>

@@ -60,8 +60,10 @@ class PipelineSettings(BaseModel):
     show_hud: bool = True
     # Startup ghost-entity cleanup: removes UNK entities with fewer than
     # ghost_entity_min_events detection events (warmup artifacts).
+    # Threshold of 3 is safe: committed entities reach 3 events in <1s;
+    # ghost entities from warmup frames never exceed 1 event.
     purge_ghost_entities_on_start: bool = True
-    ghost_entity_min_events: int = 2
+    ghost_entity_min_events: int = 3
 
 
 class QualitySettings(BaseModel):
