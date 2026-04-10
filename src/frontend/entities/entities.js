@@ -35,15 +35,15 @@
   }
 
   function renderOverviewStats(list) {
-    var known   = list.filter(function (e) { return e.entity_type === "known"; }).length;
-    var unknown = list.filter(function (e) { return e.entity_type === "unknown"; }).length;
+    var known   = list.filter(function (e) { return String(e.type || e.entity_type || "") === "known"; }).length;
+    var unknown = list.filter(function (e) { return String(e.type || e.entity_type || "") !== "known"; }).length;
     var withInc = list.reduce(function (acc, e) {
       return acc + (parseInt(e.open_incident_count, 10) || 0);
     }, 0);
 
-    var t = $("ov-total");    if (t) t.textContent = String(list.length);
-    var k = $("ov-known");    if (k) k.textContent = String(known);
-    var u = $("ov-unknown");  if (u) u.textContent = String(unknown);
+    var t = $("ov-total");     if (t) t.textContent = String(list.length);
+    var k = $("ov-known");     if (k) k.textContent = String(known);
+    var u = $("ov-unknown");   if (u) u.textContent = String(unknown);
     var i = $("ov-incidents"); if (i) i.textContent = String(withInc);
   }
 
@@ -62,31 +62,40 @@
     }
 
     grid.innerHTML = list.map(function (ent) {
-      var isKnown   = ent.entity_type === "known";
+      var isKnown   = String(ent.type || ent.entity_type || "") === "known";
       var name      = TraceClient.escapeHtml(ent.name || ent.entity_id);
-      var shortId   = TraceClient.escapeHtml(String(ent.entity_id || "").slice(0, 14));
+      var shortId   = TraceClient.escapeHtml(String(ent.entity_id || ""));
       var cat       = String(ent.category || (isKnown ? "known" : "unknown")).toLowerCase();
-      var status    = String(ent.status || "").toUpperCase();
       var lastSeen  = ent.last_seen_at ? TraceClient.formatTime(ent.last_seen_at) : "—";
       var openInc   = parseInt(ent.open_incident_count, 10) || 0;
+      var detCount  = parseInt(ent.recent_alert_count, 10) || parseInt(ent.detection_count, 10) || 0;
 
-      var badgeCls  = "entity-card__badge entity-card__badge--" + (cat === "criminal" ? "criminal" : cat === "vip" ? "vip" : isKnown ? "known" : "unknown");
+      var typeKey   = cat === "criminal" ? "criminal" : cat === "vip" ? "vip" : isKnown ? "known" : "unknown";
       var badgeText = isKnown ? cat.toUpperCase() : "UNKNOWN";
+      var cardType  = isKnown ? "known" : "unknown";
 
-      return '<div class="entity-card" data-entity-id="' + TraceClient.escapeHtml(ent.entity_id) + '">'
-        + '<span class="' + badgeCls + '">' + badgeText + '</span>'
-        + '<div class="flex items-start gap-3">'
-        + '<div class="entity-card__avatar"><span class="material-symbols-outlined text-outline text-[20px]">' + (isKnown ? "person" : "person_off") + '</span></div>'
-        + '<div class="flex-1 min-w-0">'
-        + '<div class="font-headline font-semibold text-[0.9rem] text-white truncate">' + name + '</div>'
-        + '<div class="font-mono text-[0.6rem] text-outline truncate mt-0.5">' + shortId + '</div>'
-        + '</div></div>'
-        + '<div class="mt-4 flex justify-between items-center">'
-        + '<span class="font-mono text-[0.6rem] text-outline">Last seen ' + TraceClient.escapeHtml(lastSeen) + '</span>'
-        + (openInc > 0
-          ? '<span class="font-mono text-[0.6rem] text-error">' + openInc + ' open case' + (openInc > 1 ? 's' : '') + '</span>'
-          : '<span class="font-mono text-[0.6rem] text-outline">No open cases</span>')
-        + '</div></div>';
+      return '<div class="entity-card entity-card--' + cardType + '" data-entity-id="' + TraceClient.escapeHtml(ent.entity_id) + '">'
+        /* top row: badge + arrow */
+        + '<div class="flex items-center justify-between mb-2">'
+        +   '<span class="entity-card__badge entity-card__badge--' + typeKey + '">' + badgeText + '</span>'
+        +   '<span class="ec-arrow material-symbols-outlined" style="font-size:14px;color:#919191">arrow_forward</span>'
+        + '</div>'
+        /* avatar + name block */
+        + '<div class="flex items-center gap-3">'
+        +   '<div class="entity-card__avatar"><span class="material-symbols-outlined" style="font-size:18px;color:#919191">' + (isKnown ? 'person' : 'person_off') + '</span></div>'
+        +   '<div class="flex-1 min-w-0">'
+        +     '<div style="font-family:Inter,sans-serif;font-weight:600;font-size:0.9rem;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.2">' + name + '</div>'
+        +     '<div style="font-family:JetBrains Mono,monospace;font-size:0.58rem;color:#666;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + shortId + '</div>'
+        +   '</div>'
+        + '</div>'
+        /* footer */
+        + '<div class="entity-card__footer">'
+        +   '<span style="font-family:JetBrains Mono,monospace;font-size:0.58rem;color:#666">' + TraceClient.escapeHtml(lastSeen) + '</span>'
+        +   (openInc > 0
+              ? '<span style="font-family:JetBrains Mono,monospace;font-size:0.58rem;color:#ffb4ab">' + openInc + ' open case' + (openInc > 1 ? 's' : '') + '</span>'
+              : '<span style="font-family:JetBrains Mono,monospace;font-size:0.58rem;color:#474747">No open cases</span>')
+        + '</div>'
+        + '</div>';
     }).join("");
 
     // Wire click handlers
