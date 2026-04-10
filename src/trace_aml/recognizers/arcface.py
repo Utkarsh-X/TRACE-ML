@@ -174,9 +174,17 @@ class ArcFaceRecognizer:
         vector_store: VectorStore,
     ) -> list[tuple[RecognitionMatch, list[float], LivenessResult]]:
         candidates = self.detect_faces(frame_bgr)
+        # ── Layer 1: Runtime face quality gate ────────────────────────────────
+        # Discard faces whose detector_score is below the minimum threshold.
+        # These are too uncertain to produce reliable embeddings; skipping them
+        # prevents warmup-phase ghost entities from being created downstream.
+        min_det = self.settings.quality.min_detector_score
+        candidates = [c for c in candidates if c.detector_score >= min_det]
+        # ─────────────────────────────────────────────────────────────────────
         active_ids = vector_store.active_person_ids()
         outputs: list[tuple[RecognitionMatch, list[float], LivenessResult]] = []
         for candidate in candidates:
+
             x, y, w, h = candidate.bbox
             crop = frame_bgr[max(0, y) : max(0, y + h), max(0, x) : max(0, x + w)]
             liveness = self._liveness.evaluate(crop)

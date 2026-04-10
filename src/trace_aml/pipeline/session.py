@@ -86,6 +86,11 @@ class RecognitionSession:
         self.last_frame_queue_depth = 0
         self.last_result_queue_depth = 0
         self._headless_mode = False
+        # ── Entity Commitment Protocol ─────────────────────────────────────────
+        # Track IDs that have passed the commitment gate and had their first
+        # DB write. Prevents warmup-phase ghost entities.
+        self._committed_tracks: set[str] = set()
+        # ─────────────────────────────────────────────────────────────────────
 
     def _should_log(self, key: str) -> bool:
         now = time.time()
@@ -126,6 +131,15 @@ class RecognitionSession:
         source: str = "webcam:0",
     ) -> None:
         decision = match.decision_state
+        # ── Layer 5: Minimum unknown surface threshold ─────────────────────────
+        # Don't create an unknown entity for faces so ambiguous the system has
+        # less than min_unknown_surface_threshold% smoothed confidence in any
+        # direction. These are noise, not persons of interest.
+        if decision == DecisionState.reject and not match.person_id:
+            min_surface = self.settings.recognition.min_unknown_surface_threshold
+            if match.smoothed_confidence < min_surface:
+                return
+        # ─────────────────────────────────────────────────────────────────────
         resolution = self.entity_resolver.resolve(match, embedding)
         persist_detection = True
         if decision == DecisionState.reject and not self.settings.recognition.persist_unknown:
@@ -288,6 +302,8 @@ class RecognitionSession:
     def _annotate(self, packet: InferencePacket, fps: float):
         frame = packet.frame.copy()
         now = time.time()
+        min_commit_conf = self.settings.temporal.min_commit_confidence
+        min_commit_votes = self.settings.temporal.min_commit_votes
 
         for i, (match, liveness) in enumerate(zip(packet.matches, packet.liveness, strict=False)):
             match = self._apply_temporal_decision(match, now=now)
@@ -337,6 +353,25 @@ class RecognitionSession:
         boxes: list[dict[str, Any]] = []
         for match in packet.matches:
             x, y, bw, bh = match.bbox
+            # ── Layer 2: Temporal commitment gate ─────────────────────────────
+            # Only mark a track as committed (and allow DB writes) once the
+            # temporal engine has produced enough stable votes / confidence.
+            # Overlay boxes are drawn for all tracks regardless (operator
+            # visibility from frame 1), but entity/detection records only
+            # persist after commitment.
+            tid = match.track_id
+            if tid and tid not in self._committed_tracks:
+                temporal_result = self.temporal._tracks.get(tid)
+                votes = 0
+                if temporal_result is not None:
+                    from collections import Counter
+                    non_unk = [x for x in temporal_result.identities if x != "unknown"]
+                    votes = Counter(non_unk).most_common(1)[0][1] if non_unk else 0
+                conf_ok = match.smoothed_confidence >= min_commit_conf
+                votes_ok = votes >= min_commit_votes or match.decision_state.value != "reject"
+                if conf_ok and votes_ok:
+                    self._committed_tracks.add(tid)
+            # ─────────────────────────────────────────────────────────────────
             boxes.append(
                 {
                     "x": float(x) / max(w, 1),
@@ -383,6 +418,9 @@ class RecognitionSession:
 
                 display = self._annotate(packet, fps=fps)
                 for match, emb, live in zip(packet.matches, packet.embeddings, packet.liveness, strict=False):
+                    # Only persist if track has passed the commitment gate.
+                    if match.track_id and match.track_id not in self._committed_tracks:
+                        continue
                     self._save_detection(packet.frame, match=match, embedding=emb, liveness=live)
 
                 cv2.imshow(title, display)
@@ -422,6 +460,9 @@ class RecognitionSession:
 
                 self._annotate(packet, fps=fps)
                 for match, emb, live in zip(packet.matches, packet.embeddings, packet.liveness, strict=False):
+                    # Only persist if track has passed the commitment gate.
+                    if match.track_id and match.track_id not in self._committed_tracks:
+                        continue
                     self._save_detection(packet.frame, match=match, embedding=emb, liveness=live)
         finally:
             self._headless_mode = False

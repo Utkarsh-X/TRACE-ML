@@ -49,12 +49,19 @@ class RecognitionSettings(BaseModel):
     low_quality_threshold: float = 0.40
     threshold_relaxation: float = 0.12
     unknown_reuse_threshold: float = 0.55
+    # Minimum smoothed confidence (0-100) for an unknown to become a surfaced entity.
+    # Below this, the face is logged internally but no UNK record is created.
+    min_unknown_surface_threshold: float = 35.0
 
 
 class PipelineSettings(BaseModel):
     frame_queue_size: int = 2
     result_queue_size: int = 2
     show_hud: bool = True
+    # Startup ghost-entity cleanup: removes UNK entities with fewer than
+    # ghost_entity_min_events detection events (warmup artifacts).
+    purge_ghost_entities_on_start: bool = True
+    ghost_entity_min_events: int = 2
 
 
 class QualitySettings(BaseModel):
@@ -67,6 +74,9 @@ class QualitySettings(BaseModel):
     min_valid_images: int = 6
     min_embeddings_active: int = 6
     min_embeddings_ready: int = 2
+    # Runtime face quality gate — faces with detector_score below this are discarded
+    # before ArcFace embedding runs (prevents low-quality faces from becoming entities).
+    min_detector_score: float = 0.55
 
 
 class TemporalSettings(BaseModel):
@@ -77,6 +87,10 @@ class TemporalSettings(BaseModel):
     max_track_distance_px: int = 120
     min_track_iou: float = 0.08
     track_reuse_min_score: float = 0.35
+    # Entity commitment gate: a track must reach this smoothed confidence (0-100)
+    # before any DB write occurs. Prevents warmup-phase ghost entities.
+    min_commit_confidence: float = 45.0
+    min_commit_votes: int = 2
 
 
 class RuleWindowSettings(BaseModel):

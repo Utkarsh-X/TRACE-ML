@@ -1013,3 +1013,50 @@ class VectorStore:
             row["bbox"] = self._parse_json_list(row.get("bbox", "[]"))
             row["metadata"] = self._parse_json_object(row.get("metadata", "{}"))
         return detections
+
+    def delete_unknown_entity(self, entity_id: str) -> None:
+        """Remove a single unknown entity and all its associated data.
+
+        Used by purge_ghost_entities to clean up warmup-phase artifacts.
+        Does NOT remove known-person detection records.
+        """
+        escaped = self._escape(entity_id)
+        try:
+            self.entities.delete(f"entity_id = '{escaped}'")
+            self.unknown_profiles.delete(f"entity_id = '{escaped}'")
+            self.events.delete(f"entity_id = '{escaped}'")
+            self.alerts.delete(f"entity_id = '{escaped}'")
+            # Remove associated incidents and their actions.
+            related_incidents = [
+                row for row in self.list_incidents(limit=100_000)
+                if str(row.get("entity_id", "")) == entity_id
+            ]
+            self.incidents.delete(f"entity_id = '{escaped}'")
+            for incident in related_incidents:
+                inc_id = self._escape(str(incident.get("incident_id", "")))
+                if inc_id:
+                    self.actions.delete(f"incident_id = '{inc_id}'")
+        except Exception as exc:
+            logger.warning("Failed to delete unknown entity {}: {}", entity_id, exc)
+
+    def purge_ghost_entities(self, min_events: int = 2) -> int:
+        """Remove UNK entities that have fewer than `min_events` detection events.
+
+        These are warmup-phase ghost entities created before the temporal
+        commitment gate was in place. Returns the count of purged entities.
+        """
+        unknowns = self.list_entities(type_filter=EntityType.unknown.value)
+        purged = 0
+        for entity in unknowns:
+            eid = str(entity.get("entity_id", ""))
+            if not eid:
+                continue
+            events = self.list_events(entity_id=eid, limit=100)
+            if len(events) < min_events:
+                self.delete_unknown_entity(eid)
+                purged += 1
+                logger.info("Purged ghost entity {} ({} events < {})", eid, len(events), min_events)
+        if purged:
+            logger.info("Ghost entity purge complete: removed {} entities.", purged)
+        return purged
+

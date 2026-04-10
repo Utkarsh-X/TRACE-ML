@@ -1,6 +1,7 @@
 """FastAPI service bridge for TRACE-AML read models."""
 
 import json
+from contextlib import asynccontextmanager
 from queue import Empty, Full, Queue
 from typing import Any
 
@@ -45,10 +46,28 @@ def create_service_app(
 
     publisher = stream_publisher or NullEventStreamPublisher()
     read_models = IntelligenceReadModelService(store, publisher)
+
+    # ── Person management & training routes ──
+    from trace_aml.service.person_api import create_person_router
+
+    # ── Startup: ghost entity purge (lifespan) ───────────────────────────────
+    @asynccontextmanager
+    async def _lifespan(application: Any):
+        """Run startup purge then yield control to the app."""
+        if settings.pipeline.purge_ghost_entities_on_start:
+            from loguru import logger
+            min_ev = settings.pipeline.ghost_entity_min_events
+            logger.info("Running startup ghost entity purge (min_events={})...", min_ev)
+            purged = store.purge_ghost_entities(min_events=min_ev)
+            logger.info("Startup purge done: {} ghost entities removed.", purged)
+        yield  # app runs here
+    # ─────────────────────────────────────────────────────────────────────────
+
     app = FastAPI(
         title=f"{settings.app.name} Service",
         version="4.0.0",
         description="TRACE-AML UI/API bridge over intelligence read models.",
+        lifespan=_lifespan,
     )
     # Dev-friendly: allow the static mockup to call the API with ?api=http://127.0.0.1:8080
     # without a reverse proxy (EventSource + fetch need CORS when origins differ).
@@ -58,9 +77,6 @@ def create_service_app(
         allow_methods=["*"],
         allow_headers=["*"],
     )
-
-    # ── Person management & training routes ──
-    from trace_aml.service.person_api import create_person_router
 
     person_router = create_person_router(settings, store)
     app.include_router(person_router)
