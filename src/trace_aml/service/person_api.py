@@ -192,7 +192,21 @@ def create_person_router(settings: "Settings", store: "VectorStore") -> Any:
             created_at=current.get("created_at", datetime.now(timezone.utc).isoformat()),
             updated_at=datetime.now(timezone.utc).isoformat(),
         )
-        store.add_or_update_person(updated)
+        # Update the persons table (biographical data only) without resetting image counts.
+        # add_or_update_person always resets valid_images/total_images to 0, so we bypass it:
+        escaped_id = updated.person_id.replace("'", "''")
+        store.persons.delete(f"person_id = '{escaped_id}'")
+        store.persons.add([store._filtered_row(store.persons, updated.model_dump())])
+        # Restore the lifecycle state with the preserved image counts
+        store.set_person_state(
+            person_id=updated.person_id,
+            lifecycle_state=updated.lifecycle_state,
+            lifecycle_reason=updated.lifecycle_reason,
+            enrollment_score=updated.enrollment_score,
+            valid_embeddings=updated.valid_embeddings,
+            valid_images=int(current.get("valid_images", 0)),
+            total_images=int(current.get("total_images", 0)),
+        )
         return {"person_id": person_id, "status": "updated"}
 
     # ── DELETE /api/v1/persons/{person_id} ─────────────────────────

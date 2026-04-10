@@ -16,6 +16,8 @@ def utc_now_iso() -> str:
 class PersonCategory(StrEnum):
     criminal = "criminal"
     missing = "missing"
+    employee = "employee"
+    vip = "vip"
 
 
 class PersonLifecycleStatus(StrEnum):
