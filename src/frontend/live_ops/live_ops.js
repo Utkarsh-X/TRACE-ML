@@ -156,26 +156,132 @@
     }
   }
 
-  /* ─── SSE terminal ─── */
+  /* ─── Forensic log panel ─── */
+
+  var _logBytes = 0;
+  var _logCollapsed = false;
+
+  function flTimestamp(raw) {
+    // Format as [HH:mm:ss.mmm]
+    if (!raw) {
+      var n = new Date();
+      return '[' + n.toISOString().slice(11, 23) + ']';
+    }
+    try {
+      var d = new Date(String(raw).replace('Z','') + (String(raw).endsWith('Z') ? '' : 'Z'));
+      return '[' + d.toISOString().slice(11, 23) + ']';
+    } catch (e) {
+      return '[' + String(raw).slice(11, 23) + ']';
+    }
+  }
+
+  function flTopicClass(topic) {
+    var t = String(topic || '').toLowerCase();
+    if (t.indexOf('alert') !== -1)    return 'll-topic-alert';
+    if (t.indexOf('incident') !== -1) return 'll-topic-incident';
+    if (t.indexOf('action') !== -1)   return 'll-topic-action';
+    return 'll-topic-default';
+  }
+
+  function flChipHtml(payload) {
+    // Pull out severity or decision as a chip
+    if (!payload) return '';
+    var sev = String(payload.severity || '').toUpperCase();
+    if (sev === 'HIGH' || sev === 'CRITICAL') {
+      return '<span class="ll-chip ll-chip--error">' + sev + '</span>';
+    }
+    if (sev === 'MEDIUM' || sev === 'LOW') {
+      return '<span class="ll-chip">' + sev + '</span>';
+    }
+    var dec = String(payload.decision || '').toUpperCase();
+    if (dec) return '<span class="ll-chip">' + dec + '</span>';
+    var entityId = payload.entity_id || payload.entity || '';
+    if (entityId) return '<span class="ll-chip">' + TraceClient.escapeHtml(String(entityId)) + '</span>';
+    return '';
+  }
+
+  function appendLogLine(event) {
+    var body = document.getElementById('fl-body');
+    if (!body) return;
+
+    var topic   = String(event.topic || 'SESSION').toUpperCase();
+    var payload = event.payload || {};
+    var ts      = flTimestamp(event.timestamp_utc);
+    var cls     = flTopicClass(topic);
+    var chip    = flChipHtml(payload);
+
+    // Build message text from payload
+    var msg = '';
+    if (payload.message)     msg = payload.message;
+    else if (payload.reason) msg = payload.reason;
+    else if (payload.summary)msg = payload.summary;
+    else {
+      // Compact key=value rendering
+      var parts = [];
+      Object.keys(payload).slice(0, 4).forEach(function (k) {
+        var v = payload[k];
+        if (v !== null && v !== undefined && typeof v !== 'object') {
+          parts.push(k + '=' + String(v).slice(0, 40));
+        }
+      });
+      msg = parts.join('  ') || topic.toLowerCase() + ' event';
+    }
+    msg = TraceClient.escapeHtml(String(msg).slice(0, 200));
+
+    var lineHtml = '<div class="log-line">'
+      + '<span class="ll-ts">' + ts + '</span>'
+      + '<span class="' + cls + '">' + TraceClient.escapeHtml(topic) + '</span>'
+      + '<span class="ll-msg">' + msg + chip + '</span>'
+      + '</div>';
+
+    // Prepend so newest is at top
+    body.insertAdjacentHTML('afterbegin', lineHtml);
+
+    // Update buffer counter
+    _logBytes += lineHtml.length;
+    var bufEl = document.getElementById('fl-buffer');
+    if (bufEl) bufEl.textContent = Math.round(_logBytes / 1024);
+
+    // Cap at 300 lines
+    var lines = body.querySelectorAll('.log-line');
+    if (lines.length > 300) lines[lines.length - 1].remove();
+  }
 
   function initSSE() {
-    var terminal = $("terminal-output");
-    if (!terminal) return;
-
     TraceClient.connectSSE(function (event) {
-      // Append to terminal
-      var line = TraceRender.terminalLine(event.topic, event.payload, event.timestamp_utc);
-      terminal.innerHTML = line + terminal.innerHTML;
-
-      // Cap terminal lines (~200 lines max)
-      var children = terminal.querySelectorAll("span.log-time");
-      if (children.length > 200) {
-        // Remove excess from end
-        while (terminal.childNodes.length > 600) {
-          terminal.removeChild(terminal.lastChild);
-        }
-      }
+      appendLogLine(event);
     });
+  }
+
+  function initForensicControls() {
+    // Collapse / expand
+    var panel = document.getElementById('forensic-panel');
+    var icon  = document.getElementById('fl-collapse-icon');
+    var btn   = document.getElementById('fl-collapse');
+    if (btn && panel && icon) {
+      btn.addEventListener('click', function () {
+        _logCollapsed = !_logCollapsed;
+        if (_logCollapsed) {
+          panel.classList.add('collapsed');
+          icon.textContent = 'expand_less';
+        } else {
+          panel.classList.remove('collapsed');
+          icon.textContent = 'expand_more';
+        }
+      });
+    }
+
+    // Clear console
+    var clearBtn = document.getElementById('fl-clear');
+    if (clearBtn) {
+      clearBtn.addEventListener('click', function () {
+        var body = document.getElementById('fl-body');
+        if (body) body.innerHTML = '';
+        _logBytes = 0;
+        var bufEl = document.getElementById('fl-buffer');
+        if (bufEl) bufEl.textContent = '0';
+      });
+    }
   }
 
   /* ─── Polling loops ─── */
@@ -467,7 +573,8 @@
       _snapshotTimer = setInterval(pollSnapshot, SNAPSHOT_INTERVAL);
       _timelineTimer = setInterval(pollTimeline, TIMELINE_INTERVAL);
 
-      // Connect SSE
+      // Connect SSE + wire forensic panel controls
+      initForensicControls();
       initSSE();
     });
 

@@ -5,44 +5,149 @@
   <meta content="width=device-width, initial-scale=1.0" name="viewport" />
   <title>TRACE-AML | Live Ops</title>
 
-  <!-- Compiled Design System (no CDN) -->
   <link rel="stylesheet" href="../shared/tailwind-compiled.css" />
   <link rel="stylesheet" href="../shared/base.css" />
-
-  <!-- Fonts (loaded once via base.css @import, preconnect for speed) -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 
   <style>
-    /* Page-specific grid */
-    .ops-grid {
+    /* ── Page shell ─────────────────────────────────────── */
+    .ops-shell {
+      display: flex;
+      flex-direction: column;
+      height: calc(100vh - 3.5rem);   /* minus top-nav */
+    }
+
+    /* ── Scrollable main area ───────────────────────────── */
+    .ops-main {
+      flex: 1;
+      overflow-y: auto;
+      min-height: 0;
+    }
+
+    /* ── Forensic log panel (fixed bottom) ──────────────── */
+    .forensic-panel {
+      flex-shrink: 0;
+      height: 210px;
+      background: #0e0e0e;
+      border-top: 1px solid rgba(255,255,255,0.06);
+      display: flex;
+      flex-direction: column;
+    }
+    .forensic-panel.collapsed {
+      height: 34px;
+    }
+
+    /* Header bar */
+    .forensic-panel__header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 1rem;
+      height: 34px;
+      flex-shrink: 0;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+    }
+    .forensic-panel__title {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.6rem;
+      text-transform: uppercase;
+      letter-spacing: 0.2em;
+      color: #c6c6c6;
+    }
+    .forensic-panel__title .blink-sq {
+      width: 7px; height: 7px;
+      background: #fff;
+      animation: blink-sq 1.2s step-end infinite;
+      flex-shrink: 0;
+    }
+    @keyframes blink-sq { 0%,100%{opacity:1} 50%{opacity:0} }
+
+    .forensic-panel__meta {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.57rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: #474747;
+    }
+    .forensic-panel__meta .stream-live { color: #919191; }
+
+    /* Log scroll area */
+    .forensic-panel__body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 0.35rem 1rem 0.5rem;
+    }
+    .forensic-panel.collapsed .forensic-panel__body {
+      display: none;
+    }
+
+    /* Individual log line */
+    .log-line {
+      display: flex;
+      align-items: baseline;
+      gap: 0.5rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.63rem;
+      line-height: 1.65;
+      color: #c6c6c6;
+      white-space: nowrap;
+    }
+    .log-line .ll-ts  { color: #474747; flex-shrink: 0; }
+    .log-line .ll-topic-alert    { color: #ffb4ab; font-weight: 500; }
+    .log-line .ll-topic-incident { color: #fff; font-weight: 500; }
+    .log-line .ll-topic-action   { color: #c6c6c6; font-weight: 500; }
+    .log-line .ll-topic-default  { color: #919191; font-weight: 500; }
+    .log-line .ll-msg  { color: #c6c6c6; overflow: hidden; text-overflow: ellipsis; }
+    .log-line .ll-chip {
+      display: inline-flex; align-items: center;
+      background: #1f1f1f; border: 1px solid rgba(255,255,255,0.12);
+      padding: 0 5px; font-size: 0.52rem; letter-spacing: 0.08em;
+      color: #c6c6c6; flex-shrink: 0; margin-left: 0.25rem;
+    }
+    .log-line .ll-chip--error {
+      background: rgba(147,0,10,0.4); border-color: rgba(255,180,171,0.3);
+      color: #ffb4ab;
+    }
+
+    /* ── Content grid ───────────────────────────────────── */
+    .ops-content {
       display: grid;
-      grid-template-columns: 1fr 280px;
-      grid-template-rows: auto 1fr auto;
-      height: calc(100vh - 3.5rem);
+      grid-template-columns: 280px 1fr;
       gap: 0;
+      height: 100%;
     }
-    .ops-center {
-      grid-column: 1;
-      grid-row: 1 / -1;
-      overflow-y: auto;
+    .ops-left  { overflow-y: auto; border-right: 1px solid rgba(255,255,255,0.05); }
+    .ops-right { overflow-y: auto; }
+
+    /* ── Collapse toggle button ─────────────────────────── */
+    .collapse-btn {
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      color: #474747;
+      padding: 0 0.25rem;
+      display: flex;
+      align-items: center;
+      transition: color 0.15s;
     }
-    .ops-sidebar {
-      grid-column: 2;
-      grid-row: 1 / -1;
-      overflow-y: auto;
-    }
+    .collapse-btn:hover { color: #c6c6c6; }
+    .collapse-btn .material-symbols-outlined { font-size: 16px !important; }
   </style>
 </head>
 
 <body class="bg-background text-on-surface font-body overflow-hidden">
 
-<!-- ═══════════════════════════════════════════════════════
-     TOP NAVIGATION BAR
-     ═══════════════════════════════════════════════════════ -->
+<!-- ═══ TOP NAV ═══════════════════════════════════════════ -->
 <nav class="fixed top-0 w-full z-50 bg-surface-low flex items-center justify-between px-6 h-14 no-border" id="top-nav">
   <div class="flex items-center gap-8">
-    <a href="./index.html" class="text-lg font-black tracking-tighter text-white uppercase font-headline hover:text-primary/80 transition-colors">TRACE-AML</a>
+    <a href="./index.html" class="text-lg font-black tracking-tighter text-white uppercase font-headline">TRACE-AML</a>
     <div class="hidden md:flex gap-6 items-center" id="top-nav-links">
       <a class="font-headline font-medium text-[0.875rem] tracking-tight text-white border-b-2 border-white pb-1" href="./index.html">Live Ops</a>
       <a class="font-headline font-medium text-[0.875rem] tracking-tight text-neutral-400 hover:text-white transition-colors" href="../incidents/index.html">Incidents</a>
@@ -57,40 +162,33 @@
       <span class="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span>
       <span class="text-[0.6875rem] font-mono text-outline uppercase tracking-widest">System Active</span>
     </div>
-    <button type="button" class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:bg-surface-high p-2 bg-transparent border-0" id="nav-btn-notifications" aria-label="Notifications" title="Notifications">notifications</button>
-    <button type="button" class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:bg-surface-high p-2 bg-transparent border-0" id="nav-btn-settings" aria-label="Settings" title="Settings" onclick="window.location.href='../settings/index.html'">settings</button>
+    <button type="button" class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:bg-surface-high p-2 bg-transparent border-0" id="nav-btn-notifications" aria-label="Notifications">notifications</button>
+    <button type="button" class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:bg-surface-high p-2 bg-transparent border-0" id="nav-btn-settings" aria-label="Settings" onclick="window.location.href='../settings/index.html'">settings</button>
     <div class="w-8 h-8 bg-surface-high flex items-center justify-center">
       <span class="material-symbols-outlined text-on-surface-variant text-[18px]">person</span>
     </div>
   </div>
 </nav>
 
-<!-- ═══════════════════════════════════════════════════════
-     SIDE NAVIGATION RAIL
-     ═══════════════════════════════════════════════════════ -->
+<!-- ═══ SIDE NAV ══════════════════════════════════════════ -->
 <aside class="fixed left-0 top-14 h-[calc(100vh-3.5rem)] w-20 bg-surface-low flex flex-col items-center py-4 z-40 no-border" id="side-nav">
   <div class="flex flex-col items-center gap-1 w-full">
-    <!-- Live Ops (ACTIVE) -->
-    <a class="flex flex-col items-center gap-1 cursor-pointer text-white bg-surface-high border-l-2 border-white w-full py-3 no-underline hover:text-white" href="./index.html" title="Live Ops">
+    <a class="flex flex-col items-center gap-1 cursor-pointer text-white bg-surface-high border-l-2 border-white w-full py-3 no-underline" href="./index.html" title="Live Ops">
       <span class="material-symbols-outlined">monitoring</span>
       <span class="font-mono text-[0.55rem] uppercase tracking-widest">Live Ops</span>
     </a>
-    <!-- Incidents -->
     <a class="flex flex-col items-center gap-1 cursor-pointer text-neutral-500 hover:text-neutral-200 w-full py-3 no-underline" href="../incidents/index.html" title="Incidents">
       <span class="material-symbols-outlined">timeline</span>
       <span class="font-mono text-[0.55rem] uppercase tracking-widest">Incidents</span>
     </a>
-    <!-- Entities -->
     <a class="flex flex-col items-center gap-1 cursor-pointer text-neutral-500 hover:text-neutral-200 w-full py-3 no-underline" href="../entities/index.html" title="Entities">
       <span class="material-symbols-outlined">hub</span>
       <span class="font-mono text-[0.55rem] uppercase tracking-widest">Entities</span>
     </a>
-    <!-- History -->
     <a class="flex flex-col items-center gap-1 cursor-pointer text-neutral-500 hover:text-neutral-200 w-full py-3 no-underline" href="../history/index.html" title="History">
       <span class="material-symbols-outlined">history</span>
       <span class="font-mono text-[0.55rem] uppercase tracking-widest">History</span>
     </a>
-    <!-- Database -->
     <a class="flex flex-col items-center gap-1 cursor-pointer text-neutral-500 hover:text-neutral-200 w-full py-3 no-underline" href="../database/index.html" title="Database">
       <span class="material-symbols-outlined">database</span>
       <span class="font-mono text-[0.55rem] uppercase tracking-widest">Database</span>
@@ -106,286 +204,176 @@
   </div>
 </aside>
 
-<!-- ═══════════════════════════════════════════════════════
-     MAIN CANVAS — LIVE OPS
-     ═══════════════════════════════════════════════════════ -->
-<main class="pl-20 pt-14 h-screen w-full">
-  <div class="ops-grid">
+<!-- ═══ MAIN CANVAS ════════════════════════════════════════ -->
+<main class="pl-20 pt-14 h-screen w-full flex flex-col overflow-hidden">
+  <div class="ops-shell">
 
-    <!-- ─── CENTER: Main Intelligence Grid ──────────────── -->
-    <section class="ops-center bg-surface p-5 flex flex-col gap-5">
+    <!-- ── Scrollable ops content ── -->
+    <div class="ops-main">
+      <div class="ops-content">
 
-      <!-- Header Bar -->
-      <header class="flex justify-between items-start">
-        <div>
-          <span class="flex items-center gap-2 mb-1">
-            <span class="w-1 h-1 bg-primary inline-block"></span>
-            <span class="text-[0.6875rem] font-mono uppercase tracking-[0.2em] text-outline">Live Operations Intelligence</span>
-          </span>
-          <h1 class="text-3xl font-headline font-bold text-white tracking-tight leading-none uppercase" id="hub-title">TRACE-AML</h1>
-        </div>
-        <div class="text-right flex flex-col items-end gap-2">
-          <p class="font-mono text-[0.8rem] text-primary tabular-nums" id="utc-clock">UTC --:--:--</p>
-          <div class="flex items-center gap-2">
-            <button class="px-2 py-1 text-[0.62rem] font-mono bg-surface-high text-on-surface-variant hover:bg-surface-bright cursor-pointer border-0" id="btn-refresh-all" type="button">Refresh</button>
-            <button class="px-2 py-1 text-[0.62rem] font-mono bg-surface-high text-on-surface-variant hover:bg-surface-bright cursor-pointer border-0" id="btn-enable-camera" type="button">Enable Camera</button>
-          </div>
-        </div>
-      </header>
+        <!-- LEFT: Active entities + Alert stream (compact) -->
+        <div class="ops-left bg-surface-low flex flex-col gap-0">
 
-      <!-- Top Panels: Active Entities + Recent Timeline -->
-      <div class="grid grid-cols-[280px_1fr] gap-4 min-h-0">
-
-        <!-- Active Entities Panel -->
-        <div class="bg-surface-container p-4 flex flex-col min-h-0 max-h-[300px]">
-          <div class="flex items-center justify-between mb-3">
-            <h2 class="section-header">Active Entities</h2>
-            <span class="font-mono text-[0.6rem] text-outline" id="entity-count">--</span>
-          </div>
-          <div class="flex-1 overflow-y-auto space-y-2" id="active-entities-root">
-            <!-- Entity Card -->
-            <div class="bg-surface-high p-3 hover:bg-surface-bright cursor-pointer transition-colors group">
-              <div class="flex items-center justify-between mb-1">
-                <span class="font-headline font-semibold text-[0.8rem] text-primary">ENT-KN-0001</span>
-                <span class="badge badge--filled">KNOWN</span>
-              </div>
-              <div class="flex items-center gap-3">
-                <span class="font-mono text-[0.65rem] text-on-surface-variant">Conf: 0.89</span>
-                <span class="font-mono text-[0.65rem] text-outline">Last: 14:21:05</span>
-              </div>
-            </div>
-            <div class="bg-surface-high p-3 hover:bg-surface-bright cursor-pointer transition-colors group">
-              <div class="flex items-center justify-between mb-1">
-                <span class="font-headline font-semibold text-[0.8rem] text-primary">UNK-0042</span>
-                <span class="badge badge--error">UNKNOWN</span>
-              </div>
-              <div class="flex items-center gap-3">
-                <span class="font-mono text-[0.65rem] text-on-surface-variant">Conf: 0.71</span>
-                <span class="font-mono text-[0.65rem] text-outline">Last: 14:22:01</span>
-              </div>
-            </div>
-            <div class="bg-surface-high p-3 hover:bg-surface-bright cursor-pointer transition-colors group">
-              <div class="flex items-center justify-between mb-1">
-                <span class="font-headline font-semibold text-[0.8rem] text-primary">ENT-KN-0003</span>
-                <span class="badge badge--filled">KNOWN</span>
-              </div>
-              <div class="flex items-center gap-3">
-                <span class="font-mono text-[0.65rem] text-on-surface-variant">Conf: 0.94</span>
-                <span class="font-mono text-[0.65rem] text-outline">Last: 14:19:33</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Recent Timeline Panel -->
-        <div class="bg-surface-container p-4 flex flex-col min-h-0 max-h-[300px]">
-          <div class="flex items-center justify-between mb-3">
-            <h2 class="section-header">Recent Timeline</h2>
-            <div class="flex items-center gap-2">
-              <button class="px-2 py-0.5 text-[0.6rem] font-mono bg-surface-high text-white border-b-2 border-white cursor-pointer border-0" data-timeline-filter="all">All</button>
-              <button class="px-2 py-0.5 text-[0.6rem] font-mono text-outline hover:text-on-surface-variant cursor-pointer bg-transparent border-0" data-timeline-filter="events">Events</button>
-              <button class="px-2 py-0.5 text-[0.6rem] font-mono text-outline hover:text-on-surface-variant cursor-pointer bg-transparent border-0" data-timeline-filter="alerts">Alerts</button>
-            </div>
-          </div>
-          <div class="flex-1 overflow-y-auto space-y-1.5" id="recent-timeline-root">
-            <!-- Timeline Items -->
-            <div class="flex items-start gap-3 p-2 hover:bg-surface-high transition-colors">
-              <span class="font-mono text-[0.6rem] text-outline whitespace-nowrap mt-0.5">14:22:09</span>
-              <span class="badge badge--ghost mt-0.5">EVENT</span>
-              <span class="text-[0.75rem] text-on-surface">Detection confirmed — <span class="text-primary font-medium">ENT-KN-0001</span> at source CAM_01</span>
-            </div>
-            <div class="flex items-start gap-3 p-2 hover:bg-surface-high transition-colors">
-              <span class="font-mono text-[0.6rem] text-outline whitespace-nowrap mt-0.5">14:21:45</span>
-              <span class="badge badge--error mt-0.5">ALERT</span>
-              <span class="text-[0.75rem] text-on-surface">Repeated unknown detection — <span class="text-error font-medium">UNK-0042</span> — 5 events in 10s window</span>
-            </div>
-            <div class="flex items-start gap-3 p-2 hover:bg-surface-high transition-colors">
-              <span class="font-mono text-[0.6rem] text-outline whitespace-nowrap mt-0.5">14:21:30</span>
-              <span class="badge badge--ghost mt-0.5">EVENT</span>
-              <span class="text-[0.75rem] text-on-surface">Entity resolved — <span class="text-primary font-medium">UNK-0042</span> created (unknown subject)</span>
-            </div>
-            <div class="flex items-start gap-3 p-2 hover:bg-surface-high transition-colors">
-              <span class="font-mono text-[0.6rem] text-outline whitespace-nowrap mt-0.5">14:20:58</span>
-              <span class="badge badge--ghost mt-0.5">EVENT</span>
-              <span class="text-[0.75rem] text-on-surface">Detection confirmed — <span class="text-primary font-medium">ENT-KN-0003</span> at source CAM_01</span>
-            </div>
-            <div class="flex items-start gap-3 p-2 hover:bg-surface-high transition-colors">
-              <span class="font-mono text-[0.6rem] text-outline whitespace-nowrap mt-0.5">14:19:33</span>
-              <span class="badge badge--filled mt-0.5">ACTION</span>
-              <span class="text-[0.75rem] text-on-surface">Action triggered — <span class="text-primary font-medium">log</span> for incident INC-017</span>
-            </div>
-            <div class="flex items-start gap-3 p-2 hover:bg-surface-high transition-colors">
-              <span class="font-mono text-[0.6rem] text-outline whitespace-nowrap mt-0.5">14:18:44</span>
-              <span class="badge badge--ghost mt-0.5">EVENT</span>
-              <span class="text-[0.75rem] text-on-surface">Detection confirmed — <span class="text-primary font-medium">ENT-KN-0001</span> at source CAM_01, smoothed confidence 0.91</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Camera Feed (DOMINANT) -->
-      <div class="flex-1 min-h-[280px] bg-surface-lowest relative flex items-center justify-center">
-        <div class="absolute top-3 left-4 flex items-center gap-2 z-10">
-          <span class="w-1.5 h-1.5 rounded-full bg-error animate-pulse"></span>
-          <span class="font-mono text-[0.6rem] text-on-surface-variant uppercase tracking-widest">CAM_01 · LIVE</span>
-        </div>
-        <div class="absolute top-3 right-4 z-10">
-          <span class="font-mono text-[0.65rem] text-outline" id="camera-fps">-- FPS</span>
-        </div>
-        <!-- Camera placeholder -->
-        <div class="text-center" id="camera-placeholder">
-          <span class="material-symbols-outlined text-outline-variant text-[48px] mb-2 block">videocam_off</span>
-          <p class="font-mono text-[0.7rem] text-outline">Camera feed offline</p>
-          <p class="font-mono text-[0.6rem] text-outline-variant mt-1">Click "Enable Camera" to start</p>
-        </div>
-        <!-- MJPEG feed image (hidden until enabled) -->
-        <img id="camera-feed" class="w-full h-full object-contain" style="display:none" alt="Live camera feed" />
-        <!-- Detection overlay canvas -->
-        <canvas id="detection-overlay" class="hidden absolute inset-0 w-full h-full pointer-events-none"></canvas>
-        <!-- Corner brackets (aesthetic, from mockup) -->
-        <div class="absolute top-6 left-4 w-8 h-8 border-l border-t border-outline-variant/30"></div>
-        <div class="absolute bottom-6 right-4 w-8 h-8 border-r border-b border-outline-variant/30"></div>
-      </div>
-
-      <!-- System Health Bar (compact) -->
-      <div class="bg-surface-container flex items-center justify-between px-5 py-3">
-        <div class="flex items-center gap-8">
-          <div class="flex items-center gap-2">
-            <span class="stat-label">Entities</span>
-            <span class="font-headline font-bold text-[1rem] text-primary" id="health-entities">--</span>
-          </div>
-          <div class="flex items-center gap-2">
-            <span class="stat-label">Incidents</span>
-            <span class="font-headline font-bold text-[1rem] text-primary" id="health-incidents">--</span>
-          </div>
-          <div class="flex items-center gap-2">
-            <span class="stat-label">Alerts</span>
-            <span class="font-headline font-bold text-[1rem] text-primary" id="health-alerts">--</span>
-          </div>
-          <div class="flex items-center gap-2">
-            <span class="stat-label">Detections</span>
-            <span class="font-headline font-bold text-[1rem] text-primary" id="health-detections">--</span>
-          </div>
-        </div>
-        <div class="flex items-center gap-4">
-          <div class="flex items-center gap-2">
-            <span class="status-dot status-dot--active"></span>
-            <span class="font-mono text-[0.6rem] text-on-surface-variant uppercase">Pipeline Active</span>
-          </div>
-          <span class="font-mono text-[0.6rem] text-outline" id="health-latency">-- ms</span>
-        </div>
-      </div>
-
-    </section>
-
-    <!-- ─── RIGHT SIDEBAR: Alert + Incident + Terminal ──── -->
-    <section class="ops-sidebar bg-surface-low flex flex-col">
-
-      <!-- Alert Stream -->
-      <div class="p-4 flex-shrink-0 border-b border-outline-variant/10">
-        <div class="flex items-center justify-between mb-3">
-          <h2 class="section-header">Alert Stream</h2>
-          <span class="badge badge--error" id="alert-badge">Critical (2)</span>
-        </div>
-        <div class="space-y-3 max-h-[200px] overflow-y-auto" id="alert-stream-root">
-          <!-- Alert Card -->
-          <div class="bg-surface-container p-3">
-            <div class="flex items-center justify-between mb-1">
-              <span class="font-mono text-[0.6rem] text-error font-medium uppercase">Repeated Unknown</span>
-              <span class="font-mono text-[0.6rem] text-outline">14:21:45</span>
-            </div>
-            <p class="text-[0.75rem] text-on-surface leading-snug">Unknown subject UNK-0042 detected 5 times in 10s window. Incident INC-018 opened.</p>
-            <div class="mt-1.5 flex items-center gap-2">
-              <span class="badge badge--error">HIGH</span>
-              <span class="font-mono text-[0.6rem] text-outline">ENT: UNK-0042</span>
-            </div>
-          </div>
-          <div class="bg-surface-container p-3">
-            <div class="flex items-center justify-between mb-1">
-              <span class="font-mono text-[0.6rem] text-on-surface-variant font-medium uppercase">Reappearance</span>
-              <span class="font-mono text-[0.6rem] text-outline">14:18:44</span>
-            </div>
-            <p class="text-[0.75rem] text-on-surface leading-snug">Entity ENT-KN-0001 reappeared — 3 events in 10s window. Pattern matches reappearance rule.</p>
-            <div class="mt-1.5 flex items-center gap-2">
-              <span class="badge badge--ghost">MEDIUM</span>
-              <span class="font-mono text-[0.6rem] text-outline">ENT: ENT-KN-0001</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Incident Updates -->
-      <div class="p-4 flex-1 min-h-0 border-b border-outline-variant/10">
-        <h2 class="section-header mb-3">Incident Updates</h2>
-        <div class="space-y-3 overflow-y-auto h-full" id="incident-updates-root">
-          <div class="bg-surface-container p-3 hover:bg-surface-high cursor-pointer transition-colors">
+          <!-- Header -->
+          <div class="p-4 border-b border-outline-variant/10 flex-shrink-0">
             <div class="flex items-center gap-2 mb-1">
-              <span class="w-1.5 h-1.5 bg-primary inline-block"></span>
-              <span class="font-headline font-semibold text-[0.8rem] text-primary">INC-018</span>
-              <span class="badge badge--error ml-auto">OPEN</span>
+              <span class="w-1 h-1 bg-primary inline-block"></span>
+              <span class="text-[0.6rem] font-mono uppercase tracking-[0.2em] text-outline">Live Operations</span>
             </div>
-            <p class="text-[0.7rem] text-on-surface-variant leading-snug">Repeated unknown detection — UNK-0042. Auto-escalated to high severity.</p>
-            <div class="mt-1.5 flex items-center gap-3">
-              <span class="font-mono text-[0.6rem] text-outline">Alerts: 1</span>
-              <span class="font-mono text-[0.6rem] text-outline">Since: 14:21:45</span>
+            <h1 class="text-xl font-headline font-bold text-white tracking-tight uppercase" id="hub-title">TRACE-AML</h1>
+            <p class="font-mono text-[0.72rem] text-primary tabular-nums mt-0.5" id="utc-clock">UTC --:--:--</p>
+          </div>
+
+          <!-- System health mini-bar -->
+          <div class="px-4 py-2.5 border-b border-outline-variant/10 flex-shrink-0 grid grid-cols-2 gap-x-3 gap-y-1">
+            <div class="flex items-center justify-between">
+              <span class="stat-label">Entities</span>
+              <span class="font-mono text-[0.8rem] text-white" id="health-entities">--</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="stat-label">Incidents</span>
+              <span class="font-mono text-[0.8rem] text-white" id="health-incidents">--</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="stat-label">Alerts</span>
+              <span class="font-mono text-[0.8rem] text-white" id="health-alerts">--</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="stat-label">Detections</span>
+              <span class="font-mono text-[0.8rem] text-white" id="health-detections">--</span>
             </div>
           </div>
-          <div class="bg-surface-container p-3 hover:bg-surface-high cursor-pointer transition-colors">
-            <div class="flex items-center gap-2 mb-1">
-              <span class="w-1.5 h-1.5 bg-outline inline-block"></span>
-              <span class="font-headline font-semibold text-[0.8rem] text-primary">INC-017</span>
-              <span class="badge badge--ghost ml-auto">OPEN</span>
+
+          <!-- Active Entities -->
+          <div class="p-4 flex-shrink-0 border-b border-outline-variant/10">
+            <div class="flex items-center justify-between mb-2">
+              <h2 class="section-header">Active Entities</h2>
+              <span class="font-mono text-[0.6rem] text-outline" id="entity-count">--</span>
             </div>
-            <p class="text-[0.7rem] text-on-surface-variant leading-snug">Reappearance alert for known entity ENT-KN-0001. Monitoring continues.</p>
-            <div class="mt-1.5 flex items-center gap-3">
-              <span class="font-mono text-[0.6rem] text-outline">Alerts: 2</span>
-              <span class="font-mono text-[0.6rem] text-outline">Since: 14:12:30</span>
+            <div class="space-y-2 max-h-[180px] overflow-y-auto" id="active-entities-root">
+              <div class="text-outline font-mono text-[0.65rem] py-3 text-center">Loading…</div>
             </div>
           </div>
+
+          <!-- Alert Stream -->
+          <div class="p-4 flex-shrink-0 border-b border-outline-variant/10">
+            <div class="flex items-center justify-between mb-2">
+              <h2 class="section-header">Alert Stream</h2>
+              <span class="badge badge--ghost" id="alert-badge">—</span>
+            </div>
+            <div class="space-y-2 max-h-[180px] overflow-y-auto" id="alert-stream-root">
+              <div class="text-outline font-mono text-[0.65rem] py-3 text-center">Loading…</div>
+            </div>
+          </div>
+
+          <!-- Controls -->
+          <div class="p-4 mt-auto flex-shrink-0">
+            <div class="flex gap-2">
+              <button class="flex-1 px-2 py-1.5 text-[0.6rem] font-mono bg-surface-high text-on-surface-variant hover:bg-surface-bright cursor-pointer border-0 uppercase tracking-widest" id="btn-refresh-all" type="button">Refresh</button>
+              <button class="flex-1 px-2 py-1.5 text-[0.6rem] font-mono bg-surface-high text-on-surface-variant hover:bg-surface-bright cursor-pointer border-0 uppercase tracking-widest" id="btn-enable-camera" type="button">Enable Camera</button>
+            </div>
+            <div class="flex items-center gap-2 mt-2">
+              <span class="status-dot status-dot--active"></span>
+              <span class="font-mono text-[0.58rem] text-on-surface-variant uppercase">Pipeline Active</span>
+              <span class="font-mono text-[0.58rem] text-outline ml-auto" id="health-latency">-- ms</span>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- RIGHT: Camera + Timeline + Incidents -->
+        <div class="ops-right bg-surface flex flex-col gap-0">
+
+          <!-- Camera feed -->
+          <div class="flex-1 min-h-[260px] bg-surface-lowest relative flex items-center justify-center">
+            <div class="absolute top-3 left-4 flex items-center gap-2 z-10">
+              <span class="w-1.5 h-1.5 rounded-full bg-error animate-pulse"></span>
+              <span class="font-mono text-[0.6rem] text-on-surface-variant uppercase tracking-widest">CAM_01 · LIVE</span>
+            </div>
+            <div class="absolute top-3 right-4 z-10">
+              <span class="font-mono text-[0.65rem] text-outline" id="camera-fps">-- FPS</span>
+            </div>
+            <div class="text-center" id="camera-placeholder">
+              <span class="material-symbols-outlined text-outline-variant text-[48px] mb-2 block">videocam_off</span>
+              <p class="font-mono text-[0.7rem] text-outline">Camera feed offline</p>
+              <p class="font-mono text-[0.6rem] text-outline-variant mt-1">Click "Enable Camera" to start</p>
+            </div>
+            <img id="camera-feed" class="w-full h-full object-contain" style="display:none" alt="Live camera feed" />
+            <canvas id="detection-overlay" class="hidden absolute inset-0 w-full h-full pointer-events-none"></canvas>
+            <div class="absolute top-6 left-4 w-8 h-8 border-l border-t border-outline-variant/30"></div>
+            <div class="absolute bottom-6 right-4 w-8 h-8 border-r border-b border-outline-variant/30"></div>
+          </div>
+
+          <!-- Recent Timeline + Incidents in 2-col row -->
+          <div class="grid grid-cols-2 border-t border-outline-variant/10" style="min-height:220px;max-height:280px">
+
+            <!-- Recent Timeline -->
+            <div class="p-4 border-r border-outline-variant/10 flex flex-col min-h-0">
+              <div class="flex items-center justify-between mb-2 flex-shrink-0">
+                <h2 class="section-header">Recent Timeline</h2>
+                <div class="flex items-center gap-1">
+                  <button class="px-2 py-0.5 text-[0.58rem] font-mono bg-surface-high text-white border-b-2 border-white cursor-pointer border-0" data-timeline-filter="all">All</button>
+                  <button class="px-2 py-0.5 text-[0.58rem] font-mono text-outline hover:text-on-surface-variant cursor-pointer bg-transparent border-0" data-timeline-filter="events">Events</button>
+                  <button class="px-2 py-0.5 text-[0.58rem] font-mono text-outline hover:text-on-surface-variant cursor-pointer bg-transparent border-0" data-timeline-filter="alerts">Alerts</button>
+                </div>
+              </div>
+              <div class="flex-1 overflow-y-auto space-y-1" id="recent-timeline-root">
+                <div class="text-outline font-mono text-[0.65rem] py-3 text-center">Loading…</div>
+              </div>
+            </div>
+
+            <!-- Incident Updates -->
+            <div class="p-4 flex flex-col min-h-0">
+              <h2 class="section-header mb-2 flex-shrink-0">Open Incidents</h2>
+              <div class="flex-1 overflow-y-auto space-y-2" id="incident-updates-root">
+                <div class="text-outline font-mono text-[0.65rem] py-3 text-center">Loading…</div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════════
+         FORENSIC LOG PANEL — full-width horizontal terminal
+         ══════════════════════════════════════════════════════════ -->
+    <div class="forensic-panel" id="forensic-panel">
+
+      <!-- Header bar -->
+      <div class="forensic-panel__header">
+        <div class="forensic-panel__title">
+          <span class="blink-sq"></span>
+          LIVE &nbsp; FORENSIC &nbsp; ENGINE &nbsp; LOG
+        </div>
+        <div class="forensic-panel__meta">
+          <span>BUFFER: <span id="fl-buffer">0</span> KB</span>
+          <span class="stream-live">STREAM: <span id="fl-stream-status">ACTIVE</span></span>
+          <button type="button" id="fl-clear" class="collapse-btn" title="Clear log" style="color:#474747;font-size:0.57rem;font-family:'JetBrains Mono',monospace;letter-spacing:0.1em;text-transform:uppercase">
+            [CLEAR_CONSOLE]
+          </button>
+          <button type="button" id="fl-collapse" class="collapse-btn" title="Collapse / expand log">
+            <span class="material-symbols-outlined" id="fl-collapse-icon">expand_more</span>
+          </button>
         </div>
       </div>
 
-      <!-- Terminal Output -->
-      <div class="p-4 flex-shrink-0 max-h-[220px] flex flex-col">
-        <div class="flex items-center justify-between mb-2">
-          <div class="flex items-center gap-2">
-            <span class="status-dot status-dot--active"></span>
-            <h2 class="section-header">Terminal Output</h2>
-          </div>
-          <span class="font-mono text-[0.55rem] text-outline uppercase">Stream: Active</span>
-        </div>
-        <div class="terminal-block flex-1 min-h-0" id="terminal-output">
-<span class="log-time">[14:22:09]</span> <span class="log-type">DETECTION</span> ENT-KN-0001 confirmed (0.89) track_T004
-<span class="log-time">[14:22:01]</span> <span class="log-type">ENTITY_RESOLVE</span> UNK-0042 created (unknown)
-<span class="log-time">[14:21:45]</span> <span class="log-error">ALERT_GEN</span> repeated_unknown UNK-0042 severity=high
-<span class="log-time">[14:21:45]</span> <span class="log-type">INCIDENT</span> INC-018 opened for UNK-0042
-<span class="log-time">[14:21:30]</span> <span class="log-type">DETECTION</span> unknown face detected conf=0.71 track_T007
-<span class="log-time">[14:20:58]</span> <span class="log-type">DETECTION</span> ENT-KN-0003 confirmed (0.94) track_T003
-<span class="log-time">[14:19:33]</span> <span class="log-type">ACTION</span> log executed for INC-017 trigger=on_update
-<span class="log-time">[14:18:44]</span> <span class="log-error">ALERT_GEN</span> reappearance ENT-KN-0001 severity=medium
-<span class="log-time">[14:18:20]</span> <span class="log-type">DETECTION</span> ENT-KN-0001 confirmed (0.91) track_T004
-<span class="log-time">[14:17:55]</span> <span class="log-type">HEALTH</span> pipeline_ok fps=28.4 tracks=3 queue=0
+      <!-- Log lines scroll area -->
+      <div class="forensic-panel__body" id="fl-body">
+        <!-- Lines injected by live_ops.js -->
+        <div class="log-line" style="opacity:0.4">
+          <span class="ll-ts">[--:--:--.---]</span>
+          <span class="ll-topic-default">SYSTEM</span>
+          <span class="ll-msg">Waiting for stream connection…</span>
         </div>
       </div>
 
-    </section>
+    </div>
 
   </div>
 </main>
-
-<!-- ═══════════════════════════════════════════════════════
-     UTC Clock Script (minimal, non-API)
-     ═══════════════════════════════════════════════════════ -->
-<script>
-  function updateClock() {
-    const now = new Date();
-    const utc = now.toISOString().slice(11, 19);
-    const el = document.getElementById('utc-clock');
-    if (el) el.textContent = 'UTC ' + utc;
-  }
-  setInterval(updateClock, 1000);
-  updateClock();
-</script>
 
 <!-- Service Layer -->
 <script src="../shared/trace_client.js"></script>
