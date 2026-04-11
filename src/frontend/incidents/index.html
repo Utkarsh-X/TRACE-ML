@@ -79,6 +79,8 @@
       min-height: 0;
       flex: 1;
       overflow: hidden;
+      /* Subtract forensic panel height so body doesn't overflow */
+      max-height: calc(100vh - 3.5rem - 110px - 170px);
     }
 
     /* ── Timeline entry cards ───────────────────────── */
@@ -146,6 +148,97 @@
     .alert-row--high   { border-left-color: #ffb4ab; }
     .alert-row--medium { border-left-color: #c6c6c6; }
     .alert-row--low    { border-left-color: #474747; }
+
+    /* ── Forensic log panel ─────────────────────────── */
+    .forensic-panel {
+      flex-shrink: 0;
+      height: 170px;
+      background: #0e0e0e;
+      border-top: 1px solid rgba(255,255,255,0.06);
+      display: flex;
+      flex-direction: column;
+    }
+    .forensic-panel.collapsed { height: 34px; }
+
+    .forensic-panel__header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 1rem;
+      height: 34px;
+      flex-shrink: 0;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+    }
+    .forensic-panel__title {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.6rem;
+      text-transform: uppercase;
+      letter-spacing: 0.2em;
+      color: #c6c6c6;
+    }
+    .forensic-panel__title .blink-sq {
+      width: 7px; height: 7px;
+      background: #fff;
+      animation: blink-sq 1.2s step-end infinite;
+      flex-shrink: 0;
+    }
+    @keyframes blink-sq { 0%,100%{opacity:1} 50%{opacity:0} }
+
+    .forensic-panel__meta {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.57rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: #474747;
+    }
+    .forensic-panel__meta .stream-live { color: #919191; }
+
+    .forensic-panel__body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 0.3rem 1rem 0.4rem;
+    }
+    .forensic-panel.collapsed .forensic-panel__body { display: none; }
+
+    .log-line {
+      display: flex;
+      align-items: baseline;
+      gap: 0.5rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.63rem;
+      line-height: 1.6;
+      color: #c6c6c6;
+      white-space: nowrap;
+    }
+    .log-line .ll-ts             { color: #474747; flex-shrink: 0; }
+    .log-line .ll-topic-alert    { color: #ffb4ab; font-weight: 500; }
+    .log-line .ll-topic-incident { color: #fff;    font-weight: 500; }
+    .log-line .ll-topic-action   { color: #c6c6c6; font-weight: 500; }
+    .log-line .ll-topic-default  { color: #919191; font-weight: 500; }
+    .log-line .ll-msg  { color: #c6c6c6; overflow: hidden; text-overflow: ellipsis; }
+    .log-line .ll-chip {
+      display: inline-flex; align-items: center;
+      background: #1f1f1f; border: 1px solid rgba(255,255,255,0.12);
+      padding: 0 5px; font-size: 0.52rem; letter-spacing: 0.08em;
+      color: #c6c6c6; flex-shrink: 0; margin-left: 0.25rem;
+    }
+    .log-line .ll-chip--error {
+      background: rgba(147,0,10,0.4); border-color: rgba(255,180,171,0.3);
+      color: #ffb4ab;
+    }
+    .inc-collapse-btn {
+      background: transparent; border: none; cursor: pointer;
+      color: #474747; padding: 0 0.25rem;
+      display: flex; align-items: center; transition: color 0.15s;
+    }
+    .inc-collapse-btn:hover { color: #c6c6c6; }
+    .inc-collapse-btn .material-symbols-outlined { font-size: 16px !important; }
   </style>
 </head>
 
@@ -337,6 +430,35 @@
       </div>
     </div>
 
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════
+       FORENSIC LOG PANEL — full-width horizontal terminal
+       ══════════════════════════════════════════════════════════ -->
+  <div class="forensic-panel" id="inc-forensic-panel">
+    <div class="forensic-panel__header">
+      <div class="forensic-panel__title">
+        <span class="blink-sq"></span>
+        LIVE &nbsp; FORENSIC &nbsp; ENGINE &nbsp; LOG
+      </div>
+      <div class="forensic-panel__meta">
+        <span>BUFFER: <span id="inc-fl-buffer">0</span> KB</span>
+        <span class="stream-live">STREAM: <span id="inc-fl-status">ACTIVE</span></span>
+        <button type="button" id="inc-fl-clear" class="inc-collapse-btn" style="color:#474747;font-size:0.57rem;font-family:'JetBrains Mono',monospace;letter-spacing:0.1em;text-transform:uppercase">
+          [CLEAR_CONSOLE]
+        </button>
+        <button type="button" id="inc-fl-collapse" class="inc-collapse-btn" title="Collapse / expand">
+          <span class="material-symbols-outlined" id="inc-fl-collapse-icon">expand_more</span>
+        </button>
+      </div>
+    </div>
+    <div class="forensic-panel__body" id="inc-fl-body">
+      <div class="log-line" style="opacity:0.4">
+        <span class="ll-ts">[--:--:--.---]</span>
+        <span class="ll-topic-default">SYSTEM</span>
+        <span class="ll-msg">Waiting for stream connection…</span>
+      </div>
+    </div>
   </div>
 
 </main>

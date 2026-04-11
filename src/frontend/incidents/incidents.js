@@ -365,6 +365,99 @@
   }
 
   /* ════════════════════════════════════════════════
+     FORENSIC LOG PANEL
+  ════════════════════════════════════════════════ */
+
+  var _flBytes = 0;
+  var _flCollapsed = false;
+
+  function flTimestamp(raw) {
+    if (!raw) { var n = new Date(); return '[' + n.toISOString().slice(11,23) + ']'; }
+    try {
+      var d = new Date(String(raw).replace('Z','') + (String(raw).endsWith('Z') ? '' : 'Z'));
+      return '[' + d.toISOString().slice(11,23) + ']';
+    } catch(e) { return '[' + String(raw).slice(11,23) + ']'; }
+  }
+
+  function flTopicClass(topic) {
+    var t = String(topic || '').toLowerCase();
+    if (t.indexOf('alert')    !== -1) return 'll-topic-alert';
+    if (t.indexOf('incident') !== -1) return 'll-topic-incident';
+    if (t.indexOf('action')   !== -1) return 'll-topic-action';
+    return 'll-topic-default';
+  }
+
+  function flChipHtml(payload) {
+    if (!payload) return '';
+    var sev = String(payload.severity || '').toUpperCase();
+    if (sev === 'HIGH' || sev === 'CRITICAL') return '<span class="ll-chip ll-chip--error">' + sev + '</span>';
+    if (sev === 'MEDIUM' || sev === 'LOW')    return '<span class="ll-chip">' + sev + '</span>';
+    var dec = String(payload.decision || '').toUpperCase();
+    if (dec) return '<span class="ll-chip">' + dec + '</span>';
+    var eid = payload.entity_id || payload.entity || '';
+    if (eid) return '<span class="ll-chip">' + TraceClient.escapeHtml(String(eid)) + '</span>';
+    return '';
+  }
+
+  function flAppendLine(event) {
+    var body = document.getElementById('inc-fl-body');
+    if (!body) return;
+    var topic = String(event.topic || 'SESSION').toUpperCase();
+    var payload = event.payload || {};
+    var ts  = flTimestamp(event.timestamp_utc);
+    var cls = flTopicClass(topic);
+    var chip = flChipHtml(payload);
+    var msg = payload.message || payload.reason || payload.summary || '';
+    if (!msg) {
+      var parts = [];
+      Object.keys(payload).slice(0,4).forEach(function(k) {
+        var v = payload[k];
+        if (v !== null && v !== undefined && typeof v !== 'object') parts.push(k + '=' + String(v).slice(0,40));
+      });
+      msg = parts.join('  ') || topic.toLowerCase() + ' event';
+    }
+    msg = TraceClient.escapeHtml(String(msg).slice(0,200));
+    var html = '<div class="log-line">'
+      + '<span class="ll-ts">' + ts + '</span>'
+      + '<span class="' + cls + '">' + TraceClient.escapeHtml(topic) + '</span>'
+      + '<span class="ll-msg">' + msg + chip + '</span>'
+      + '</div>';
+    body.insertAdjacentHTML('afterbegin', html);
+    _flBytes += html.length;
+    var buf = document.getElementById('inc-fl-buffer');
+    if (buf) buf.textContent = Math.round(_flBytes / 1024);
+    var lines = body.querySelectorAll('.log-line');
+    if (lines.length > 300) lines[lines.length - 1].remove();
+  }
+
+  function initForensicPanel() {
+    // Collapse / expand
+    var panel = document.getElementById('inc-forensic-panel');
+    var icon  = document.getElementById('inc-fl-collapse-icon');
+    var btn   = document.getElementById('inc-fl-collapse');
+    if (btn && panel && icon) {
+      btn.addEventListener('click', function() {
+        _flCollapsed = !_flCollapsed;
+        panel.classList.toggle('collapsed', _flCollapsed);
+        icon.textContent = _flCollapsed ? 'expand_less' : 'expand_more';
+      });
+    }
+    // Clear
+    var clearBtn = document.getElementById('inc-fl-clear');
+    if (clearBtn) {
+      clearBtn.addEventListener('click', function() {
+        var body = document.getElementById('inc-fl-body');
+        if (body) body.innerHTML = '';
+        _flBytes = 0;
+        var buf = document.getElementById('inc-fl-buffer');
+        if (buf) buf.textContent = '0';
+      });
+    }
+    // Connect SSE
+    TraceClient.connectSSE(function(event) { flAppendLine(event); });
+  }
+
+  /* ════════════════════════════════════════════════
      CONTROLS wiring
   ════════════════════════════════════════════════ */
 
@@ -412,6 +505,7 @@
     wireControls();
     initArrows();
     initSentinel();
+    initForensicPanel();
 
     // Load cards immediately — no probe() gate
     loadCards(true);
