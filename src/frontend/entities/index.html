@@ -5,6 +5,7 @@
   <meta content="width=device-width, initial-scale=1.0" name="viewport" />
   <title>TRACE-AML | Entities</title>
   <link rel="stylesheet" href="../shared/tailwind-compiled.css" />
+  <link rel="stylesheet" href="../shared/sidenav.css" />
   <link rel="stylesheet" href="../shared/base.css" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -123,49 +124,76 @@
 
 <body class="bg-background text-on-surface font-body overflow-hidden">
 
-<!-- TOP NAV -->
-<nav class="fixed top-0 w-full z-50 bg-surface-low flex items-center justify-between px-6 h-14 no-border">
-  <div class="flex items-center gap-8">
-    <a href="../live_ops/index.html" class="text-lg font-black tracking-tighter text-white uppercase font-headline hover:text-primary/80 transition-colors">TRACE-AML</a>
-    <div class="hidden md:flex gap-6 items-center">
-      <a class="font-headline font-medium text-[0.875rem] tracking-tight text-neutral-400 hover:text-white transition-colors" href="../live_ops/index.html">Live Ops</a>
-      <a class="font-headline font-medium text-[0.875rem] tracking-tight text-neutral-400 hover:text-white transition-colors" href="../incidents/index.html">Incidents</a>
-      <a class="font-headline font-medium text-[0.875rem] tracking-tight text-white border-b-2 border-white pb-1" href="./index.html">Entities</a>
-      <a class="font-headline font-medium text-[0.875rem] tracking-tight text-neutral-400 hover:text-white transition-colors" href="../history/index.html">History</a>
-      <a class="font-headline font-medium text-[0.875rem] tracking-tight text-neutral-400 hover:text-white transition-colors" href="../database/index.html">Database</a>
-      <a class="font-headline font-medium text-[0.875rem] tracking-tight text-neutral-400 hover:text-white transition-colors" href="../enrollment/index.html">Enrollment</a>
-    </div>
-  </div>
-  <div class="flex items-center gap-3">
-    <div class="hidden md:flex items-center bg-surface-lowest px-3 py-1.5 gap-2" id="connection-badge">
-      <span class="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span>
-      <span class="text-[0.6875rem] font-mono text-outline uppercase tracking-widest">System Active</span>
-    </div>
-    <button type="button" class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:bg-surface-high p-2 bg-transparent border-0">notifications</button>
-    <button type="button" class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:bg-surface-high p-2 bg-transparent border-0" onclick="window.location.href='../settings/index.html'">settings</button>
-    <div class="w-8 h-8 bg-surface-high flex items-center justify-center">
-      <span class="material-symbols-outlined text-on-surface-variant text-[18px]">person</span>
-    </div>
-  </div>
-</nav>
+
+
+<div class="app-shell">
 
 <!-- SIDE NAV -->
-<aside class="fixed left-0 top-14 h-[calc(100vh-3.5rem)] w-20 bg-surface-low flex flex-col items-center py-4 z-40 no-border">
-  <div class="flex flex-col items-center gap-1 w-full">
-    <a class="flex flex-col items-center gap-1 text-neutral-500 hover:text-neutral-200 w-full py-3 no-underline" href="../live_ops/index.html"><span class="material-symbols-outlined">monitoring</span><span class="font-mono text-[0.55rem] uppercase tracking-widest">Live Ops</span></a>
-    <a class="flex flex-col items-center gap-1 text-neutral-500 hover:text-neutral-200 w-full py-3 no-underline" href="../incidents/index.html"><span class="material-symbols-outlined">timeline</span><span class="font-mono text-[0.55rem] uppercase tracking-widest">Incidents</span></a>
-    <a class="flex flex-col items-center gap-1 text-white bg-surface-high border-l-2 border-white w-full py-3 no-underline" href="./index.html"><span class="material-symbols-outlined">hub</span><span class="font-mono text-[0.55rem] uppercase tracking-widest">Entities</span></a>
-    <a class="flex flex-col items-center gap-1 text-neutral-500 hover:text-neutral-200 w-full py-3 no-underline" href="../history/index.html"><span class="material-symbols-outlined">history</span><span class="font-mono text-[0.55rem] uppercase tracking-widest">History</span></a>
-    <a class="flex flex-col items-center gap-1 text-neutral-500 hover:text-neutral-200 w-full py-3 no-underline" href="../database/index.html"><span class="material-symbols-outlined">database</span><span class="font-mono text-[0.55rem] uppercase tracking-widest">Database</span></a>
+<aside class="sidenav" id="sidenav">
+  <div class="sidenav-header">
+    <button class="hamburger-btn" id="sidenav-toggle" title="Toggle sidebar (Ctrl+B)">
+      <span class="material-symbols-outlined">menu</span>
+    </button>
+    <span class="sidenav-brand">TRACE-AML</span>
   </div>
-  <div class="mt-auto flex flex-col items-center gap-4 w-full pb-4">
-    <button class="text-neutral-500 hover:text-neutral-200 py-2 bg-transparent border-0"><span class="material-symbols-outlined">help_outline</span></button>
-    <button class="text-neutral-500 hover:text-neutral-200 py-2 bg-transparent border-0"><span class="material-symbols-outlined">logout</span></button>
+  <div class="sidenav-status">
+    <span class="status-dot" id="connection-badge"></span>
+    <span class="status-label">System Active</span>
   </div>
+  <nav class="sidenav-nav">
+    <a class="nav-item " href="../live_ops/index.html" data-tooltip="Live Ops">
+      <span class="material-symbols-outlined nav-icon">monitoring</span>
+      <span class="nav-label">Live Ops</span>
+    </a>
+    <a class="nav-item " href="../incidents/index.html" data-tooltip="Incidents">
+      <span class="material-symbols-outlined nav-icon">timeline</span>
+      <span class="nav-label">Incidents</span>
+    </a>
+    <a class="nav-item active" href="../entities/index.html" data-tooltip="Entities">
+      <span class="material-symbols-outlined nav-icon">hub</span>
+      <span class="nav-label">Entities</span>
+    </a>
+    <a class="nav-item " href="../history/index.html" data-tooltip="History">
+      <span class="material-symbols-outlined nav-icon">history</span>
+      <span class="nav-label">History</span>
+    </a>
+    <a class="nav-item " href="../database/index.html" data-tooltip="Database">
+      <span class="material-symbols-outlined nav-icon">database</span>
+      <span class="nav-label">Database</span>
+    </a>
+  </nav>
+  <div class="sidenav-divider"></div>
+  <nav class="sidenav-nav">
+    <a class="nav-item " href="../enrollment/index.html" data-tooltip="Enrollment">
+      <span class="material-symbols-outlined nav-icon">person_add</span>
+      <span class="nav-label">Enrollment</span>
+    </a>
+  </nav>
+  <div class="sidenav-spacer"></div>
+  <div class="sidenav-bottom">
+    <a class="nav-item " href="../settings/index.html" data-tooltip="Settings">
+      <span class="material-symbols-outlined nav-icon">settings</span>
+      <span class="nav-label">Settings</span>
+    </a>
+    <button class="nav-item nav-btn" type="button" data-tooltip="Admin">
+      <span class="material-symbols-outlined nav-icon">person</span>
+      <span class="nav-label">Admin</span>
+    </button>
+    <div class="sidenav-divider"></div>
+    <button class="nav-item nav-btn" type="button" data-tooltip="Help">
+      <span class="material-symbols-outlined nav-icon">help_outline</span>
+      <span class="nav-label">Help</span>
+    </button>
+    <button class="nav-item nav-btn" type="button" data-tooltip="Exit">
+      <span class="material-symbols-outlined nav-icon">logout</span>
+      <span class="nav-label">Exit</span>
+    </button>
+  </div>
+  <div class="sidenav-splitter" id="sidenav-splitter"></div>
 </aside>
 
-<!-- MAIN -->
-<main class="pl-20 pt-14 h-screen w-full overflow-y-auto">
+<!-- MAIN CANVAS -->
+<main class="main-content">
 
   <!-- ═══════════════ OVERVIEW VIEW ═══════════════ -->
   <div id="view-overview">
@@ -347,7 +375,9 @@
 
 <script src="../shared/trace_client.js"></script>
 <script src="../shared/trace_render.js"></script>
+<script src="../shared/sidenav.js"></script>
 <script src="./entities.js"></script>
 
+</div><!-- /app-shell -->
 </body>
 </html>
