@@ -254,31 +254,119 @@
   }
 
   function initForensicControls() {
-    // Collapse / expand
-    var panel = document.getElementById('forensic-panel');
-    var icon  = document.getElementById('fl-collapse-icon');
-    var btn   = document.getElementById('fl-collapse');
-    if (btn && panel && icon) {
-      btn.addEventListener('click', function () {
-        _logCollapsed = !_logCollapsed;
-        if (_logCollapsed) {
-          panel.classList.add('collapsed');
-          icon.textContent = 'expand_less';
+    var MINIMIZED_H  = 33;                         // header-only height (px)
+    var MAX_H_RATIO  = 0.30;                       // max 30% of viewport
+    var SNAP_THRESH  = 48;                         // px — snap to minimized if within this
+
+    var panel     = document.getElementById('forensic-panel');
+    var splitter  = document.getElementById('forensic-splitter');
+    var toggleBtn = document.getElementById('fl-toggle-btn');
+    var clearBtn  = document.getElementById('fl-clear');
+    var body      = document.getElementById('fl-body');
+    var bufEl     = document.getElementById('fl-buffer');
+
+    if (!panel || !splitter) return;
+
+    /* ── Height utility ─────────────────────────────────── */
+    function maxH() { return Math.floor(window.innerHeight * MAX_H_RATIO); }
+
+    function applyHeight(h, animate) {
+      if (animate) {
+        panel.classList.add('animating');
+        // Remove after transition ends
+        var onEnd = function() {
+          panel.classList.remove('animating');
+          panel.removeEventListener('transitionend', onEnd);
+        };
+        panel.addEventListener('transitionend', onEnd);
+      } else {
+        panel.classList.remove('animating');
+      }
+      panel.style.height = h + 'px';
+
+      var isExpanded = h > MINIMIZED_H;
+      panel.classList.toggle('is-expanded', isExpanded);
+      if (toggleBtn) {
+        toggleBtn.innerHTML = isExpanded ? '&darr; COLLAPSE' : '&uarr; EXPAND';
+      }
+    }
+
+    /* Start minimized */
+    applyHeight(MINIMIZED_H, false);
+
+    /* ── Toggle button (click to expand / collapse) ──────── */
+    if (toggleBtn) {
+      toggleBtn.addEventListener('click', function() {
+        var current = parseFloat(panel.style.height) || MINIMIZED_H;
+        if (current <= MINIMIZED_H) {
+          // Expand to 30%
+          applyHeight(maxH(), true);
         } else {
-          panel.classList.remove('collapsed');
-          icon.textContent = 'expand_more';
+          // Collapse
+          applyHeight(MINIMIZED_H, true);
         }
       });
     }
 
-    // Clear console
-    var clearBtn = document.getElementById('fl-clear');
+    /* ── Double-click splitter → expand / collapse ───────── */
+    splitter.addEventListener('dblclick', function(e) {
+      e.preventDefault();
+      var current = parseFloat(panel.style.height) || MINIMIZED_H;
+      if (current <= MINIMIZED_H) {
+        applyHeight(maxH(), true);
+      } else {
+        applyHeight(MINIMIZED_H, true);
+      }
+    });
+
+    /* ── Drag to resize ──────────────────────────────────── */
+    var _dragging  = false;
+    var _dragStartY = 0;
+    var _dragStartH = 0;
+
+    splitter.addEventListener('mousedown', function(e) {
+      if (e.button !== 0) return;               // left-click only
+      _dragging   = true;
+      _dragStartY = e.clientY;
+      _dragStartH = parseFloat(panel.style.height) || MINIMIZED_H;
+      splitter.classList.add('is-dragging');
+      document.body.style.cursor = 'ns-resize';
+      document.body.style.userSelect = 'none';
+      e.preventDefault();
+    });
+
+    document.addEventListener('mousemove', function(e) {
+      if (!_dragging) return;
+      var delta  = _dragStartY - e.clientY;     // drag up = positive delta = grow
+      var newH   = Math.max(MINIMIZED_H, Math.min(maxH(), _dragStartH + delta));
+      // Apply instantly, no animation during drag
+      panel.style.height = newH + 'px';
+      var isExpanded = newH > MINIMIZED_H;
+      panel.classList.toggle('is-expanded', isExpanded);
+      if (toggleBtn) {
+        toggleBtn.innerHTML = isExpanded ? '&darr; COLLAPSE' : '&uarr; EXPAND';
+      }
+    });
+
+    document.addEventListener('mouseup', function() {
+      if (!_dragging) return;
+      _dragging = false;
+      splitter.classList.remove('is-dragging');
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+
+      // Snap: if barely opened, collapse all the way to minimized
+      var finalH = parseFloat(panel.style.height) || MINIMIZED_H;
+      if (finalH < MINIMIZED_H + SNAP_THRESH && finalH > MINIMIZED_H) {
+        applyHeight(MINIMIZED_H, true);
+      }
+    });
+
+    /* ── Clear console ───────────────────────────────────── */
     if (clearBtn) {
-      clearBtn.addEventListener('click', function () {
-        var body = document.getElementById('fl-body');
+      clearBtn.addEventListener('click', function() {
         if (body) body.innerHTML = '';
         _logBytes = 0;
-        var bufEl = document.getElementById('fl-buffer');
         if (bufEl) bufEl.textContent = '0';
       });
     }

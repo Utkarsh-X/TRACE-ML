@@ -431,29 +431,102 @@
   }
 
   function initForensicPanel() {
-    // Collapse / expand
-    var panel = document.getElementById('inc-forensic-panel');
-    var icon  = document.getElementById('inc-fl-collapse-icon');
-    var btn   = document.getElementById('inc-fl-collapse');
-    if (btn && panel && icon) {
-      btn.addEventListener('click', function() {
-        _flCollapsed = !_flCollapsed;
-        panel.classList.toggle('collapsed', _flCollapsed);
-        icon.textContent = _flCollapsed ? 'expand_less' : 'expand_more';
+    var MINIMIZED_H = 33;       // header-only height (px)
+    var MAX_H_RATIO = 0.30;     // max 30% of viewport
+    var SNAP_THRESH = 48;       // snap to minimized if opened less than this many px
+
+    var panel     = document.getElementById('inc-forensic-panel');
+    var splitter  = document.getElementById('inc-forensic-splitter');
+    var toggleBtn = document.getElementById('inc-fl-toggle-btn');
+    var clearBtn  = document.getElementById('inc-fl-clear');
+    var body      = document.getElementById('inc-fl-body');
+    var bufEl     = document.getElementById('inc-fl-buffer');
+
+    if (!panel || !splitter) return;
+
+    /* ── Height helpers ──────────────────────────────── */
+    function maxH() { return Math.floor(window.innerHeight * MAX_H_RATIO); }
+
+    function applyHeight(h, animate) {
+      if (animate) {
+        panel.classList.add('animating');
+        var onEnd = function() {
+          panel.classList.remove('animating');
+          panel.removeEventListener('transitionend', onEnd);
+        };
+        panel.addEventListener('transitionend', onEnd);
+      } else {
+        panel.classList.remove('animating');
+      }
+      panel.style.height = h + 'px';
+      var expanded = h > MINIMIZED_H;
+      panel.classList.toggle('is-expanded', expanded);
+      if (toggleBtn) toggleBtn.innerHTML = expanded ? '&darr; COLLAPSE' : '&uarr; EXPAND';
+    }
+
+    /* Start minimized */
+    applyHeight(MINIMIZED_H, false);
+
+    /* ── Toggle button ───────────────────────────────── */
+    if (toggleBtn) {
+      toggleBtn.addEventListener('click', function() {
+        var cur = parseFloat(panel.style.height) || MINIMIZED_H;
+        applyHeight(cur <= MINIMIZED_H ? maxH() : MINIMIZED_H, true);
       });
     }
-    // Clear
-    var clearBtn = document.getElementById('inc-fl-clear');
+
+    /* ── Double-click splitter ───────────────────────── */
+    splitter.addEventListener('dblclick', function(e) {
+      e.preventDefault();
+      var cur = parseFloat(panel.style.height) || MINIMIZED_H;
+      applyHeight(cur <= MINIMIZED_H ? maxH() : MINIMIZED_H, true);
+    });
+
+    /* ── Drag to resize ──────────────────────────────── */
+    var _drag = false, _startY = 0, _startH = 0;
+
+    splitter.addEventListener('mousedown', function(e) {
+      if (e.button !== 0) return;
+      _drag = true;
+      _startY = e.clientY;
+      _startH = parseFloat(panel.style.height) || MINIMIZED_H;
+      splitter.classList.add('is-dragging');
+      document.body.style.cursor = 'ns-resize';
+      document.body.style.userSelect = 'none';
+      e.preventDefault();
+    });
+
+    document.addEventListener('mousemove', function(e) {
+      if (!_drag) return;
+      var newH = Math.max(MINIMIZED_H, Math.min(maxH(), _startH + (_startY - e.clientY)));
+      panel.style.height = newH + 'px';
+      var expanded = newH > MINIMIZED_H;
+      panel.classList.toggle('is-expanded', expanded);
+      if (toggleBtn) toggleBtn.innerHTML = expanded ? '&darr; COLLAPSE' : '&uarr; EXPAND';
+    });
+
+    document.addEventListener('mouseup', function() {
+      if (!_drag) return;
+      _drag = false;
+      splitter.classList.remove('is-dragging');
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      var finalH = parseFloat(panel.style.height) || MINIMIZED_H;
+      if (finalH > MINIMIZED_H && finalH < MINIMIZED_H + SNAP_THRESH) {
+        applyHeight(MINIMIZED_H, true);
+      }
+    });
+
+    /* ── Clear console ───────────────────────────────── */
     if (clearBtn) {
       clearBtn.addEventListener('click', function() {
-        var body = document.getElementById('inc-fl-body');
         if (body) body.innerHTML = '';
         _flBytes = 0;
-        var buf = document.getElementById('inc-fl-buffer');
-        if (buf) buf.textContent = '0';
+        if (bufEl) bufEl.textContent = '0';
       });
     }
-    // Connect SSE
+
+    /* ── Connect SSE ─────────────────────────────────── */
     TraceClient.connectSSE(function(event) { flAppendLine(event); });
   }
 

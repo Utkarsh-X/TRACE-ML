@@ -72,15 +72,13 @@
     .inc-card__ent  { font-family:'JetBrains Mono',monospace; font-size:0.57rem; color:#919191; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:120px; }
     .inc-card__time { font-family:'JetBrains Mono',monospace; font-size:0.56rem; color:#666; white-space:nowrap; }
 
-    /* ── 2-column content area ──────────────────────── */
+    /* ── 2-column content area ────────────────── */
     .inc-body {
       display: grid;
       grid-template-columns: 260px 1fr;
       min-height: 0;
       flex: 1;
       overflow: hidden;
-      /* Subtract forensic panel height so body doesn't overflow */
-      max-height: calc(100vh - 3.5rem - 110px - 170px);
     }
 
     /* ── Timeline entry cards ───────────────────────── */
@@ -136,7 +134,7 @@
     }
     @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
 
-    /* ── Alert row on left panel ────────────────────── */
+    /* ── Alert row on left panel ────────────────── */
     .alert-row {
       border-left: 2px solid rgba(71,71,71,0.4);
       padding: 0.5rem 0.65rem;
@@ -149,24 +147,53 @@
     .alert-row--medium { border-left-color: #c6c6c6; }
     .alert-row--low    { border-left-color: #474747; }
 
-    /* ── Forensic log panel ─────────────────────────── */
+    /* ── Draggable splitter ──────────────────────────── */
+    .forensic-splitter {
+      height: 5px;
+      flex-shrink: 0;
+      background: rgba(255,255,255,0.02);
+      cursor: ns-resize;
+      position: relative;
+      transition: background 0.15s;
+      -webkit-user-select: none;
+      user-select: none;
+      z-index: 10;
+    }
+    .forensic-splitter:hover,
+    .forensic-splitter.is-dragging { background: rgba(255,255,255,0.09); }
+    .forensic-splitter::after {
+      content: '';
+      position: absolute;
+      left: 50%; top: 50%;
+      transform: translate(-50%, -50%);
+      width: 44px; height: 2px;
+      border-radius: 2px;
+      background: rgba(255,255,255,0.15);
+    }
+
+    /* ── Forensic log panel (JS-driven height) ────────── */
     .forensic-panel {
       flex-shrink: 0;
-      height: 170px;
+      height: 33px;          /* minimized default — header only */
       background: #0e0e0e;
       border-top: 1px solid rgba(255,255,255,0.06);
       display: flex;
       flex-direction: column;
+      overflow: hidden;
     }
-    .forensic-panel.collapsed { height: 34px; }
+    .forensic-panel.animating {
+      transition: height 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+    }
 
     .forensic-panel__header {
       display: flex;
       align-items: center;
       justify-content: space-between;
       padding: 0 1rem;
-      height: 34px;
+      height: 33px;
       flex-shrink: 0;
+    }
+    .forensic-panel.is-expanded .forensic-panel__header {
       border-bottom: 1px solid rgba(255,255,255,0.05);
     }
     .forensic-panel__title {
@@ -199,12 +226,14 @@
     }
     .forensic-panel__meta .stream-live { color: #919191; }
 
+    /* Body hidden by default; shown only when expanded */
     .forensic-panel__body {
+      display: none;
       flex: 1;
       overflow-y: auto;
       padding: 0.3rem 1rem 0.4rem;
     }
-    .forensic-panel.collapsed .forensic-panel__body { display: none; }
+    .forensic-panel.is-expanded .forensic-panel__body { display: block; }
 
     .log-line {
       display: flex;
@@ -232,13 +261,28 @@
       background: rgba(147,0,10,0.4); border-color: rgba(255,180,171,0.3);
       color: #ffb4ab;
     }
-    .inc-collapse-btn {
-      background: transparent; border: none; cursor: pointer;
-      color: #474747; padding: 0 0.25rem;
-      display: flex; align-items: center; transition: color 0.15s;
+
+    /* ── Forensic panel buttons ───────────────────────── */
+    .fp-btn {
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      color: #474747;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.57rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 0 0.15rem;
+      transition: color 0.15s;
+      line-height: 1;
     }
-    .inc-collapse-btn:hover { color: #c6c6c6; }
-    .inc-collapse-btn .material-symbols-outlined { font-size: 16px !important; }
+    .fp-btn:hover { color: #c6c6c6; }
+    #inc-fl-toggle-btn {
+      color: #919191;
+      border: 1px solid rgba(255,255,255,0.1);
+      padding: 2px 8px;
+    }
+    #inc-fl-toggle-btn:hover { color: #fff; border-color: rgba(255,255,255,0.25); }
   </style>
 </head>
 
@@ -432,6 +476,9 @@
 
   </div>
 
+  <!-- Draggable splitter -->
+  <div class="forensic-splitter" id="inc-forensic-splitter" title="Drag to resize · Double-click to expand"></div>
+
   <!-- ══════════════════════════════════════════════════════════
        FORENSIC LOG PANEL — full-width horizontal terminal
        ══════════════════════════════════════════════════════════ -->
@@ -444,12 +491,8 @@
       <div class="forensic-panel__meta">
         <span>BUFFER: <span id="inc-fl-buffer">0</span> KB</span>
         <span class="stream-live">STREAM: <span id="inc-fl-status">ACTIVE</span></span>
-        <button type="button" id="inc-fl-clear" class="inc-collapse-btn" style="color:#474747;font-size:0.57rem;font-family:'JetBrains Mono',monospace;letter-spacing:0.1em;text-transform:uppercase">
-          [CLEAR_CONSOLE]
-        </button>
-        <button type="button" id="inc-fl-collapse" class="inc-collapse-btn" title="Collapse / expand">
-          <span class="material-symbols-outlined" id="inc-fl-collapse-icon">expand_more</span>
-        </button>
+        <button type="button" id="inc-fl-clear" class="fp-btn" title="Clear log">[CLEAR_CONSOLE]</button>
+        <button type="button" id="inc-fl-toggle-btn" class="fp-btn" title="Expand / Collapse log">&uarr; EXPAND</button>
       </div>
     </div>
     <div class="forensic-panel__body" id="inc-fl-body">

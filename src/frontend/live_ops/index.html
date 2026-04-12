@@ -16,26 +16,54 @@
       display: flex;
       flex-direction: column;
       height: calc(100vh - 3.5rem);   /* minus top-nav */
+      overflow: hidden;
     }
 
     /* ── Scrollable main area ───────────────────────────── */
     .ops-main {
       flex: 1;
-      overflow-y: auto;
+      overflow: hidden;   /* inner panels each scroll themselves */
       min-height: 0;
     }
 
-    /* ── Forensic log panel (fixed bottom) ──────────────── */
+    /* ── Draggable splitter ──────────────────────────────── */
+    .forensic-splitter {
+      height: 5px;
+      flex-shrink: 0;
+      background: rgba(255,255,255,0.02);
+      cursor: ns-resize;
+      position: relative;
+      transition: background 0.15s;
+      -webkit-user-select: none;
+      user-select: none;
+      z-index: 10;
+    }
+    .forensic-splitter:hover,
+    .forensic-splitter.is-dragging { background: rgba(255,255,255,0.09); }
+    /* Grip handle pip */
+    .forensic-splitter::after {
+      content: '';
+      position: absolute;
+      left: 50%; top: 50%;
+      transform: translate(-50%, -50%);
+      width: 44px; height: 2px;
+      border-radius: 2px;
+      background: rgba(255,255,255,0.15);
+    }
+
+    /* ── Forensic log panel (JS-driven height) ───────────── */
     .forensic-panel {
       flex-shrink: 0;
-      height: 210px;
+      height: 33px;          /* minimized default — header only */
       background: #0e0e0e;
       border-top: 1px solid rgba(255,255,255,0.06);
       display: flex;
       flex-direction: column;
+      overflow: hidden;
     }
-    .forensic-panel.collapsed {
-      height: 34px;
+    /* Applied only during click-triggered expand / collapse */
+    .forensic-panel.animating {
+      transition: height 0.22s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
     /* Header bar */
@@ -44,8 +72,10 @@
       align-items: center;
       justify-content: space-between;
       padding: 0 1rem;
-      height: 34px;
+      height: 33px;
       flex-shrink: 0;
+    }
+    .forensic-panel.is-expanded .forensic-panel__header {
       border-bottom: 1px solid rgba(255,255,255,0.05);
     }
     .forensic-panel__title {
@@ -78,14 +108,15 @@
     }
     .forensic-panel__meta .stream-live { color: #919191; }
 
-    /* Log scroll area */
+    /* Log scroll area — hidden when minimized, shown when expanded */
     .forensic-panel__body {
+      display: none;
       flex: 1;
       overflow-y: auto;
       padding: 0.35rem 1rem 0.5rem;
     }
-    .forensic-panel.collapsed .forensic-panel__body {
-      display: none;
+    .forensic-panel.is-expanded .forensic-panel__body {
+      display: block;
     }
 
     /* Individual log line */
@@ -126,19 +157,28 @@
     .ops-left  { overflow-y: auto; border-right: 1px solid rgba(255,255,255,0.05); }
     .ops-right { overflow-y: auto; }
 
-    /* ── Collapse toggle button ─────────────────────────── */
-    .collapse-btn {
+    /* ── Forensic panel action buttons ──────────────────── */
+    .fp-btn {
       background: transparent;
       border: none;
       cursor: pointer;
       color: #474747;
-      padding: 0 0.25rem;
-      display: flex;
-      align-items: center;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.57rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 0 0.15rem;
       transition: color 0.15s;
+      line-height: 1;
     }
-    .collapse-btn:hover { color: #c6c6c6; }
-    .collapse-btn .material-symbols-outlined { font-size: 16px !important; }
+    .fp-btn:hover { color: #c6c6c6; }
+    /* Expand / collapse toggle pill */
+    #fl-toggle-btn {
+      color: #919191;
+      border: 1px solid rgba(255,255,255,0.1);
+      padding: 2px 8px;
+    }
+    #fl-toggle-btn:hover { color: #fff; border-color: rgba(255,255,255,0.25); }
   </style>
 </head>
 
@@ -337,6 +377,9 @@
       </div>
     </div>
 
+    <!-- Draggable splitter -->
+    <div class="forensic-splitter" id="forensic-splitter" title="Drag to resize / Double-click to expand"></div>
+
     <!-- ══════════════════════════════════════════════════════════
          FORENSIC LOG PANEL — full-width horizontal terminal
          ══════════════════════════════════════════════════════════ -->
@@ -351,12 +394,8 @@
         <div class="forensic-panel__meta">
           <span>BUFFER: <span id="fl-buffer">0</span> KB</span>
           <span class="stream-live">STREAM: <span id="fl-stream-status">ACTIVE</span></span>
-          <button type="button" id="fl-clear" class="collapse-btn" title="Clear log" style="color:#474747;font-size:0.57rem;font-family:'JetBrains Mono',monospace;letter-spacing:0.1em;text-transform:uppercase">
-            [CLEAR_CONSOLE]
-          </button>
-          <button type="button" id="fl-collapse" class="collapse-btn" title="Collapse / expand log">
-            <span class="material-symbols-outlined" id="fl-collapse-icon">expand_more</span>
-          </button>
+          <button type="button" id="fl-clear" class="fp-btn" title="Clear log">[CLEAR_CONSOLE]</button>
+          <button type="button" id="fl-toggle-btn" class="fp-btn" title="Expand / Collapse log">&uarr; EXPAND</button>
         </div>
       </div>
 
