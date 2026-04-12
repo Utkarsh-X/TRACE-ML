@@ -70,22 +70,6 @@
     });
   }
 
-  function initEngineLog() {
-    var terminal = $("engine-log");
-    if (!terminal) return;
-
-    TraceClient.connectSSE(function (event) {
-      var line = TraceRender.terminalLine(event.topic, event.payload, event.timestamp_utc);
-      terminal.innerHTML = line + terminal.innerHTML;
-
-      // Cap lines
-      var lines = terminal.innerHTML.split("\n");
-      if (lines.length > 150) {
-        terminal.innerHTML = lines.slice(0, 150).join("\n");
-      }
-    });
-  }
-
   function init() {
     var mainContent = document.querySelector("main");
     TraceRender.initOfflineUI(mainContent);
@@ -94,7 +78,6 @@
       if (info) {
         loadSystemInfo();
         loadHealth();
-        initEngineLog();
       }
     });
   }

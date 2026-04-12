@@ -15,7 +15,7 @@
   <style>
     .settings-grid {
       display: grid;
-      grid-template-columns: 240px 1fr 340px;
+      grid-template-columns: 240px 1fr;
       height: 100vh;
       gap: 0;
     }
@@ -330,44 +330,6 @@
         </div>
       </div>
 
-    </section>
-
-    <!-- RIGHT: Live Engine Log -->
-    <section class="bg-surface-low flex flex-col overflow-hidden">
-      <div class="p-4 flex items-center justify-between flex-shrink-0">
-        <div class="flex items-center gap-2">
-          <span class="status-dot status-dot--active"></span>
-          <h2 class="section-header">Engine Log</h2>
-        </div>
-        <span class="font-mono text-[0.55rem] text-outline uppercase">SSE Stream</span>
-      </div>
-      <div class="terminal-block flex-1 mx-4 mb-4" id="engine-log">
-<span class="log-time">[14:22:09]</span> <span class="log-type">PIPELINE</span> frame processed in 34ms
-<span class="log-time">[14:22:09]</span> <span class="log-type">DETECT</span> face found bbox=[412,180,580,390]
-<span class="log-time">[14:22:09]</span> <span class="log-type">INFER</span> embedding computed dim=512 norm=1.00
-<span class="log-time">[14:22:09]</span> <span class="log-type">MATCH</span> ENT-KN-0001 score=0.89 k=5
-<span class="log-time">[14:22:09]</span> <span class="log-type">TEMPORAL</span> smoothed=0.91 votes=3/6
-<span class="log-time">[14:22:09]</span> <span class="log-type">DECISION</span> accept (threshold=0.72)
-<span class="log-time">[14:22:01]</span> <span class="log-type">PIPELINE</span> frame processed in 31ms
-<span class="log-time">[14:22:01]</span> <span class="log-type">DETECT</span> face found bbox=[395,175,568,385]
-<span class="log-time">[14:22:01]</span> <span class="log-type">INFER</span> embedding computed dim=512 norm=1.00
-<span class="log-time">[14:22:01]</span> <span class="log-type">MATCH</span> no match above 0.45 threshold
-<span class="log-time">[14:22:01]</span> <span class="log-type">RESOLVE</span> new entity UNK-0042 persisted
-<span class="log-time">[14:21:45]</span> <span class="log-error">RULES</span> repeated_unknown triggered
-<span class="log-time">[14:21:45]</span> <span class="log-error">ALERT</span> ALR-0891 severity=high
-<span class="log-time">[14:21:45]</span> <span class="log-type">INCIDENT</span> INC-018 created
-<span class="log-time">[14:21:45]</span> <span class="log-type">ACTION</span> log executed for INC-018
-<span class="log-time">[14:21:45]</span> <span class="log-type">ACTION</span> email executed for INC-018
-<span class="log-time">[14:21:45]</span> <span class="log-type">ACTION</span> alarm executed for INC-018
-<span class="log-time">[14:20:58]</span> <span class="log-type">PIPELINE</span> frame processed in 29ms
-<span class="log-time">[14:20:58]</span> <span class="log-type">DETECT</span> face found bbox=[200,90,340,280]
-<span class="log-time">[14:20:58]</span> <span class="log-type">MATCH</span> ENT-KN-0003 score=0.94 k=5
-<span class="log-time">[14:20:58]</span> <span class="log-type">DECISION</span> accept (threshold=0.72)
-<span class="log-time">[14:19:33]</span> <span class="log-type">ACTION</span> log for INC-017 on_update
-<span class="log-time">[14:18:44]</span> <span class="log-error">RULES</span> reappearance triggered
-<span class="log-time">[14:18:44]</span> <span class="log-error">ALERT</span> ALR-0889 severity=medium
-<span class="log-time">[14:17:55]</span> <span class="log-type">HEALTH</span> fps=28.4 tracks=3 q=0
-      </div>
     </section>
 
   </div>

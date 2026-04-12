@@ -15,7 +15,7 @@
   <style>
     .history-grid {
       display: grid;
-      grid-template-columns: 1fr 300px;
+      grid-template-columns: 1fr;
       height: 100vh;
       gap: 0;
     }
@@ -244,35 +244,6 @@
           <p class="text-[0.75rem] text-on-surface-variant leading-relaxed">Pipeline health OK. FPS: 28.4. Active tracks: 3. Queue: 0.</p>
         </div>
 
-      </div>
-    </section>
-
-    <!-- RIGHT: Forensic Stream -->
-    <section class="bg-surface-low flex flex-col overflow-hidden">
-      <div class="p-4 flex items-center justify-between flex-shrink-0">
-        <div class="flex items-center gap-2">
-          <span class="status-dot status-dot--active"></span>
-          <h2 class="section-header">Forensic Stream</h2>
-        </div>
-        <span class="font-mono text-[0.55rem] text-outline uppercase">Live Feed</span>
-      </div>
-      <div class="terminal-block flex-1 mx-4 mb-4" id="forensic-stream">
-<span class="log-time">[14:22:09]</span> <span class="log-type">DETECT</span> ENT-KN-0001 conf=0.89 trk=T004
-<span class="log-time">[14:22:01]</span> <span class="log-type">RESOLVE</span> UNK-0042 created
-<span class="log-time">[14:21:45]</span> <span class="log-error">ALERT</span> repeated_unknown UNK-0042 sev=HIGH
-<span class="log-time">[14:21:45]</span> <span class="log-type">INCIDENT</span> INC-018 opened
-<span class="log-time">[14:21:44]</span> <span class="log-type">DETECT</span> unknown conf=0.74 trk=T007
-<span class="log-time">[14:21:42]</span> <span class="log-type">DETECT</span> unknown conf=0.71 trk=T007
-<span class="log-time">[14:21:39]</span> <span class="log-type">DETECT</span> unknown conf=0.68 trk=T007
-<span class="log-time">[14:21:30]</span> <span class="log-type">DETECT</span> unknown conf=0.65 trk=T007
-<span class="log-time">[14:21:28]</span> <span class="log-type">DETECT</span> unknown conf=0.63 trk=T007
-<span class="log-time">[14:20:58]</span> <span class="log-type">DETECT</span> ENT-KN-0003 conf=0.94 trk=T003
-<span class="log-time">[14:19:33]</span> <span class="log-type">ACTION</span> log for INC-017
-<span class="log-time">[14:18:44]</span> <span class="log-error">ALERT</span> reappearance ENT-KN-0001 sev=MED
-<span class="log-time">[14:18:20]</span> <span class="log-type">DETECT</span> ENT-KN-0001 conf=0.91 trk=T004
-<span class="log-time">[14:17:55]</span> <span class="log-type">HEALTH</span> fps=28.4 tracks=3 q=0
-<span class="log-time">[14:17:30]</span> <span class="log-type">DETECT</span> ENT-KN-0001 conf=0.87 trk=T004
-<span class="log-time">[14:16:05]</span> <span class="log-type">HEALTH</span> fps=29.1 tracks=2 q=0
       </div>
     </section>
 
