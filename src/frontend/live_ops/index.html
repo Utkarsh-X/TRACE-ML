@@ -292,38 +292,47 @@
             </div>
           </div>
 
-          <!-- Active Entities -->
-          <div class="p-4 flex-shrink-0 border-b border-outline-variant/10">
-            <div class="flex items-center justify-between mb-2">
+          <!-- Primary Controls (ALWAYS VISIBLE) -->
+          <div class="p-4 border-b border-outline-variant/10 flex-shrink-0 space-y-2">
+            <!-- Enable Camera: PRIMARY ACTION (larger, prominent) -->
+            <button class="w-full px-3 py-2 text-[0.7rem] font-mono font-semibold bg-primary text-on-primary hover:bg-primary/90 cursor-pointer border-0 uppercase tracking-widest transition-colors" id="btn-enable-camera" type="button">
+              ▶ ENABLE CAMERA
+            </button>
+            <!-- Refresh: SECONDARY ACTION (smaller, muted) -->
+            <div class="flex gap-2">
+              <button class="flex-1 px-2 py-1 text-[0.55rem] font-mono bg-surface-high text-on-surface-variant hover:bg-surface-bright cursor-pointer border-0 uppercase tracking-widest transition-colors" id="btn-refresh-all" type="button">⟳ Refresh</button>
+              <!-- Pipeline Status (inline) -->
+              <div class="flex-1 flex items-center justify-end gap-1.5 px-2 py-1 bg-surface-high/50 rounded-sm">
+                <span class="status-dot status-dot--active" style="flex-shrink: 0;"></span>
+                <span class="font-mono text-[0.55rem] text-on-surface-variant uppercase">Pipeline</span>
+              </div>
+            </div>
+            <!-- Latency indicator -->
+            <div class="flex items-center justify-between px-2 py-1 bg-surface-high/30 rounded-sm">
+              <span class="font-mono text-[0.55rem] text-outline-variant uppercase">Latency</span>
+              <span class="font-mono text-[0.6rem] text-primary font-semibold" id="health-latency">-- ms</span>
+            </div>
+          </div>
+
+          <!-- Active Entities (scrollable) -->
+          <div class="p-4 flex-1 border-b border-outline-variant/10 min-h-0 flex flex-col">
+            <div class="flex items-center justify-between mb-2 flex-shrink-0">
               <h2 class="section-header">Active Entities</h2>
               <span class="font-mono text-[0.6rem] text-outline" id="entity-count">--</span>
             </div>
-            <div class="space-y-2 max-h-[180px] overflow-y-auto" id="active-entities-root">
+            <div class="space-y-2 overflow-y-auto flex-1" id="active-entities-root">
               <div class="text-outline font-mono text-[0.65rem] py-3 text-center">Loading…</div>
             </div>
           </div>
 
-          <!-- Alert Stream -->
-          <div class="p-4 flex-shrink-0 border-b border-outline-variant/10">
-            <div class="flex items-center justify-between mb-2">
+          <!-- Alert Stream (scrollable) -->
+          <div class="p-4 flex-1 border-b border-outline-variant/10 min-h-0 flex flex-col">
+            <div class="flex items-center justify-between mb-2 flex-shrink-0">
               <h2 class="section-header">Alert Stream</h2>
               <span class="badge badge--ghost" id="alert-badge">—</span>
             </div>
-            <div class="space-y-2 max-h-[180px] overflow-y-auto" id="alert-stream-root">
+            <div class="space-y-2 overflow-y-auto flex-1" id="alert-stream-root">
               <div class="text-outline font-mono text-[0.65rem] py-3 text-center">Loading…</div>
-            </div>
-          </div>
-
-          <!-- Controls -->
-          <div class="p-4 mt-auto flex-shrink-0">
-            <div class="flex gap-2">
-              <button class="flex-1 px-2 py-1.5 text-[0.6rem] font-mono bg-surface-high text-on-surface-variant hover:bg-surface-bright cursor-pointer border-0 uppercase tracking-widest" id="btn-refresh-all" type="button">Refresh</button>
-              <button class="flex-1 px-2 py-1.5 text-[0.6rem] font-mono bg-surface-high text-on-surface-variant hover:bg-surface-bright cursor-pointer border-0 uppercase tracking-widest" id="btn-enable-camera" type="button">Enable Camera</button>
-            </div>
-            <div class="flex items-center gap-2 mt-2">
-              <span class="status-dot status-dot--active"></span>
-              <span class="font-mono text-[0.58rem] text-on-surface-variant uppercase">Pipeline Active</span>
-              <span class="font-mono text-[0.58rem] text-outline ml-auto" id="health-latency">-- ms</span>
             </div>
           </div>
 
@@ -422,10 +431,10 @@
 </main>
 
 <!-- Service Layer -->
-<script src="../shared/trace_client.js?v=20260412001"></script>
-<script src="../shared/trace_render.js?v=20260412001"></script>
-<script src="../shared/sidenav.js?v=20260412001"></script>
-<script src="./live_ops.js?v=20260412001"></script>
+<script src="../shared/trace_client.js?v=20260413001"></script>
+<script src="../shared/trace_render.js?v=20260413001"></script>
+<script src="../shared/sidenav.js?v=20260413001"></script>
+<script src="./live_ops.js?v=20260413001"></script>
 
 </div><!-- /app-shell -->
 </body>

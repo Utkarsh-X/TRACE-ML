@@ -12,11 +12,28 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 
   <style>
+    /* ─── Full-height vertical split layout ─────────────── */
     .db-grid {
-      display: grid;
-      grid-template-columns: 1fr 280px;
+      display: flex;
+      flex-direction: column;
       height: 100vh;
       gap: 0;
+    }
+    .db-table-section {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      min-h-0;
+    }
+    .db-console-section {
+      height: 280px;
+      flex-shrink: 0;
+      border-top: 1px solid rgba(255,255,255,0.06);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      background: #0d0d0d;
     }
     .db-table th, .db-table td {
       padding: 0.5rem 0.75rem;
@@ -24,7 +41,7 @@
       white-space: nowrap;
     }
     .db-table tbody tr:hover {
-      background-color: #393939;
+      background-color: #2a2a2a;
     }
     .db-table tbody tr {
       transition: background-color 0.1s ease;
@@ -34,8 +51,6 @@
 </head>
 
 <body class="bg-background text-on-surface font-body overflow-hidden">
-
-
 
 <div class="app-shell">
 
@@ -103,26 +118,47 @@
   <div class="sidenav-splitter" id="sidenav-splitter"></div>
 </aside>
 
-<!-- MAIN CANVAS -->
-<main class="main-content">
-<!-- MAIN CANVAS — DATABASE -->
+<!-- MAIN CANVAS — DATABASE EXPLORER -->
 <main class="main-content">
   <div class="db-grid">
 
-    <!-- CENTER: Data Table -->
-    <section class="bg-surface p-6 flex flex-col overflow-hidden">
+    <!-- TABLE SECTION (top) -->
+    <div class="db-table-section bg-surface">
 
-      <header class="flex justify-between items-start mb-5 flex-shrink-0">
-        <div>
+      <!-- Header with Database Health Compact Display -->
+      <header class="p-5 border-b border-outline-variant/10 flex-shrink-0">
+        <div class="mb-4">
           <span class="flex items-center gap-2 mb-1">
-            <span class="w-1 h-1 bg-primary inline-block"></span>
+            <span class="w-1 h-1 bg-white inline-block"></span>
             <span class="font-mono text-[0.6875rem] uppercase tracking-[0.2em] text-outline">Database Explorer</span>
           </span>
-          <h1 class="text-3xl font-headline font-bold text-white tracking-tight uppercase">Entity Registry</h1>
+          <h1 class="text-2xl font-headline font-bold text-white tracking-tight uppercase">Database Explorer</h1>
+          <p class="font-mono text-[0.65rem] text-outline mt-1">GLOBAL INVESTIGATIVE INDEX / SHARDS-EU-WEST-1</p>
         </div>
-        <div class="flex items-center gap-2">
-          <input type="text" placeholder="Search entities..." class="bg-surface-high font-mono text-[0.75rem] text-white border-0 px-3 py-2 w-56 placeholder-outline-variant focus:ring-1 focus:ring-white" id="db-search" />
-          <button class="px-3 py-2 bg-surface-high text-on-surface-variant font-mono text-[0.65rem] uppercase hover:bg-surface-bright cursor-pointer border-0" id="db-refresh">Refresh</button>
+        
+        <!-- Top Control Bar -->
+        <div class="flex justify-between items-center gap-4">
+          <div class="flex items-center gap-3 flex-1">
+            <div class="flex-1 relative">
+              <span class="material-symbols-outlined absolute left-3 top-2 text-outline-variant text-[18px]">search</span>
+              <input type="text" placeholder="Query entity hash or node ID..." class="w-full bg-surface-high font-mono text-[0.7rem] text-white border-0 px-3 py-2 pl-9 placeholder-outline-variant focus:ring-1 focus:ring-primary rounded-sm" id="db-search" />
+            </div>
+            <button class="px-4 py-2 bg-white text-background font-mono text-[0.65rem] font-semibold uppercase hover:bg-gray-100 cursor-pointer border-0 transition-colors rounded-sm" id="db-execute">EXECUTE QUERY</button>
+            <button class="px-3 py-2 bg-surface-high text-on-surface-variant font-mono text-[0.65rem] uppercase hover:bg-surface-bright cursor-pointer border-0 transition-colors" id="db-refresh">⟳ Filters</button>
+          </div>
+          
+          <!-- Health Indicators (compact inline) -->
+          <div class="flex items-center gap-6 ml-auto flex-shrink-0">
+            <div class="flex items-center gap-2">
+              <span class="stat-label">Node Connectivity</span>
+              <span class="font-mono text-[0.9rem] text-white font-semibold" id="db-stat-entities">14 / 14</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="stat-label">Throughput</span>
+              <span class="font-mono text-[0.9rem] text-white font-semibold" id="db-stat-detections">12.4K</span>
+              <span class="font-mono text-[0.6rem] text-outline-variant">ops/sec</span>
+            </div>
+          </div>
         </div>
       </header>
 
@@ -130,80 +166,59 @@
       <div class="flex-1 overflow-auto">
         <table class="db-table w-full">
           <thead>
-            <tr class="bg-surface-container">
-              <th class="font-mono text-[0.6rem] text-outline uppercase tracking-widest font-medium">Entity ID</th>
-              <th class="font-mono text-[0.6rem] text-outline uppercase tracking-widest font-medium">Name</th>
-              <th class="font-mono text-[0.6rem] text-outline uppercase tracking-widest font-medium">Category</th>
+            <tr class="bg-surface-low sticky top-0 z-10">
+              <th class="font-mono text-[0.6rem] text-outline uppercase tracking-widest font-medium">ID Hash</th>
+              <th class="font-mono text-[0.6rem] text-outline uppercase tracking-widest font-medium">Type</th>
               <th class="font-mono text-[0.6rem] text-outline uppercase tracking-widest font-medium">Status</th>
-              <th class="font-mono text-[0.6rem] text-outline uppercase tracking-widest font-medium">Alerts</th>
-              <th class="font-mono text-[0.6rem] text-outline uppercase tracking-widest font-medium">Incidents</th>
-              <th class="font-mono text-[0.6rem] text-outline uppercase tracking-widest font-medium">Updated</th>
+              <th class="font-mono text-[0.6rem] text-outline uppercase tracking-widest font-medium">Last Sync</th>
+              <th class="font-mono text-[0.6rem] text-outline uppercase tracking-widest font-medium">Data Integrity</th>
             </tr>
           </thead>
           <tbody class="text-[0.75rem]">
             <tr class="bg-surface cursor-pointer">
-              <td class="font-mono text-primary">ENT-KN-0001</td>
-              <td class="text-on-surface">Mikhail Volkov</td>
-              <td><span class="badge badge--filled">CRIMINAL</span></td>
-              <td class="text-primary">active</td>
-              <td class="font-mono text-on-surface-variant">24</td>
-              <td class="font-mono text-on-surface-variant">0.94</td>
-              <td class="font-mono text-outline text-[0.65rem]">2026-04-06T14:22:09Z</td>
+              <td class="font-mono text-on-surface">0x8F2A...E4C9</td>
+              <td class="text-on-surface">ENTITY_WALLETS</td>
+              <td><span class="badge badge--filled">SYNCED</span></td>
+              <td class="font-mono text-on-surface-variant">2023-10-27 14:02:11</td>
+              <td class="font-mono text-on-surface-variant">99.98%</td>
             </tr>
             <tr class="bg-surface-container cursor-pointer">
-              <td class="font-mono text-primary">ENT-KN-0002</td>
-              <td class="text-on-surface">Elena Vasquez</td>
-              <td><span class="badge badge--ghost">POI</span></td>
-              <td class="text-primary">active</td>
-              <td class="font-mono text-on-surface-variant">18</td>
-              <td class="font-mono text-on-surface-variant">0.88</td>
-              <td class="font-mono text-outline text-[0.65rem]">2026-04-06T13:05:22Z</td>
+              <td class="font-mono text-on-surface">0x1B4D...A82F</td>
+              <td class="text-on-surface">TRANS_LOGS</td>
+              <td><span class="badge badge--neutral">PENDING</span></td>
+              <td class="font-mono text-on-surface-variant">2023-10-27 14:01:58</td>
+              <td class="font-mono text-on-surface-variant">100.00%</td>
             </tr>
             <tr class="bg-surface cursor-pointer">
-              <td class="font-mono text-primary">ENT-KN-0003</td>
-              <td class="text-on-surface">Sarah Chen</td>
-              <td><span class="badge badge--ghost">POI</span></td>
-              <td class="text-primary">active</td>
-              <td class="font-mono text-on-surface-variant">21</td>
-              <td class="font-mono text-on-surface-variant">0.91</td>
-              <td class="font-mono text-outline text-[0.65rem]">2026-04-06T14:20:58Z</td>
+              <td class="font-mono text-on-surface">0xC923...F11B</td>
+              <td class="text-on-surface">NODE_MESH_V4</td>
+              <td><span class="badge badge--error">ERROR</span></td>
+              <td class="font-mono text-on-surface-variant">2023-10-27 13:59:02</td>
+              <td class="font-mono text-on-surface-variant">42.10%</td>
             </tr>
             <tr class="bg-surface-container cursor-pointer">
-              <td class="font-mono text-primary">ENT-KN-0004</td>
-              <td class="text-on-surface">James McAllister</td>
-              <td><span class="badge badge--filled">CRIMINAL</span></td>
-              <td class="text-on-surface-variant">ready</td>
-              <td class="font-mono text-on-surface-variant">12</td>
-              <td class="font-mono text-on-surface-variant">0.82</td>
-              <td class="font-mono text-outline text-[0.65rem]">2026-04-05T09:14:00Z</td>
+              <td class="font-mono text-on-surface">0x77E1...B592</td>
+              <td class="text-on-surface">SYS_METRIC</td>
+              <td><span class="badge badge--filled">SYNCED</span></td>
+              <td class="font-mono text-on-surface-variant">2023-10-27 13:58:45</td>
+              <td class="font-mono text-on-surface-variant">99.99%</td>
             </tr>
             <tr class="bg-surface cursor-pointer">
-              <td class="font-mono text-error">UNK-0042</td>
-              <td class="text-on-surface-variant">—</td>
-              <td><span class="badge badge--error">UNKNOWN</span></td>
-              <td class="text-error">flagged</td>
-              <td class="font-mono text-on-surface-variant">0</td>
-              <td class="font-mono text-on-surface-variant">—</td>
-              <td class="font-mono text-outline text-[0.65rem]">2026-04-06T14:22:09Z</td>
-            </tr>
-            <tr class="bg-surface-container cursor-pointer">
-              <td class="font-mono text-primary">ENT-KN-0005</td>
-              <td class="text-on-surface">Amir Hassan</td>
-              <td><span class="badge badge--ghost">POI</span></td>
-              <td class="text-on-surface-variant">draft</td>
-              <td class="font-mono text-on-surface-variant">6</td>
-              <td class="font-mono text-on-surface-variant">0.45</td>
-              <td class="font-mono text-outline text-[0.65rem]">2026-04-04T16:30:00Z</td>
+              <td class="font-mono text-on-surface">0x44A2...C119</td>
+              <td class="text-on-surface">ENTITY_KYC</td>
+              <td><span class="badge badge--filled">SYNCED</span></td>
+              <td class="font-mono text-on-surface-variant">2023-10-27 13:55:12</td>
+              <td class="font-mono text-on-surface-variant">99.94%</td>
             </tr>
           </tbody>
         </table>
       </div>
 
       <!-- Table Footer -->
-      <div class="flex items-center justify-between pt-3 flex-shrink-0">
-        <span class="font-mono text-[0.6rem] text-outline">Showing 6 of 6 entities</span>
+      <div class="flex items-center justify-between px-5 py-3 flex-shrink-0 border-t border-outline-variant/10 bg-surface-container text-[0.6rem]">
+        <span class="font-mono text-outline">Showing 5 of 5 database nodes</span>
         <div class="flex items-center gap-2">
-          <span class="font-mono text-[0.6rem] text-outline">Rows per page:</span>
+          <span class="font-mono text-outline">Rows per page:</span>
           <select class="bg-surface-high font-mono text-[0.65rem] text-white border-0 px-2 py-1 cursor-pointer">
             <option>25</option>
             <option>50</option>
@@ -212,82 +227,40 @@
         </div>
       </div>
 
-    </section>
+    </div>
 
-    <!-- RIGHT: Database Health + Query Console -->
-    <section class="bg-surface-low flex flex-col overflow-hidden">
-
-      <!-- Database Health -->
-      <div class="p-4 flex-shrink-0">
-        <h2 class="section-header mb-4">Database Health</h2>
-        <div class="space-y-2">
-          <div class="bg-surface-container p-3 flex items-center justify-between">
-            <span class="stat-label">Entities</span>
-            <span class="font-headline font-bold text-[1rem] text-primary" id="db-stat-entities">—</span>
-          </div>
-          <div class="bg-surface-container p-3 flex items-center justify-between">
-            <span class="stat-label">Detections</span>
-            <span class="font-headline font-bold text-[1rem] text-primary" id="db-stat-detections">—</span>
-          </div>
-          <div class="bg-surface-container p-3 flex items-center justify-between">
-            <span class="stat-label">Alerts</span>
-            <span class="font-headline font-bold text-[1rem] text-primary" id="db-stat-alerts">—</span>
-          </div>
-          <div class="bg-surface-container p-3 flex items-center justify-between">
-            <span class="stat-label">Incidents</span>
-            <span class="font-headline font-bold text-[1rem] text-primary" id="db-stat-incidents">—</span>
-          </div>
-          <div class="bg-surface-container p-3 flex items-center justify-between">
-            <span class="stat-label">Storage</span>
-            <span class="font-mono text-[0.8rem] text-on-surface-variant" id="db-stat-storage">—</span>
-          </div>
+    <!-- QUERY CONSOLE SECTION (bottom - HORIZONTAL) -->
+    <section class="db-console-section">
+      <div class="px-4 py-3 flex-shrink-0 flex items-center justify-between border-b border-outline-variant/10">
+        <div class="flex items-center gap-3">
+          <span class="status-dot status-dot--active"></span>
+          <h2 class="section-header">CONSOLE: QUERY LOG</h2>
+          <span class="font-mono text-[0.55rem] text-outline ml-2">● LIVE FEED</span>
+        </div>
+        <div class="flex items-center gap-4 text-[0.6rem] font-mono text-outline-variant">
+          <span>BUF_SIZE: 1024KB</span>
+          <span class="cursor-pointer hover:text-white transition-colors">[CLEAR_CONSOLE]</span>
         </div>
       </div>
-
-      <!-- Query Console -->
-      <div class="p-4 flex-1 flex flex-col min-h-0">
-        <div class="flex items-center justify-between mb-2 flex-shrink-0">
-          <div class="flex items-center gap-2">
-            <span class="status-dot status-dot--active"></span>
-            <h2 class="section-header">Query Console</h2>
-          </div>
-        </div>
-        <div class="terminal-block flex-1 min-h-0" id="query-console">
-<span class="log-type">&gt;</span> SELECT count(*) FROM persons WHERE lifecycle_state='active'
-<span class="log-time">→</span> 3
-
-<span class="log-type">&gt;</span> SELECT count(*) FROM embeddings
-<span class="log-time">→</span> 81
-
-<span class="log-type">&gt;</span> SELECT person_id, name, lifecycle_state FROM persons
-<span class="log-time">→</span> ENT-KN-0001 | Mikhail Volkov  | active
-<span class="log-time">→</span> ENT-KN-0002 | Elena Vasquez   | active
-<span class="log-time">→</span> ENT-KN-0003 | Sarah Chen      | active
-<span class="log-time">→</span> ENT-KN-0004 | James McAllister| ready
-<span class="log-time">→</span> ENT-KN-0005 | Amir Hassan     | draft
-<span class="log-time">→</span> UNK-0042    | —               | flagged
-
-<span class="log-type">&gt;</span> SHOW TABLE STATUS
-<span class="log-time">→</span> persons:    6 rows
-<span class="log-time">→</span> embeddings: 81 rows
-<span class="log-time">→</span> detections: 1,247 rows
-<span class="log-time">→</span> alerts:     89 rows
-<span class="log-time">→</span> incidents:  18 rows
-<span class="log-time">→</span> actions:    42 rows
-        </div>
+      <div class="terminal-block flex-1 min-h-0 text-[0.65rem]" id="query-console">
+<span class="log-time">[14:02:11]</span> <span class="log-type">DB_QUERY:</span> SELECT * FROM entity_wallets WHERE risk_score > 0.85;
+<span class="log-time">[14:02:11]</span> <span class="log-type">SYSTEM:</span> Execution successful. Returned 1,402 entries in 12ms.
+<span class="log-time">[14:02:08]</span> <span class="log-type">DB_WRITE:</span> COMMIT TRANSACTION #TX-9921-X; SUCCESS.
+<span class="log-time">[14:01:55]</span> <span class="log-type">WARNING:</span> Latency peak detected on shard EU-CENTRAL-01. Shifting load ...
+<span class="log-time">[14:01:42]</span> <span class="log-type">NODE_HEARTBEAT:</span> 14/14 nodes responding nominal.
       </div>
-
     </section>
 
   </div>
 </main>
 
-<!-- Service Layer -->
-<script src="../shared/trace_client.js"></script>
-<script src="../shared/trace_render.js"></script>
-<script src="../shared/sidenav.js"></script>
-<script src="./database.js"></script>
-
 </div><!-- /app-shell -->
+
+<!-- Service Layer -->
+<script src="../shared/trace_client.js?v=20260413002"></script>
+<script src="../shared/trace_render.js?v=20260413002"></script>
+<script src="../shared/sidenav.js?v=20260413002"></script>
+<script src="./database.js?v=20260413002"></script>
+
 </body>
 </html>
