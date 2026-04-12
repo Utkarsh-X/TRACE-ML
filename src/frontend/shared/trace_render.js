@@ -306,23 +306,34 @@
    * @param {"online"|"offline"|"connecting"} state
    */
   function updateConnectionBadge(state) {
-    var el = document.getElementById("connection-badge");
-    if (!el) return;
-    var dotColor, label;
+    /* ── New sidenav: #connection-badge is the dot <span>,
+       sibling .status-label is the text.               ── */
+    var dot   = document.getElementById("connection-badge");
+    var label = dot && dot.parentElement
+                  ? dot.parentElement.querySelector(".status-label")
+                  : null;
+
+    if (!dot) return;
+
+    var dotColor, labelText;
     if (state === "online") {
-      dotColor = "bg-emerald-400";
-      label = "System Active";
+      dotColor  = "#22c55e";   /* green */
+      labelText = "System Active";
     } else if (state === "connecting") {
-      dotColor = "bg-yellow-400 animate-pulse";
-      label = "Connecting...";
+      dotColor  = "#facc15";   /* amber */
+      labelText = "Connecting\u2026";
     } else {
-      dotColor = "bg-red-400";
-      label = "Offline";
+      dotColor  = "#ef4444";   /* red */
+      labelText = "Offline";
     }
-    el.innerHTML =
-      '<span class="w-1.5 h-1.5 rounded-full ' + dotColor + '"></span>'
-      + '<span class="text-[0.6875rem] font-mono text-outline uppercase tracking-widest">' + esc(label) + "</span>";
+
+    /* Update dot colour and pulse animation */
+    dot.style.background = dotColor;
+
+    /* Update label text if present */
+    if (label) label.textContent = labelText;
   }
+
 
   /**
    * Show or hide the offline banner.
