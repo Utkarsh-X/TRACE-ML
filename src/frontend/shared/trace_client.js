@@ -553,6 +553,19 @@
     return _fetchJson(_url("/api/v1/train/status"));
   }
 
+  /**
+   * Filter: only show meaningful business events, exclude metrics.
+   * @param {Object} event - Event object with {topic, payload, timestamp_utc}
+   * @returns {boolean} true if event should be displayed, false if it's a metric
+   */
+  function isMeaningfulEvent(event) {
+    var topic = String(event.topic || '').toLowerCase();
+    // Explicitly REJECT metrics
+    if (topic === 'session.state') return false;
+    // ACCEPT all other meaningful events
+    return true;
+  }
+
   /* ───────────────────────── Public API ──────────────────────────── */
 
   global.TraceClient = {
@@ -617,6 +630,7 @@
     formatDateTime: formatDateTime,
     getTZ: getTZ,
     setTZ: setTZ,
+    isMeaningfulEvent: isMeaningfulEvent,
 
   };
 })(typeof window !== "undefined" ? window : globalThis);

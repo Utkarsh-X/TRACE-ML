@@ -527,7 +527,12 @@
     }
 
     /* ── Connect SSE ─────────────────────────────────── */
-    TraceClient.connectSSE(function(event) { flAppendLine(event); });
+    TraceClient.connectSSE(function(event) { 
+      // Only display meaningful events; skip metrics (session.state)
+      if (TraceClient.isMeaningfulEvent(event)) {
+        flAppendLine(event);
+      }
+    });
   }
 
   /* ════════════════════════════════════════════════

@@ -249,7 +249,10 @@
 
   function initSSE() {
     TraceClient.connectSSE(function (event) {
-      appendLogLine(event);
+      // Only display meaningful events; skip metrics (session.state)
+      if (TraceClient.isMeaningfulEvent(event)) {
+        appendLogLine(event);
+      }
     });
   }
 
