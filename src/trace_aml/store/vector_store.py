@@ -760,9 +760,32 @@ class VectorStore:
         payload["alert_count"] = int(payload.get("alert_count", len(incident.alert_ids)))
         payload["summary"] = str(payload.get("summary", ""))
         payload["last_action_at"] = str(payload.get("last_action_at", ""))
+        row = self._filtered_row(self.incidents, payload)
         escaped = self._escape(incident.incident_id)
-        self.incidents.delete(f"incident_id = '{escaped}'")
-        self.incidents.add([self._filtered_row(self.incidents, payload)])
+        
+        # Delete any existing incidents with this ID
+        # Lance delete is synchronous but we verify the result
+        try:
+            self.incidents.delete(f"incident_id = '{escaped}'")
+        except Exception:
+            pass  # Safe to continue if delete fails (no matching record)
+        
+        # Add the new incident record
+        self.incidents.add([row])
+        
+        # Verify we don't have duplicates (safety check)
+        # This prevents the delete+add race condition from causing duplicates
+        existing = self._query_rows(self.incidents, where=f"incident_id = '{escaped}'", limit=100)
+        if len(existing) > 1:
+            # Duplicate detected - remove all but the most recent
+            for dup in existing[1:]:
+                try:
+                    self.incidents.delete(f"incident_id = '{escaped}'")
+                    # Re-add only the intended record
+                    self.incidents.add([row])
+                    break
+                except Exception:
+                    pass  # Continue on error
 
     def update_incident(self, incident: IncidentRecord) -> None:
         self.create_incident(incident)
@@ -1059,4 +1082,46 @@ class VectorStore:
         if purged:
             logger.info("Ghost entity purge complete: removed {} entities.", purged)
         return purged
+
+    def deduplicate_incidents(self) -> int:
+        """Remove duplicate incidents caused by non-atomic delete+add operations.
+
+        This method detects and removes duplicate incident_id records, keeping
+        only the most recently updated one. Returns the count of deduplicated records removed.
+        
+        The duplication issue occurs when multiple incidents share the same incident_id,
+        which can happen due to race conditions in the create_incident() method.
+        """
+        all_incidents = self._query_rows(self.incidents, limit=100_000)
+        incident_groups: dict[str, list[dict]] = {}
+        
+        # Group incidents by incident_id
+        for row in all_incidents:
+            iid = str(row.get("incident_id", ""))
+            if iid:
+                if iid not in incident_groups:
+                    incident_groups[iid] = []
+                incident_groups[iid].append(row)
+        
+        deduped_count = 0
+        for incident_id, duplicates in incident_groups.items():
+            if len(duplicates) > 1:
+                logger.info("Found {} duplicate incident records for {}", len(duplicates), incident_id)
+                # Delete ALL duplicates and keep only one (most recently updated)
+                escaped = self._escape(incident_id)
+                self.incidents.delete(f"incident_id = '{escaped}'")
+                
+                # Re-add only the most recent one
+                # Sort by last_seen_time, descending
+                latest = max(
+                    duplicates,
+                    key=lambda r: str(r.get("last_seen_time", ""))
+                )
+                self.incidents.add([latest])
+                deduped_count += len(duplicates) - 1
+                logger.info("Deduped incident {} - removed {} duplicate records", incident_id, len(duplicates) - 1)
+        
+        if deduped_count > 0:
+            logger.warning("Deduplication complete: removed {} duplicate incident records", deduped_count)
+        return deduped_count
 

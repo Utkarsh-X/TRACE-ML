@@ -139,14 +139,15 @@
 
     /* ── Alert row on left panel ────────────────── */
     .alert-row {
-      border-left: 2px solid rgba(71,71,71,0.4);
+      border-left: 2px solid rgba(117,117,117,0.4);
+      border-radius: 2px;
       padding: 0.5rem 0.65rem;
       background: #1a1a1a;
       margin-bottom: 4px;
       transition: background 0.12s;
     }
     .alert-row:hover { background: #222; }
-    .alert-row--high   { border-left-color: #ffb4ab; }
+    .alert-row--high   { border-left-color: #bdbdbd; background: rgba(189,189,189,0.08); }
     .alert-row--medium { border-left-color: #c6c6c6; }
     .alert-row--low    { border-left-color: #474747; }
 
@@ -442,6 +443,41 @@
         </div>
       </div>
 
+      <!-- Controls & Response (Compact Horizontal Layout) - MOVED UP FOR ACCESSIBILITY -->
+      <div class="px-5 py-4 border-b border-outline-variant/10" style="background: linear-gradient(180deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.02) 100%);">
+        <div class="space-y-3">
+          <!-- Severity Control Row -->
+          <div class="flex items-center gap-3">
+            <select id="sev-select" class="flex-1 bg-surface-high text-on-surface font-mono text-[0.65rem] border border-outline-variant/40 px-3 py-2 cursor-pointer focus:ring-1 focus:ring-primary focus:border-primary transition-all hover:border-outline-variant/60 rounded h-8">
+              <option value="low">Low</option>
+              <option value="medium">Medium</option>
+              <option value="high">High</option>
+            </select>
+            <button type="button" id="btn-apply-sev" class="flex-1 px-4 py-2 bg-primary hover:bg-primary/90 border border-primary/60 text-on-primary font-mono font-semibold text-[0.70rem] uppercase tracking-wider rounded transition-all hover:shadow-md cursor-pointer h-8 flex items-center justify-center gap-2 active:scale-95" title="Apply severity level to incident">
+              <span class="material-symbols-outlined" style="font-size:16px;">flag</span>
+              <span>Apply</span>
+            </button>
+          </div>
+          
+          <!-- Action Buttons Row -->
+          <div class="flex items-center gap-3">
+            <button type="button" id="btn-close-inc" class="flex-1 px-4 py-2 bg-red-900/40 hover:bg-red-900/60 border border-red-700/50 hover:border-red-600/70 text-red-200 font-mono font-semibold text-[0.70rem] uppercase tracking-wider rounded transition-all hover:shadow-sm cursor-pointer h-8 flex items-center justify-center gap-2 active:scale-95" title="Close incident (no longer active)">
+              <span class="material-symbols-outlined" style="font-size:16px;">close</span>
+              <span>Close</span>
+            </button>
+            <button type="button" id="btn-deduplicate" class="flex-1 px-4 py-2 bg-amber-900/30 hover:bg-amber-900/50 border border-amber-700/40 hover:border-amber-600/60 text-amber-200 font-mono font-semibold text-[0.70rem] uppercase tracking-wider rounded transition-all hover:shadow-sm cursor-pointer h-8 flex items-center justify-center gap-2 active:scale-95" title="Remove duplicate entries from database">
+              <span class="material-symbols-outlined" style="font-size:16px;">delete_sweep</span>
+              <span>Dedup</span>
+            </button>
+          </div>
+          
+          <!-- Status Message -->
+          <div class="h-5 flex items-center">
+            <p class="font-mono text-[0.58rem] text-outline/80" id="ctrl-status"></p>
+          </div>
+        </div>
+      </div>
+
       <!-- Trigger Alerts -->
       <div class="p-5 border-b border-outline-variant/10">
         <span class="stat-label block mb-2">Trigger Alerts</span>
@@ -450,26 +486,7 @@
         </div>
       </div>
 
-      <!-- Controls -->
-      <div class="p-5 border-b border-outline-variant/10 space-y-2.5">
-        <span class="stat-label block mb-1">Response</span>
-        <select id="sev-select" class="w-full bg-surface-high text-white font-mono text-[0.78rem] border-0 px-3 py-2 cursor-pointer focus:ring-1 focus:ring-white">
-          <option value="low">Severity — Low</option>
-          <option value="medium">Severity — Medium</option>
-          <option value="high">Severity — High</option>
-        </select>
-        <button type="button" id="btn-apply-sev" class="w-full bg-primary text-on-primary py-2 font-mono font-bold uppercase tracking-widest text-[0.62rem] hover:opacity-80 transition-opacity cursor-pointer border-0">Apply Severity</button>
-        <button type="button" id="btn-close-inc" class="w-full bg-surface-high text-on-surface-variant py-2 font-mono font-bold uppercase tracking-widest text-[0.62rem] hover:text-white hover:bg-surface-bright transition-colors cursor-pointer border-0">Close Incident</button>
-        <p class="font-mono text-[0.58rem] text-outline" id="ctrl-status"></p>
-      </div>
 
-      <!-- Actions log -->
-      <div class="p-5">
-        <span class="stat-label block mb-2">Actions Log</span>
-        <div id="inc-actions-root">
-          <div class="text-outline font-mono text-[0.65rem] py-3 text-center">—</div>
-        </div>
-      </div>
 
     </div>
 

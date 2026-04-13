@@ -565,6 +565,21 @@
       });
     });
 
+    var deduplicateBtn = $("btn-deduplicate");
+    if (deduplicateBtn) deduplicateBtn.addEventListener("click", function () {
+      setText("ctrl-status", "Deduplicating…");
+      TraceClient.deduplicateIncidents().then(function (result) {
+        if (result) {
+          var count = result.removed_duplicates || 0;
+          setText("ctrl-status", count > 0 ? ("Removed " + count + " duplicate(s)") : "No duplicates found");
+          resetStrip();
+          loadCards(true);
+        } else {
+          setText("ctrl-status", "Failed — offline");
+        }
+      });
+    });
+
     var moreBtn = $("btn-show-more-tl");
     if (moreBtn) moreBtn.addEventListener("click", function () {
       appendTlBatch(TL_PAGE);

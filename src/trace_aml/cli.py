@@ -775,6 +775,37 @@ def incident_set_severity(
     console.print(f"[green]Updated severity[/green] {id} -> {severity.value}")
 
 
+@incident_app.command("deduplicate")
+def incident_deduplicate(ctx: typer.Context) -> None:
+    """Remove duplicate incident records from the database.
+
+    This command detects and removes duplicate incident_id records that may have
+    been created due to non-atomic delete+add operations during incident creation
+    or updates. For each incident_id that has duplicates, the most recently updated
+    record is kept and all other duplicates are removed.
+
+    Use this command if you notice duplicate incidents appearing in the UI or
+    when querying incidents by entity.
+    """
+    runtime = _runtime(ctx)
+    console.print("[yellow]Scanning for duplicate incidents...[/yellow]")
+    removed_count = runtime.store.deduplicate_incidents()
+    
+    if removed_count == 0:
+        console.print("[green]✓[/green] No duplicates found - database is clean!")
+    else:
+        console.print(f"[green]✓ Deduplication complete![/green] Removed [bold]{removed_count}[/bold] duplicate record(s)")
+    
+    # Show summary
+    total_incidents = len(runtime.store.list_incidents(limit=100_000))
+    unique_incident_ids = len(set(
+        str(row.get("incident_id", ""))
+        for row in runtime.store.list_incidents(limit=100_000)
+    ))
+    console.print(f"\nDatabase now has [bold]{unique_incident_ids}[/bold] unique incidents "
+                  f"({total_incidents} total records)")
+
+
 @action_app.command("list")
 def action_list(
     ctx: typer.Context,

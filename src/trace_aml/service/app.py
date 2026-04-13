@@ -290,6 +290,30 @@ def create_service_app(
         detail = read_models.get_incident_detail(incident_id)
         return detail.model_dump(mode="json")
 
+    @app.post("/api/v1/incidents/deduplicate")
+    def incident_deduplicate() -> dict[str, Any]:
+        """Remove duplicate incident records from the database.
+        
+        This endpoint triggers the deduplication process to remove any
+        duplicate incident_id records that may have been created due to
+        non-atomic operations.
+        
+        Returns a summary of the deduplication operation.
+        """
+        removed_count = store.deduplicate_incidents()
+        total_incidents = len(store.list_incidents(limit=100_000))
+        unique_incident_ids = len(set(
+            str(row.get("incident_id", ""))
+            for row in store.list_incidents(limit=100_000)
+        ))
+        return {
+            "status": "success",
+            "removed_duplicates": removed_count,
+            "total_records": total_incidents,
+            "unique_incidents": unique_incident_ids,
+            "message": f"Removed {removed_count} duplicate record(s). Database now has {unique_incident_ids} unique incidents."
+        }
+
     @app.get("/api/v1/timeline")
     def global_timeline(
         start: str = Query(default=""),

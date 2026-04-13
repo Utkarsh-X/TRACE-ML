@@ -355,6 +355,18 @@
     );
   }
 
+  /**
+   * POST /api/v1/incidents/deduplicate
+   * Removes duplicate incident records from the database.
+   * @returns {Promise<Object|null>}
+   */
+  function deduplicateIncidents() {
+    return _fetchJsonMethod(
+      _url("/api/v1/incidents/deduplicate"),
+      "POST"
+    );
+  }
+
   /* ── Timeline ── */
 
   /**
@@ -597,6 +609,7 @@
     incident: incident,
     setSeverity: setSeverity,
     closeIncident: closeIncident,
+    deduplicateIncidents: deduplicateIncidents,
 
     // Timeline
     globalTimeline: globalTimeline,
