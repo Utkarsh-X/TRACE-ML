@@ -33,6 +33,7 @@ def create_service_app(
     settings: Settings,
     store: VectorStore,
     stream_publisher: EventStreamPublisher | None = None,
+    session: Any | None = None,  # RecognitionSession instance (for camera control)
 ) -> Any:
     """Create FastAPI app lazily so CLI stays usable without web deps."""
     try:
@@ -94,6 +95,61 @@ def create_service_app(
     def health() -> dict[str, Any]:
         snapshot = read_models.get_live_ops_snapshot(entity_limit=3, incident_limit=3, alert_limit=3)
         return snapshot.system_health.model_dump(mode="json")
+
+    # ── Camera Control Endpoints (Frontend-driven) ────────────────────────────
+    @app.get("/api/v1/camera/status")
+    def camera_status() -> dict[str, Any]:
+        """Get current camera status (enabled/disabled)."""
+        if session is None:
+            return {
+                "enabled": False,
+                "camera_index": settings.camera.device_index,
+                "resolution": f"{settings.camera.width}x{settings.camera.height}",
+                "fps": settings.camera.fps,
+                "message": "Live recognition session not available",
+            }
+        return session.get_camera_status()
+
+    @app.post("/api/v1/camera/enable")
+    def camera_enable() -> dict[str, Any]:
+        """Enable camera capture. Called when user clicks 'Enable Camera' button."""
+        if session is None:
+            return {"status": "error", "message": "Live recognition session not available"}
+        return session.enable_camera()
+
+    @app.post("/api/v1/camera/disable")
+    def camera_disable() -> dict[str, Any]:
+        """Disable camera capture. Called when user clicks 'Disable Camera' button."""
+        if session is None:
+            return {"status": "error", "message": "Live recognition session not available"}
+        return session.disable_camera()
+
+    # ── Recognition/Inference Control Endpoints ────────────────────────────────
+    @app.get("/api/v1/recognition/status")
+    def recognition_status() -> dict[str, Any]:
+        """Get current recognition/inference status."""
+        if session is None:
+            return {
+                "enabled": False,
+                "camera_enabled": False,
+                "message": "Live recognition session not available",
+            }
+        return session.get_recognition_status()
+
+    @app.post("/api/v1/recognition/enable")
+    def recognition_enable() -> dict[str, Any]:
+        """Enable face recognition inference. Requires camera to be enabled first."""
+        if session is None:
+            return {"status": "error", "message": "Live recognition session not available"}
+        return session.enable_recognition()
+
+    @app.post("/api/v1/recognition/disable")
+    def recognition_disable() -> dict[str, Any]:
+        """Disable face recognition inference (camera keeps running)."""
+        if session is None:
+            return {"status": "error", "message": "Live recognition session not available"}
+        return session.disable_recognition()
+    # ─────────────────────────────────────────────────────────────────────────
 
     @app.get("/api/v1/live/overlay")
     def live_overlay() -> dict[str, Any]:

@@ -423,14 +423,35 @@
     reject:  "rgba(255, 60, 60, 0.85)"
   };
 
-  function toggleCamera() {
+  // ── Camera Control State Management ────────────────────────────────
+  var _cameraUISync = false;  // Track if UI matches backend state
+  var _recognitionUISync = false;  // Track if recognition UI matches backend state
+
+  function _updateCameraUI(enabled) {
+    // Update UI to reflect actual camera state from backend
     var feedImg = $("camera-feed");
     var placeholder = $("camera-placeholder");
     var btn = $("btn-enable-camera");
+    var recognitionBtn = $("btn-enable-recognition");
     var canvas = $("detection-overlay");
 
-    if (_cameraActive) {
-      // Stop: clear the MJPEG src and overlay
+    if (enabled) {
+      // Camera is enabled on backend
+      if (feedImg) {
+        feedImg.src = TraceClient.baseUrl + "/api/v1/live/mjpeg";
+        feedImg.style.display = "block";
+      }
+      if (placeholder) placeholder.style.display = "none";
+      if (btn) btn.textContent = "Disable Camera";
+      if (canvas) canvas.classList.remove("hidden");
+      _cameraActive = true;
+      
+      // Enable recognition button when camera is on
+      if (recognitionBtn) {
+        recognitionBtn.disabled = false;
+      }
+    } else {
+      // Camera is disabled on backend
       if (feedImg) {
         feedImg.src = "";
         feedImg.style.display = "none";
@@ -444,29 +465,130 @@
         if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
       }
       _cameraActive = false;
-    } else {
-      // Start: set MJPEG src
-      var mjpegUrl = TraceClient.baseUrl + "/api/v1/live/mjpeg";
-      if (feedImg) {
-        feedImg.onerror = function () {
-          // Stream unavailable (404/503/etc). Revert UI cleanly.
-          feedImg.style.display = "none";
-          feedImg.src = "";
-          if (placeholder) placeholder.style.display = "";
-          if (btn) btn.textContent = "Enable Camera";
-          stopOverlayPoll();
-          _cameraActive = false;
-        };
-        feedImg.src = mjpegUrl;
-        feedImg.style.display = "block";
+      
+      // Disable recognition button when camera is off
+      if (recognitionBtn) {
+        recognitionBtn.disabled = true;
+        recognitionBtn.textContent = "⚙ START RECOGNITION";
       }
-      if (placeholder) placeholder.style.display = "none";
-      if (btn) btn.textContent = "Disable Camera";
-      if (canvas) canvas.classList.remove("hidden");
-      _cameraActive = true;
+    }
+    _cameraUISync = true;
+  }
+
+  function _updateRecognitionUI(enabled) {
+    // Update UI to reflect actual recognition state from backend
+    var btn = $("btn-enable-recognition");
+    if (!btn) return;
+    
+    if (enabled) {
+      btn.textContent = "⏹ STOP RECOGNITION";
       startOverlayPoll();
+    } else {
+      btn.textContent = "⚙ START RECOGNITION";
+      stopOverlayPoll();
+    }
+    _recognitionUISync = true;
+  }
+
+  function toggleCamera() {
+    // Called when user clicks Enable/Disable Camera button
+    var btn = $("btn-enable-camera");
+    if (btn) btn.disabled = true;
+
+    if (_cameraActive) {
+      // Request disable from backend
+      TraceClient.cameraDisable().then(function (response) {
+        if (response && response.status) {
+          if (response.status === "disabled" || response.status === "already_disabled") {
+            _updateCameraUI(false);
+            if (btn) btn.disabled = false;
+          } else {
+            console.warn("[Camera] Disable failed:", response.message);
+            if (btn) btn.disabled = false;
+          }
+        } else {
+          console.warn("[Camera] No response from disable endpoint");
+          if (btn) btn.disabled = false;
+        }
+      });
+    } else {
+      // Request enable from backend
+      TraceClient.cameraEnable().then(function (response) {
+        if (response && response.status) {
+          if (response.status === "enabled" || response.status === "already_enabled") {
+            _updateCameraUI(true);
+            if (btn) btn.disabled = false;
+          } else {
+            console.warn("[Camera] Enable failed:", response.message);
+            if (btn) btn.disabled = false;
+          }
+        } else {
+          console.warn("[Camera] No response from enable endpoint");
+          if (btn) btn.disabled = false;
+        }
+      });
     }
   }
+
+  function toggleRecognition() {
+    // Called when user clicks Start/Stop Recognition button
+    var btn = $("btn-enable-recognition");
+    if (btn) btn.disabled = true;
+
+    // Check current state from backend
+    TraceClient.recognitionStatus().then(function (status) {
+      if (!status) {
+        console.warn("[Recognition] No status response");
+        if (btn) btn.disabled = false;
+        return;
+      }
+
+      var isEnabled = status.enabled;
+      
+      if (isEnabled) {
+        // Request disable
+        TraceClient.recognitionDisable().then(function (response) {
+          if (response && (response.status === "disabled" || response.status === "already_disabled")) {
+            _updateRecognitionUI(false);
+            if (btn) btn.disabled = false;
+          } else {
+            console.warn("[Recognition] Disable failed:", response ? response.message : "no response");
+            if (btn) btn.disabled = false;
+          }
+        });
+      } else {
+        // Request enable
+        TraceClient.recognitionEnable().then(function (response) {
+          if (response && (response.status === "enabled" || response.status === "already_enabled")) {
+            _updateRecognitionUI(true);
+            if (btn) btn.disabled = false;
+          } else {
+            console.warn("[Recognition] Enable failed:", response ? response.message : "no response");
+            if (btn) btn.disabled = false;
+          }
+        });
+      }
+    });
+  }
+
+  function checkCameraStatus() {
+    // Poll backend for actual camera status on page load
+    TraceClient.cameraStatus().then(function (status) {
+      if (status) {
+        _updateCameraUI(status.enabled);
+      }
+    });
+  }
+
+  function checkRecognitionStatus() {
+    // Poll backend for actual recognition status on page load
+    TraceClient.recognitionStatus().then(function (status) {
+      if (status) {
+        _updateRecognitionUI(status.enabled);
+      }
+    });
+  }
+  // ──────────────────────────────────────────────────────────────────
 
   function startOverlayPoll() {
     if (_overlayTimer) return;
@@ -626,6 +748,11 @@
       cameraBtn.addEventListener("click", toggleCamera);
     }
 
+    var recognitionBtn = $("btn-enable-recognition");
+    if (recognitionBtn) {
+      recognitionBtn.addEventListener("click", toggleRecognition);
+    }
+
     // Wire notification bell → navigate to alerts
     var notifBtn = $("nav-btn-notifications");
     if (notifBtn) {
@@ -660,6 +787,12 @@
         if (h) renderHealth(h);
       });
 
+      // CAMERA STATE SYNC: Check backend camera status and sync UI accordingly.
+      // Camera is NOT auto-started; user must click "Enable Camera" button.
+      // This ensures the backend and frontend are in sync on page load.
+      checkCameraStatus();
+      checkRecognitionStatus();
+
       // Start polling (just 2 loops — snapshot and timeline)
       _snapshotTimer = setInterval(pollSnapshot, SNAPSHOT_INTERVAL);
       _timelineTimer = setInterval(pollTimeline, TIMELINE_INTERVAL);
@@ -689,6 +822,26 @@
   } else {
     init();
   }
+
+  // Sync camera/recognition UI immediately (fallback if probe is delayed)
+  // This ensures UI matches backend state even if probe().then() takes time
+  setTimeout(function () {
+    checkCameraStatus();
+    checkRecognitionStatus();
+    
+    // Also wire button event listeners as fallback
+    var cameraBtn = $("btn-enable-camera");
+    if (cameraBtn && !cameraBtn._hasListener) {
+      cameraBtn.addEventListener("click", toggleCamera);
+      cameraBtn._hasListener = true;
+    }
+    
+    var recognitionBtn = $("btn-enable-recognition");
+    if (recognitionBtn && !recognitionBtn._hasListener) {
+      recognitionBtn.addEventListener("click", toggleRecognition);
+      recognitionBtn._hasListener = true;
+    }
+  }, 100);
 
   // Cleanup on page unload
   window.addEventListener("beforeunload", function () {

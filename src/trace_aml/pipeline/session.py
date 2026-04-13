@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import math
 import queue
+import threading
 import time
 from typing import Any
 from collections import deque
@@ -86,11 +87,178 @@ class RecognitionSession:
         self.last_frame_queue_depth = 0
         self.last_result_queue_depth = 0
         self._headless_mode = False
+        # ── Camera & Recognition Control State ──────────────────────────────────
+        # Camera: Controls frame capture (independent)
+        # Recognition: Controls inference processing (requires camera on)
+        self._camera_enabled = False
+        self._recognition_enabled = False
+        self._camera_lock = threading.Lock()
+        self._capture: CameraCapture | None = None
+        self._inference: InferenceWorker | None = None
+        self._frame_queue: queue.Queue | None = None
+        self._result_queue: queue.Queue | None = None
+        # ─────────────────────────────────────────────────────────────────────
         # ── Entity Commitment Protocol ─────────────────────────────────────────
         # Track IDs that have passed the commitment gate and had their first
         # DB write. Prevents warmup-phase ghost entities.
         self._committed_tracks: set[str] = set()
         # ─────────────────────────────────────────────────────────────────────
+
+    # ── Camera Control API (Frontend-driven) ──────────────────────────────────
+    def is_camera_enabled(self) -> bool:
+        """Check if camera is currently enabled."""
+        with self._camera_lock:
+            return self._camera_enabled
+
+    def enable_camera(self) -> dict[str, Any]:
+        """Enable camera capture. Safe to call multiple times."""
+        with self._camera_lock:
+            if self._camera_enabled:
+                return {"status": "already_enabled", "message": "Camera is already enabled"}
+            
+            try:
+                # Create fresh queues for this session
+                self._frame_queue = queue.Queue(maxsize=self.settings.pipeline.frame_queue_size)
+                self._result_queue = queue.Queue(maxsize=self.settings.pipeline.result_queue_size)
+                
+                # Create and start capture + inference
+                self._capture = CameraCapture(self.settings, self._frame_queue)
+                self._inference = InferenceWorker(
+                    self.recognizer,
+                    self.store,
+                    self._frame_queue,
+                    self._result_queue,
+                )
+                
+                self._capture.start()
+                self._inference.start()
+                self._camera_enabled = True
+                
+                return {
+                    "status": "enabled",
+                    "message": "Camera started successfully",
+                    "camera_index": self.settings.camera.device_index,
+                }
+            except Exception as e:
+                self._camera_enabled = False
+                self._capture = None
+                self._inference = None
+                self._frame_queue = None
+                self._result_queue = None
+                return {
+                    "status": "error",
+                    "message": f"Failed to enable camera: {str(e)}",
+                }
+
+    def disable_camera(self) -> dict[str, Any]:
+        """Disable camera capture. Safe to call multiple times."""
+        with self._camera_lock:
+            if not self._camera_enabled:
+                return {"status": "already_disabled", "message": "Camera is already disabled"}
+            
+            try:
+                if self._inference is not None:
+                    self._inference.stop()
+                    self._inference = None
+                
+                if self._capture is not None:
+                    self._capture.stop()
+                    self._capture = None
+                
+                self._frame_queue = None
+                self._result_queue = None
+                self._camera_enabled = False
+                
+                return {
+                    "status": "disabled",
+                    "message": "Camera stopped successfully",
+                }
+            except Exception as e:
+                return {
+                    "status": "error",
+                    "message": f"Failed to disable camera: {str(e)}",
+                }
+
+    def get_camera_status(self) -> dict[str, Any]:
+        """Get current camera status."""
+        with self._camera_lock:
+            return {
+                "enabled": self._camera_enabled,
+                "recognition_enabled": self._recognition_enabled,
+                "camera_index": self.settings.camera.device_index,
+                "resolution": f"{self.settings.camera.width}x{self.settings.camera.height}",
+                "fps": self.settings.camera.fps,
+            }
+
+    # ── Recognition/Inference Control (requires camera to be enabled first) ──
+    def enable_recognition(self) -> dict[str, Any]:
+        """Enable face recognition inference. Requires camera to be enabled."""
+        with self._camera_lock:
+            if not self._camera_enabled:
+                return {
+                    "status": "error",
+                    "message": "Cannot enable recognition: camera is not enabled. Enable camera first.",
+                }
+            
+            if self._recognition_enabled:
+                return {"status": "already_enabled", "message": "Recognition is already enabled"}
+            
+            try:
+                if self._inference is None:
+                    # Create new inference worker if it doesn't exist
+                    assert self._frame_queue is not None
+                    self._inference = InferenceWorker(
+                        self.recognizer,
+                        self.store,
+                        self._frame_queue,
+                        self._result_queue,
+                    )
+                
+                self._inference.start()
+                self._recognition_enabled = True
+                
+                return {
+                    "status": "enabled",
+                    "message": "Face recognition started",
+                }
+            except Exception as e:
+                return {
+                    "status": "error",
+                    "message": f"Failed to enable recognition: {str(e)}",
+                }
+
+    def disable_recognition(self) -> dict[str, Any]:
+        """Disable face recognition inference (keep camera running)."""
+        with self._camera_lock:
+            if not self._recognition_enabled:
+                return {"status": "already_disabled", "message": "Recognition is already disabled"}
+            
+            try:
+                if self._inference is not None:
+                    self._inference.stop()
+                    self._inference = None
+                
+                self._recognition_enabled = False
+                
+                return {
+                    "status": "disabled",
+                    "message": "Face recognition stopped",
+                }
+            except Exception as e:
+                return {
+                    "status": "error",
+                    "message": f"Failed to disable recognition: {str(e)}",
+                }
+
+    def get_recognition_status(self) -> dict[str, Any]:
+        """Get current recognition status."""
+        with self._camera_lock:
+            return {
+                "enabled": self._recognition_enabled,
+                "camera_enabled": self._camera_enabled,
+                "message": "Can only enable recognition if camera is enabled" if not self._camera_enabled else "Ready",
+            }
+    # ─────────────────────────────────────────────────────────────────────────
 
     def _should_log(self, key: str) -> bool:
         now = time.time()
@@ -432,22 +600,36 @@ class RecognitionSession:
             cv2.destroyAllWindows()
 
     def run_headless(self) -> None:
-        """Run capture + inference without OpenCV windows (for service-integrated live recognition)."""
-        frame_q: queue.Queue = queue.Queue(maxsize=self.settings.pipeline.frame_queue_size)
-        result_q: queue.Queue = queue.Queue(maxsize=self.settings.pipeline.result_queue_size)
-        capture = CameraCapture(self.settings, frame_q)
-        inference = InferenceWorker(self.recognizer, self.store, frame_q, result_q)
-
-        capture.start()
-        inference.start()
-
+        """Run recognition session loop (camera/recognition control is frontend-driven via API).
+        
+        This method runs indefinitely:
+        - If camera disabled: waits (no frame capture)
+        - If camera enabled but recognition disabled: captures frames but doesn't process
+        - If both enabled: processes frames normally
+        """
         prev = time.time()
         fps = 0.0
         self._headless_mode = True
         try:
             while True:
+                # Check if camera is enabled
+                with self._camera_lock:
+                    if not self._camera_enabled or self._result_queue is None:
+                        # Camera is disabled, just wait and continue
+                        time.sleep(0.1)
+                        continue
+                    
+                    # Camera is enabled - now check if recognition is enabled
+                    if not self._recognition_enabled:
+                        # Camera on, but recognition off - skip processing, just keep polling
+                        time.sleep(0.1)
+                        continue
+                    
+                    result_queue = self._result_queue
+                
+                # Both camera AND recognition are enabled, try to get a result packet
                 try:
-                    packet: InferencePacket = result_q.get(timeout=0.5)
+                    packet: InferencePacket = result_queue.get(timeout=0.5)
                 except queue.Empty:
                     continue
 
@@ -455,8 +637,11 @@ class RecognitionSession:
                 fps = 0.92 * fps + 0.08 * (1.0 / max(1e-6, now - prev))
                 prev = now
                 self.last_latency_ms = max(0.0, (now - packet.captured_at) * 1000.0)
-                self.last_frame_queue_depth = frame_q.qsize()
-                self.last_result_queue_depth = result_q.qsize()
+                
+                # Get queue depths (with lock to be safe)
+                with self._camera_lock:
+                    self.last_frame_queue_depth = self._frame_queue.qsize() if self._frame_queue else 0
+                    self.last_result_queue_depth = result_queue.qsize()
 
                 self._annotate(packet, fps=fps)
                 for match, emb, live in zip(packet.matches, packet.embeddings, packet.liveness, strict=False):
@@ -466,5 +651,18 @@ class RecognitionSession:
                     self._save_detection(packet.frame, match=match, embedding=emb, liveness=live)
         finally:
             self._headless_mode = False
-            inference.stop()
-            capture.stop()
+            # Cleanup any active state on shutdown
+            with self._camera_lock:
+                if self._inference is not None:
+                    try:
+                        self._inference.stop()
+                    except Exception:
+                        pass
+                if self._capture is not None:
+                    try:
+                        self._capture.stop()
+                    except Exception:
+                        pass
+                self._camera_enabled = False
+                self._recognition_enabled = False
+

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import shutil
+import threading
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -855,39 +856,54 @@ def service_run(
         ) from exc
 
     from trace_aml.service.app import create_service_app
+    from trace_aml.pipeline.session import RecognitionSession
 
+    # Create RecognitionSession BEFORE API (so we can pass it to API)
+    # Camera is NOT auto-started; user must enable from frontend
+    session_obj = None
+    if live:
+        try:
+            recognizer = _recognizer(runtime)
+            session_obj = RecognitionSession(
+                runtime.settings,
+                runtime.store,
+                recognizer,
+                stream_publisher=runtime.stream_publisher,
+            )
+        except Exception as exc:
+            console.print(
+                Panel.fit(
+                    f"[red]Failed to initialize live recognition: {exc}[/red]",
+                    title="service run --live",
+                )
+            )
+
+    # Create API with session reference (for camera control)
     api = create_service_app(
         settings=runtime.settings,
         store=runtime.store,
         stream_publisher=runtime.stream_publisher,
+        session=session_obj,
     )
-    if live:
-        import threading
 
-        from trace_aml.pipeline.session import RecognitionSession
-
+    # Start recognition session in background thread (if available)
+    if session_obj is not None:
         def _live_worker() -> None:
             try:
-                recognizer = _recognizer(runtime)
-                session = RecognitionSession(
-                    runtime.settings,
-                    runtime.store,
-                    recognizer,
-                    stream_publisher=runtime.stream_publisher,
-                )
-                session.run_headless()
+                session_obj.run_headless()
             except Exception as exc:  # pragma: no cover - hardware-dependent
                 console.print(Panel.fit(f"[red]Live recognition stopped: {exc}[/red]", title="service run --live"))
 
         threading.Thread(target=_live_worker, name="trace-aml-live-recognition", daemon=True).start()
         console.print(
             Panel.fit(
-                "[yellow]Live recognition thread started (webcam index 0).[/yellow]\n"
-                "Do not run [bold]recognize live[/bold] in another terminal (camera conflict).",
+                "[yellow]Live recognition ready (camera disabled).[/yellow]\n"
+                "Enable camera from the frontend UI to start processing.",
                 title="service run --live",
                 border_style="yellow",
             )
         )
+    
     console.print(
         Panel.fit(
             f"[cyan]Service starting[/cyan]\n"
@@ -897,6 +913,7 @@ def service_run(
         )
     )
     uvicorn.run(api, host=host, port=port, log_level="info")
+
 
 
 if __name__ == "__main__":

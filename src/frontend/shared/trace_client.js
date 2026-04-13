@@ -261,6 +261,62 @@
     return BASE_URL + "/api/v1/live/mjpeg";
   }
 
+  /* ── Camera Control ── */
+
+  /**
+   * GET /api/v1/camera/status
+   * Check current camera status (enabled/disabled)
+   * @returns {Promise<{enabled:boolean, camera_index:number, resolution:string, fps:number}|null>}
+   */
+  function cameraStatus() {
+    return _fetchJson(_url("/api/v1/camera/status"));
+  }
+
+  /**
+   * POST /api/v1/camera/enable
+   * Enable camera capture on backend
+   * @returns {Promise<{status:string, message:string}|null>}
+   */
+  function cameraEnable() {
+    return _fetchJsonMethod(_url("/api/v1/camera/enable"), "POST");
+  }
+
+  /**
+   * POST /api/v1/camera/disable
+   * Disable camera capture on backend
+   * @returns {Promise<{status:string, message:string}|null>}
+   */
+  function cameraDisable() {
+    return _fetchJsonMethod(_url("/api/v1/camera/disable"), "POST");
+  }
+
+  /**
+   * GET /api/v1/recognition/status
+   * Check current recognition status (inference/processing)
+   * @returns {Promise<{enabled:boolean, camera_enabled:boolean}|null>}
+   */
+  function recognitionStatus() {
+    return _fetchJson(_url("/api/v1/recognition/status"));
+  }
+
+  /**
+   * POST /api/v1/recognition/enable
+   * Enable face recognition inference (requires camera to be enabled)
+   * @returns {Promise<{status:string, message:string}|null>}
+   */
+  function recognitionEnable() {
+    return _fetchJsonMethod(_url("/api/v1/recognition/enable"), "POST");
+  }
+
+  /**
+   * POST /api/v1/recognition/disable
+   * Disable face recognition inference (camera keeps running)
+   * @returns {Promise<{status:string, message:string}|null>}
+   */
+  function recognitionDisable() {
+    return _fetchJsonMethod(_url("/api/v1/recognition/disable"), "POST");
+  }
+
   /* ── Entities ── */
 
   /**
@@ -596,6 +652,12 @@
     liveSnapshot: liveSnapshot,
     liveOverlay: liveOverlay,
     mjpegUrl: mjpegUrl,
+    cameraStatus: cameraStatus,
+    cameraEnable: cameraEnable,
+    cameraDisable: cameraDisable,
+    recognitionStatus: recognitionStatus,
+    recognitionEnable: recognitionEnable,
+    recognitionDisable: recognitionDisable,
 
     // Entities
     entities: entities,
