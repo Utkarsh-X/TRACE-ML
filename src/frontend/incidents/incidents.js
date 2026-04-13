@@ -3,7 +3,7 @@
  *
  * Fixes applied vs v1:
  *  - Arrow nav buttons (prev/next) scroll the card strip; sentinel still lazy-loads more
- *  - All colors now use design-system tokens (badge--error, badge--ghost, #ffb4ab, etc.)
+ *  - All colors now use design-system tokens (badge--neutral, badge--ghost, #ffb4ab, etc.)
  *  - Timeline cards are fully rendered with border, typed dots, proper time + meta layout
  *  - Trigger alert rows use the app's tonal / border-left pattern
  *  - Timeline items windowed at 30, "Show older" reveals more from already-fetched data
@@ -71,7 +71,7 @@
     div.setAttribute("data-id", inc.incident_id);
 
     var sev       = String(inc.severity || "low");
-    var sevBadge  = sev === "high" ? "badge--error" : "badge--ghost";
+    var sevBadge  = sev === "high" ? "badge--neutral" : "badge--ghost";
     var status    = String(inc.status  || "open").toUpperCase();
     /* Show last 8 chars of incident ID so it stays compact */
     var shortId   = TraceClient.escapeHtml(String(inc.incident_id || "").slice(-8));
@@ -273,7 +273,7 @@
     /* Badge + dot use design-system classes only */
     var badgeHtml = "";
     if      (kind === "incident") badgeHtml = '<span class="badge badge--filled">INCIDENT</span>';
-    else if (kind === "alert")    badgeHtml = '<span class="badge badge--error">ALERT</span>';
+    else if (kind === "alert")    badgeHtml = '<span class="badge badge--neutral">ALERT</span>';
     else if (kind === "action")   badgeHtml = '<span class="badge badge--ghost">ACTION</span>';
     else                          badgeHtml = '<span class="badge badge--ghost">EVENT</span>';
 

@@ -9,6 +9,7 @@
 html { -webkit-text-size-adjust: 100%; tab-size: 4; }
 
 /* ── COLOR VARIABLES ───────────────────────────────────── */
+/* MONOCHROMATIC SYSTEM: Grays, whites, blacks only. Red reserved for critical alerts. */
 :root {
   --surface-lowest: #0e0e0e;
   --surface-low: #1b1b1b;
@@ -23,8 +24,17 @@ html { -webkit-text-size-adjust: 100%; tab-size: 4; }
   --outline-variant: #474747;
   --primary: #ffffff;
   --on-primary: #1a1c1c;
-  --error: #ffb4ab;
-  --error-container: #93000a;
+  /* Monochromatic grays - no color coding */
+  --gray-white: #ffffff;
+  --gray-100: #f5f5f5;
+  --gray-200: #e0e0e0;
+  --gray-300: #bdbdbd;
+  --gray-400: #757575;
+  --gray-600: #424242;
+  --gray-800: #212121;
+  --gray-black: #000000;
+  /* Critical red - ONLY for system failures */
+  --critical-red: #d32f2f;
   --background: #131313;
 }
 

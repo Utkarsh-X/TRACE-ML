@@ -78,7 +78,7 @@
           return String(a.severity || "").toLowerCase() === "high";
         }).length;
         alertBadge.textContent = highCount > 0 ? "Critical (" + highCount + ")" : "Active (" + snap.recent_alerts.length + ")";
-        alertBadge.className = highCount > 0 ? "badge badge--error" : "badge badge--ghost";
+        alertBadge.className = highCount > 0 ? "badge badge--neutral" : "badge badge--ghost";
       }
 
       if (snap.recent_alerts.length === 0) {

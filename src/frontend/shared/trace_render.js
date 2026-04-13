@@ -33,41 +33,52 @@
   /* ───────────────────── Badge / Label Helpers ───────────────────── */
 
   /**
-   * Forensic badge.
-   * @param {"filled"|"ghost"|"error"} kind
+   * Forensic badge. Monochromatic system:
+   * - "filled": white background (primary states)
+   * - "ghost": transparent with gray border (secondary states)
+   * - "neutral": dashed border (informational states like UNKNOWN, PENDING)
+   * - "critical": red background (ONLY for system emergencies)
+   * @param {"filled"|"ghost"|"neutral"|"critical"} kind
    * @param {string} label
    * @returns {string} HTML
    */
   function badge(kind, label) {
     var cls = "badge";
     if (kind === "filled") cls += " badge--filled";
-    else if (kind === "error") cls += " badge--error";
+    else if (kind === "critical") cls += " badge--critical";
+    else if (kind === "neutral") cls += " badge--neutral";
     else cls += " badge--ghost";
     return '<span class="' + cls + '">' + esc(label) + "</span>";
   }
 
   /**
-   * Severity → badge kind mapping.
+   * Severity → badge kind mapping (monochromatic).
+   * Only 'critical' severity uses red. All others use neutral/ghost.
    * @param {string} severity
-   * @returns {"filled"|"ghost"|"error"}
+   * @returns {"filled"|"ghost"|"neutral"|"critical"}
    */
   function _severityKind(severity) {
     var s = String(severity || "").toLowerCase();
-    if (s === "high") return "error";
+    /* CRITICAL: Only for actual system emergencies */
+    if (s === "critical" || s === "extreme") return "critical";
+    /* All other severities: neutral grayscale */
+    if (s === "high") return "neutral";
     if (s === "medium") return "ghost";
     return "ghost";
   }
 
   /**
-   * Timeline item kind → badge kind.
+   * Timeline item kind → badge kind (monochromatic).
    * @param {string} kind
-   * @returns {"filled"|"ghost"|"error"}
+   * @returns {"filled"|"ghost"|"neutral"|"critical"}
    */
   function _timelineKind(kind) {
     var k = String(kind || "").toLowerCase();
     if (k === "incident") return "filled";
-    if (k === "alert") return "error";
-    if (k === "action") return "filled";
+    /* Alerts: use neutral (gray) instead of red error badge */
+    if (k === "alert") return "neutral";
+    if (k === "action") return "ghost";
+    if (k === "critical") return "critical";
     return "ghost";
   }
 
@@ -119,7 +130,7 @@
     var cat = String(entity.category || entity.type || "unknown").toUpperCase();
     var catBadge;
     if (cat === "CRIMINAL") catBadge = badge("filled", cat);
-    else if (cat === "UNKNOWN") catBadge = badge("error", cat);
+    else if (cat === "UNKNOWN") catBadge = badge("neutral", cat);
     else catBadge = badge("ghost", cat);
 
     // Build info line: confidence + last-seen
@@ -173,7 +184,7 @@
    */
   function incidentCard(inc) {
     var status = String(inc.status || "open").toUpperCase();
-    var statusBadge = status === "OPEN" ? badge("error", status) : badge("ghost", status);
+    var statusBadge = status === "OPEN" ? badge("neutral", status) : badge("ghost", status);
     var displayId = shortId(inc.incident_id);
     var summary = esc(inc.summary || inc.reason || "");
     // Truncate summary to avoid overflow
@@ -249,7 +260,7 @@
     var cat = String(entity.category || "unknown").toLowerCase();
     var idClass = cat === "unknown" ? "text-error" : "text-primary";
     var catLabel = cat.toUpperCase();
-    var catBadge = cat === "criminal" ? badge("filled", catLabel) : (cat === "unknown" ? badge("error", catLabel) : badge("ghost", catLabel));
+    var catBadge = cat === "criminal" ? badge("filled", catLabel) : (cat === "unknown" ? badge("neutral", catLabel) : badge("ghost", catLabel));
     var statusClass = entity.status === "active" ? "text-primary" : "text-on-surface-variant";
     var alerts = entity.recent_alert_count != null ? String(entity.recent_alert_count) : "0";
     var incidents = entity.open_incident_count != null ? String(entity.open_incident_count) : "0";
@@ -317,13 +328,13 @@
 
     var dotColor, labelText;
     if (state === "online") {
-      dotColor  = "#22c55e";   /* green */
+      dotColor  = "#ffffff";   /* green */
       labelText = "System Active";
     } else if (state === "connecting") {
-      dotColor  = "#facc15";   /* amber */
+      dotColor  = "#bdbdbd";   /* amber */
       labelText = "Connecting\u2026";
     } else {
-      dotColor  = "#ef4444";   /* red */
+      dotColor  = "#757575";   /* red */
       labelText = "Offline";
     }
 

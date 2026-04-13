@@ -93,16 +93,26 @@ html, body {
   border-radius: 50%;
   display: inline-block;
   flex-shrink: 0;
+  border: 1px solid;
 }
 .status-dot--active {
   background-color: #ffffff;
+  border-color: #ffffff;
   animation: pulse-dot 2s ease-in-out infinite;
 }
 .status-dot--idle {
-  background-color: #474747;
+  background-color: transparent;
+  border-color: #474747;
 }
-.status-dot--error {
-  background-color: #c9c9c9;
+.status-dot--pending {
+  background-color: #bdbdbd;
+  border-color: #757575;
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+.status-dot--critical {
+  background-color: #d32f2f;
+  border-color: #d32f2f;
+  animation: pulse-dot 1.5s ease-in-out infinite;
 }
 
 @keyframes pulse-dot {
@@ -121,26 +131,29 @@ html, body {
   display: inline-flex;
   align-items: center;
 }
+/* Monochromatic badge system - no colored states */
 .badge--filled {
   background-color: #ffffff;
   color: #1a1c1c;
+  border: 1px solid #ffffff;
 }
 .badge--ghost {
   background-color: transparent;
   border: 1px solid rgba(71, 71, 71, 0.3);
   color: #c6c6c6;
 }
-/* Neutral badge - for UNKNOWN, UNKNOWN_TYPE, etc. - NOT for errors */
+/* Standard badge - for all non-critical states (UNKNOWN, PENDING, etc.) */
 .badge--neutral {
   background-color: transparent;
-  border: 1px solid rgba(198, 198, 198, 0.2);
+  border: 1px dashed rgba(198, 198, 198, 0.4);
   color: #919191;
 }
-/* Error badge - ONLY for actual alert/high-severity cases */
-.badge--error {
-  background-color: rgba(255, 100, 100, 0.15);
-  color: #ffcacb;
-  border: 1px solid rgba(255, 100, 100, 0.2);
+/* CRITICAL red badge - ONLY for actual system emergencies */
+.badge--critical {
+  background-color: rgba(211, 47, 47, 0.15);
+  color: #d32f2f;
+  border: 1px solid rgba(211, 47, 47, 0.4);
+  font-weight: 600;
 }
 
 /* ── Investigation Thread Line ────────────────────────── */
@@ -184,7 +197,13 @@ html, body {
   font-weight: 500;
 }
 .terminal-block .log-error {
-  color: #ffcacb;
+  color: #d32f2f;
+  font-weight: 600;
+}
+.terminal-block .log-warning {
+  color: #424242;
+  font-weight: 500;
+  text-decoration: underline;
 }
 
 /* ── Smooth Transitions ──────────────────────────────── */

@@ -67,7 +67,7 @@
     .entity-card:hover .ec-arrow { opacity: 1; }
     .ec-arrow { opacity: 0; transition: opacity 0.15s; }
 
-    /* top accent line per type */
+    /* top accent line per type - monochromatic patterns */
     .entity-card::before {
       content: '';
       position: absolute;
@@ -75,9 +75,10 @@
       height: 2px;
     }
     .entity-card--known::before   { background: rgba(255,255,255,0.15); }
-    .entity-card--unknown::before { background: rgba(255,180,171,0.45); }
+    /* Unknown entity: gray pattern instead of red */
+    .entity-card--unknown::before { background: repeating-linear-gradient(90deg, rgba(189,189,189,0.3) 0px, rgba(189,189,189,0.3) 2px, transparent 2px, transparent 4px); }
 
-    /* badge */
+    /* badge - monochromatic */
     .entity-card__badge {
       display: inline-flex;
       align-self: flex-start;
@@ -90,10 +91,12 @@
       border: 1px solid;
       margin-bottom: 0.7rem;
     }
-    .entity-card__badge--known    { color: #c6c6c6; border-color: rgba(198,198,198,0.22); }
-    .entity-card__badge--unknown  { color: #ffb4ab; border-color: rgba(255,180,171,0.3); background: rgba(147,0,10,0.18); }
+    .entity-card__badge--known    { color: #c6c6c6; border-color: rgba(198,198,198,0.22); border-style: solid; }
+    /* Unknown badge: gray dashed instead of red */
+    .entity-card__badge--unknown  { color: #919191; border-color: rgba(117,117,117,0.4); background: transparent; border-style: dashed; }
     .entity-card__badge--vip      { color: #fff;    border-color: rgba(255,255,255,0.45); }
-    .entity-card__badge--criminal { color: #ffb4ab; border-color: rgba(255,180,171,0.5); background: rgba(147,0,10,0.32); }
+    /* Criminal badge: gray solid instead of red */
+    .entity-card__badge--criminal { color: #e2e2e2; border-color: rgba(255,255,255,0.3); background: rgba(255,255,255,0.05); }
 
     /* avatar */
     .entity-card__avatar {

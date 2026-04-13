@@ -109,8 +109,9 @@
       flex-shrink: 0;
     }
     .tl-dot--incident { border-color: #fff; background: #fff; }
-    .tl-dot--alert    { border-color: #ffb4ab; background: #93000a; }
-    .tl-dot--action   { border-color: #666; background: #1f1f1f; }
+    /* Alert dot: solid gray border with pattern indicator */
+    .tl-dot--alert    { border-color: #757575; background: #bdbdbd; border-style: dashed; }
+    .tl-dot--action   { border-color: #666; background: transparent; }
     .tl-dot--event    { border-color: #474747; background: #131313; }
 
     /* card body */
@@ -123,7 +124,8 @@
     }
     .tl-card:hover { background: #252525; }
     .tl-card--incident { border-left-color: #fff; }
-    .tl-card--alert    { border-left-color: #ffb4ab; }
+    /* Alert card: dashed gray border instead of red */
+    .tl-card--alert    { border-left-color: #757575; border-left-style: dashed; border-left-width: 2px; }
     .tl-card--action   { border-left-color: #474747; }
     .tl-card--event    { border-left-color: transparent; border: 1px solid rgba(71,71,71,0.2); }
 
