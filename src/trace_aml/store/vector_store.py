@@ -79,6 +79,8 @@ class VectorStore:
                     pa.field("last_seen_city", pa.string()),
                     pa.field("last_seen_country", pa.string()),
                     pa.field("notes", pa.string()),
+                    pa.field("profile_photo_path", pa.string()),
+                    pa.field("profile_photo_confidence", pa.float32()),
                     pa.field("created_at", pa.string()),
                     pa.field("updated_at", pa.string()),
                 ]

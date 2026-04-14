@@ -93,6 +93,8 @@ class PersonRecord(BaseModel):
     last_seen_city: str = ""
     last_seen_country: str = ""
     notes: str = ""
+    profile_photo_path: str = ""  # Path to best recognition image
+    profile_photo_confidence: float = 0.0  # Confidence of best profile photo
     lifecycle_state: PersonLifecycleStatus = PersonLifecycleStatus.draft
     lifecycle_reason: str = "new enrollment"
     enrollment_score: float = 0.0

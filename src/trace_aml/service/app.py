@@ -82,6 +82,17 @@ def create_service_app(
     person_router = create_person_router(settings, store)
     app.include_router(person_router)
 
+    # Add geo and quality routers
+    from trace_aml.service.geo_api import create_geo_router
+    from trace_aml.service.quality_api import create_quality_router
+    
+    if session is not None and hasattr(session, 'recognizer'):
+        geo_router = create_geo_router(settings, store)
+        app.include_router(geo_router)
+        
+        quality_router = create_quality_router(settings, store, session.recognizer)
+        app.include_router(quality_router)
+
     @app.get("/")
     def root() -> dict[str, Any]:
         return {
