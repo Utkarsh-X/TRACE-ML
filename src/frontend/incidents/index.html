@@ -14,7 +14,7 @@
     /* ── Card strip wrapper ───────────────────────────── */
     .strip-wrapper {
       position: relative;
-      background: var(--color-surface-low, #1a1a1a);
+      background: var(--surface-low);
       border-bottom: 1px solid rgba(255,255,255,0.06);
       flex-shrink: 0;
       display: flex;
@@ -30,7 +30,7 @@
       background: rgba(19,19,19,0.92);
       border: none;
       cursor: pointer;
-      color: #919191;
+      color: var(--outline);
       flex-shrink: 0;
       transition: color 0.15s, background 0.15s;
       z-index: 2;
@@ -59,18 +59,18 @@
       border-top: 2px solid transparent;
       cursor: pointer;
       transition: background 0.12s;
-      background: var(--color-surface-low, #1a1a1a);
+      background: var(--surface-low);
       position: relative;
     }
-    .inc-card:hover  { background: var(--color-surface-high, #2a2a2a); }
+    .inc-card:hover  { background: var(--surface-high); }
     .inc-card.active {
-      background: var(--color-surface, #1e1e1e);
+      background: var(--surface);
       border-top-color: #fff;
     }
-    .inc-card__id   { font-family:'JetBrains Mono',monospace; font-size:0.58rem; color:#919191; text-transform:uppercase; letter-spacing:0.1em; margin-bottom:0.3rem; }
-    .inc-card__sum  { font-size:0.72rem; color:#e0e0e0; line-height:1.35; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; margin-bottom:0.45rem; }
+    .inc-card__id   { font-family:'JetBrains Mono',monospace; font-size:0.58rem; color:var(--outline); text-transform:uppercase; letter-spacing:0.1em; margin-bottom:0.3rem; }
+    .inc-card__sum  { font-size:0.72rem; color:var(--on-surface); line-height:1.35; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; margin-bottom:0.45rem; }
     .inc-card__foot { display:flex; align-items:center; justify-content:space-between; margin-top:0.35rem; }
-    .inc-card__ent  { font-family:'JetBrains Mono',monospace; font-size:0.57rem; color:#919191; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:120px; }
+    .inc-card__ent  { font-family:'JetBrains Mono',monospace; font-size:0.57rem; color:var(--outline); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:120px; }
     .inc-card__time { font-family:'JetBrains Mono',monospace; font-size:0.56rem; color:#666; white-space:nowrap; }
 
     /* ── 2-column content area ────────────────── */
@@ -104,34 +104,34 @@
     .tl-dot {
       width: 8px; height: 8px;
       position: absolute; left: 4px; top: 16px;
-      border: 1.5px solid #474747;
-      background: #131313;
+      border: 1.5px solid var(--outline-variant);
+      background: var(--surface-lowest);
       flex-shrink: 0;
     }
     .tl-dot--incident { border-color: #fff; background: #fff; }
     /* Alert dot: solid gray border with pattern indicator */
     .tl-dot--alert    { border-color: #757575; background: #bdbdbd; border-style: dashed; }
     .tl-dot--action   { border-color: #666; background: transparent; }
-    .tl-dot--event    { border-color: #474747; background: #131313; }
+    .tl-dot--event    { border-color: var(--outline-variant); background: var(--surface-lowest); }
 
     /* card body */
     .tl-card {
-      background: #1a1a1a;
+      background: var(--surface-low);
       border-left: 2px solid transparent;
       padding: 0.65rem 0.85rem;
       margin-bottom: 6px;
       transition: background 0.12s;
     }
-    .tl-card:hover { background: #252525; }
+    .tl-card:hover { background: var(--surface-container); }
     .tl-card--incident { border-left-color: #fff; }
     /* Alert card: dashed gray border instead of red */
     .tl-card--alert    { border-left-color: #757575; border-left-style: dashed; border-left-width: 2px; }
-    .tl-card--action   { border-left-color: #474747; }
+    .tl-card--action   { border-left-color: var(--outline-variant); }
     .tl-card--event    { border-left-color: transparent; border: 1px solid rgba(71,71,71,0.2); }
 
     /* ── Skeleton shimmer ───────────────────────────── */
     .skeleton {
-      background: linear-gradient(90deg,#1f1f1f 25%,#2a2a2a 50%,#1f1f1f 75%);
+      background: linear-gradient(90deg, var(--surface-container) 25%, var(--surface-high) 50%, var(--surface-container) 75%);
       background-size: 200% 100%;
       animation: shimmer 1.4s infinite;
     }
@@ -142,14 +142,14 @@
       border-left: 2px solid rgba(117,117,117,0.4);
       border-radius: 2px;
       padding: 0.5rem 0.65rem;
-      background: #1a1a1a;
+      background: var(--surface-low);
       margin-bottom: 4px;
       transition: background 0.12s;
     }
     .alert-row:hover { background: #222; }
     .alert-row--high   { border-left-color: #bdbdbd; background: rgba(189,189,189,0.08); }
     .alert-row--medium { border-left-color: #c6c6c6; }
-    .alert-row--low    { border-left-color: #474747; }
+    .alert-row--low    { border-left-color: var(--outline-variant); }
 
     /* ── Draggable splitter ──────────────────────────── */
     .forensic-splitter {
@@ -179,7 +179,7 @@
     .forensic-panel {
       flex-shrink: 0;
       height: 33px;          /* minimized default — header only */
-      background: #0e0e0e;
+      background: var(--surface-lowest);
       border-top: 1px solid rgba(255,255,255,0.06);
       display: flex;
       flex-direction: column;
@@ -208,7 +208,7 @@
       font-size: 0.6rem;
       text-transform: uppercase;
       letter-spacing: 0.2em;
-      color: #c6c6c6;
+      color: var(--on-surface-variant);
     }
     .forensic-panel__title .blink-sq {
       width: 7px; height: 7px;
@@ -226,9 +226,9 @@
       font-size: 0.57rem;
       text-transform: uppercase;
       letter-spacing: 0.1em;
-      color: #474747;
+      color: var(--outline-variant);
     }
-    .forensic-panel__meta .stream-live { color: #919191; }
+    .forensic-panel__meta .stream-live { color: var(--outline); }
 
     /* Body hidden by default; shown only when expanded */
     .forensic-panel__body {
@@ -246,20 +246,20 @@
       font-family: 'JetBrains Mono', monospace;
       font-size: 0.63rem;
       line-height: 1.6;
-      color: #c6c6c6;
+      color: var(--on-surface-variant);
       white-space: nowrap;
     }
-    .log-line .ll-ts             { color: #474747; flex-shrink: 0; }
+    .log-line .ll-ts             { color: var(--outline-variant); flex-shrink: 0; }
     .log-line .ll-topic-alert    { color: #ffb4ab; font-weight: 500; }
     .log-line .ll-topic-incident { color: #fff;    font-weight: 500; }
-    .log-line .ll-topic-action   { color: #c6c6c6; font-weight: 500; }
-    .log-line .ll-topic-default  { color: #919191; font-weight: 500; }
-    .log-line .ll-msg  { color: #c6c6c6; overflow: hidden; text-overflow: ellipsis; }
+    .log-line .ll-topic-action   { color: var(--on-surface-variant); font-weight: 500; }
+    .log-line .ll-topic-default  { color: var(--outline); font-weight: 500; }
+    .log-line .ll-msg  { color: var(--on-surface-variant); overflow: hidden; text-overflow: ellipsis; }
     .log-line .ll-chip {
       display: inline-flex; align-items: center;
       background: #1f1f1f; border: 1px solid rgba(255,255,255,0.12);
       padding: 0 5px; font-size: 0.52rem; letter-spacing: 0.08em;
-      color: #c6c6c6; flex-shrink: 0; margin-left: 0.25rem;
+      color: var(--on-surface-variant); flex-shrink: 0; margin-left: 0.25rem;
     }
     .log-line .ll-chip--error {
       background: rgba(147,0,10,0.4); border-color: rgba(255,180,171,0.3);
@@ -271,7 +271,7 @@
       background: transparent;
       border: none;
       cursor: pointer;
-      color: #474747;
+      color: var(--outline-variant);
       font-family: 'JetBrains Mono', monospace;
       font-size: 0.57rem;
       letter-spacing: 0.08em;
@@ -280,9 +280,9 @@
       transition: color 0.15s;
       line-height: 1;
     }
-    .fp-btn:hover { color: #c6c6c6; }
+    .fp-btn:hover { color: var(--on-surface-variant); }
     #inc-fl-toggle-btn {
-      color: #919191;
+      color: var(--outline);
       border: 1px solid rgba(255,255,255,0.1);
       padding: 2px 8px;
     }
@@ -463,11 +463,7 @@
           <div class="flex items-center gap-3">
             <button type="button" id="btn-close-inc" class="flex-1 px-4 py-2 bg-red-900/40 hover:bg-red-900/60 border border-red-700/50 hover:border-red-600/70 text-red-200 font-mono font-semibold text-[0.70rem] uppercase tracking-wider rounded transition-all hover:shadow-sm cursor-pointer h-8 flex items-center justify-center gap-2 active:scale-95" title="Close incident (no longer active)">
               <span class="material-symbols-outlined" style="font-size:16px;">close</span>
-              <span>Close</span>
-            </button>
-            <button type="button" id="btn-deduplicate" class="flex-1 px-4 py-2 bg-amber-900/30 hover:bg-amber-900/50 border border-amber-700/40 hover:border-amber-600/60 text-amber-200 font-mono font-semibold text-[0.70rem] uppercase tracking-wider rounded transition-all hover:shadow-sm cursor-pointer h-8 flex items-center justify-center gap-2 active:scale-95" title="Remove duplicate entries from database">
-              <span class="material-symbols-outlined" style="font-size:16px;">delete_sweep</span>
-              <span>Dedup</span>
+              <span>Close Incident</span>
             </button>
           </div>
           
@@ -486,7 +482,22 @@
         </div>
       </div>
 
+      <!-- Incident Actions -->
+      <div class="p-5 border-b border-outline-variant/10">
+        <span class="stat-label block mb-2">Automated Actions</span>
+        <div id="inc-actions-root">
+          <div class="text-outline font-mono text-[0.65rem] py-3 text-center">—</div>
+        </div>
+      </div>
 
+      <!-- Global Maintenance -->
+      <div class="mt-auto p-5 bg-surface-lowest/20">
+        <span class="stat-label block mb-3">System Maintenance</span>
+        <button type="button" id="btn-deduplicate" class="w-full px-4 py-2 bg-amber-900/10 hover:bg-amber-900/20 border border-amber-700/20 hover:border-amber-600/40 text-amber-200/60 hover:text-amber-200 font-mono font-semibold text-[0.65rem] uppercase tracking-wider rounded transition-all cursor-pointer h-8 flex items-center justify-center gap-2" title="Remove duplicate entries from database">
+          <span class="material-symbols-outlined" style="font-size:16px;">delete_sweep</span>
+          <span>Deduplicate Database</span>
+        </button>
+      </div>
 
     </div>
 
@@ -536,7 +547,10 @@
         <span>BUFFER: <span id="inc-fl-buffer">0</span> KB</span>
         <span class="stream-live">STREAM: <span id="inc-fl-status">ACTIVE</span></span>
         <button type="button" id="inc-fl-clear" class="fp-btn" title="Clear log">[CLEAR_CONSOLE]</button>
-        <button type="button" id="inc-fl-toggle-btn" class="fp-btn" title="Expand / Collapse log">&uarr; EXPAND</button>
+        <button type="button" id="inc-fl-toggle-btn" class="fp-btn flex items-center gap-1" title="Expand / Collapse log">
+          <span class="material-symbols-outlined" id="inc-fl-toggle-icon" style="font-size:14px">expand_less</span>
+          <span id="inc-fl-toggle-text">EXPAND</span>
+        </button>
       </div>
     </div>
     <div class="forensic-panel__body" id="inc-fl-body">

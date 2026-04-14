@@ -174,13 +174,20 @@
     var sm = $("tl-show-more");   if (sm) sm.classList.add("hidden");
 
     TraceClient.incident(id).then(function (detail) {
-      if (!detail) return;
+      if (!detail) {
+        if (tlEl) tlEl.innerHTML = '<div class="text-outline font-mono text-[0.7rem] py-12 text-center">Incident not found or failed to load</div>';
+        setText("ctrl-status", "Load failed");
+        return;
+      }
       renderHeader(detail.incident);
       renderEntity(detail.entity);
       renderAlerts(detail.alerts);
       renderTimeline(detail.timeline);
       renderActions(detail.actions);
       syncControls(detail.incident);
+    }).catch(function(err) {
+      if (tlEl) tlEl.innerHTML = '<div class="text-outline font-mono text-[0.7rem] py-12 text-center">Error loading incident data</div>';
+      setText("ctrl-status", "Connection error");
     });
   }
 
@@ -461,7 +468,10 @@
       panel.style.height = h + 'px';
       var expanded = h > MINIMIZED_H;
       panel.classList.toggle('is-expanded', expanded);
-      if (toggleBtn) toggleBtn.innerHTML = expanded ? '&darr; COLLAPSE' : '&uarr; EXPAND';
+      var icon = document.getElementById('inc-fl-toggle-icon');
+      var text = document.getElementById('inc-fl-toggle-text');
+      if (icon) icon.textContent = expanded ? 'expand_more' : 'expand_less';
+      if (text) text.textContent = expanded ? 'COLLAPSE' : 'EXPAND';
     }
 
     /* Start minimized */
@@ -502,7 +512,10 @@
       panel.style.height = newH + 'px';
       var expanded = newH > MINIMIZED_H;
       panel.classList.toggle('is-expanded', expanded);
-      if (toggleBtn) toggleBtn.innerHTML = expanded ? '&darr; COLLAPSE' : '&uarr; EXPAND';
+      var icon = document.getElementById('inc-fl-toggle-icon');
+      var text = document.getElementById('inc-fl-toggle-text');
+      if (icon) icon.textContent = expanded ? 'expand_more' : 'expand_less';
+      if (text) text.textContent = expanded ? 'COLLAPSE' : 'EXPAND';
     });
 
     document.addEventListener('mouseup', function() {
