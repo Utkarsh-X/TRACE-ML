@@ -75,7 +75,29 @@
     var status    = String(inc.status  || "open").toUpperCase();
     /* Show last 8 chars of incident ID so it stays compact */
     var shortId   = TraceClient.escapeHtml(String(inc.incident_id || "").slice(-8));
-    var summary   = TraceClient.escapeHtml(inc.summary || "Incident");
+    /* Highlight the prefix (e.g. "REAPPEARANCE:") if present */
+    var summary = TraceClient.escapeHtml(inc.summary || "Incident");
+    if (summary.includes(": ")) {
+      var parts = summary.split(": ");
+      var prefix = parts[0];
+      var rest = parts.slice(1).join(": ").trim();
+
+      // If the rest of the string starts with the same word as the prefix, remove it to avoid "TYPE: TYPE ..."
+      // This handles existing redundant data without needing a database wipe.
+      var prefixUpper = prefix.toUpperCase();
+      if (rest.toUpperCase().startsWith(prefixUpper)) {
+        // Remove the redundant prefix from the start of the rest string
+        rest = rest.substring(prefix.length).trim();
+        // Clean up any leading colons, dashes or spaces that might remain
+        rest = rest.replace(/^[:\s-]+/, "");
+        // Capitalize the first letter of the remaining sentence
+        if (rest.length > 0) {
+          rest = rest.charAt(0).toUpperCase() + rest.slice(1);
+        }
+      }
+
+      summary = '<span class="font-bold text-on-surface">' + prefix + ':</span> ' + rest;
+    }
     var entityId  = TraceClient.escapeHtml(inc.entity_id || "—");
     var timeStr   = TraceClient.escapeHtml(TraceClient.formatTime(inc.last_seen_time || inc.start_time));
 
@@ -185,9 +207,78 @@
       renderTimeline(detail.timeline);
       renderActions(detail.actions);
       syncControls(detail.incident);
+      handleResolution(detail.entity);
     }).catch(function(err) {
       if (tlEl) tlEl.innerHTML = '<div class="text-outline font-mono text-[0.7rem] py-12 text-center">Error loading incident data</div>';
       setText("ctrl-status", "Connection error");
+    });
+  }
+
+  /* ════════════════════════════════════════════════
+     IDENTITY RESOLUTION
+  ════════════════════════════════════════════════ */
+
+  function handleResolution(entity) {
+    var panel = $("inc-resolution-panel");
+    if (!panel) return;
+    
+    // Only show for unknown entities
+    if (!entity || String(entity.type || "").toLowerCase() !== "unknown") {
+      panel.classList.add("hidden");
+      return;
+    }
+    
+    panel.classList.remove("hidden");
+    var root = $("inc-resolution-root");
+    root.innerHTML = '<div class="text-outline font-mono text-[0.62rem] py-2 text-center">Searching for matches...</div>';
+    
+    TraceClient.entitySuggestions(entity.entity_id).then(function(list) {
+      if (!list || list.length === 0) {
+        root.innerHTML = '<div class="text-outline font-mono text-[0.62rem] py-2 text-center">No similar persons found</div>';
+        return;
+      }
+      
+      root.innerHTML = list.map(function(s) {
+        var pct = Math.round(s.similarity * 100);
+        var name = TraceClient.escapeHtml(s.name);
+        var pid = TraceClient.escapeHtml(s.person_id);
+        var color = pct > 70 ? "text-primary" : "text-amber-200/80";
+        
+        return '<div class="bg-surface-lowest/50 border border-outline-variant/10 p-2 flex items-center justify-between group hover:border-outline-variant/30 transition-all">'
+          + '<div class="min-w-0">'
+          +   '<div class="flex items-center gap-2">'
+          +     '<span class="font-mono text-[0.65rem] font-medium text-on-surface truncate">' + name + '</span>'
+          +     '<span class="font-mono text-[0.55rem] ' + color + '">' + pct + '% match</span>'
+          +   '</div>'
+          +   '<div class="font-mono text-[0.52rem] text-outline mt-0.5">' + pid + '</div>'
+          + '</div>'
+          + '<button type="button" class="btn-merge-entity px-2 py-1 bg-surface-high hover:bg-primary hover:text-on-primary border border-outline-variant/30 font-mono text-[0.55rem] uppercase rounded transition-all active:scale-95" data-target="' + s.person_id + '">'
+          +   'Link'
+          + '</button>'
+          + '</div>';
+      }).join("");
+      
+      root.querySelectorAll(".btn-merge-entity").forEach(function(btn) {
+        btn.addEventListener("click", function() {
+          var targetId = btn.getAttribute("data-target");
+          if (confirm("Merge this unknown entity into " + targetId + "?\n\nAll detection history and incidents will be linked to this person.")) {
+            btn.disabled = true;
+            btn.textContent = "...";
+            TraceClient.entityMerge(entity.entity_id, targetId).then(function(res) {
+              if (res) {
+                setText("ctrl-status", "Identity resolved");
+                // Refresh list and select same index or reload
+                resetStrip();
+                loadCards(true);
+              } else {
+                btn.disabled = false;
+                btn.textContent = "Link";
+                alert("Merge failed. Check backend logs.");
+              }
+            });
+          }
+        });
+      });
     });
   }
 

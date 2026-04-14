@@ -1085,6 +1085,166 @@ class VectorStore:
             logger.info("Ghost entity purge complete: removed {} entities.", purged)
         return purged
 
+    def merge_entities(self, source_entity_id: str, target_entity_id: str) -> bool:
+        """Merge source entity into target entity.
+        
+        Moves all events, alerts, and incidents from source to target.
+        If target already has an open incident, merges alerts and closes source incident.
+        Returns True if successful.
+        """
+        if source_entity_id == target_entity_id:
+            return False
+
+        # Verify target exists
+        target = self.get_entity(target_entity_id)
+        if not target:
+            logger.error("Merge target entity {} not found", target_entity_id)
+            return False
+
+        source_esc = self._escape(source_entity_id)
+        target_esc = self._escape(target_entity_id)
+
+        try:
+            # 1. Update Events
+            all_source_events = self._query_rows(self.events, where=f"entity_id = '{source_esc}'", limit=100_000)
+            if all_source_events:
+                self.events.delete(f"entity_id = '{source_esc}'")
+                for event in all_source_events:
+                    event["entity_id"] = target_entity_id
+                self.events.add(all_source_events)
+                logger.info("Moved {} events from {} to {}", len(all_source_events), source_entity_id, target_entity_id)
+
+            # 2. Update Alerts
+            all_source_alerts = self._query_rows(self.alerts, where=f"entity_id = '{source_esc}'", limit=100_000)
+            if all_source_alerts:
+                self.alerts.delete(f"entity_id = '{source_esc}'")
+                for alert in all_source_alerts:
+                    alert["entity_id"] = target_entity_id
+                self.alerts.add(all_source_alerts)
+                logger.info("Moved {} alerts from {} to {}", len(all_source_alerts), source_entity_id, target_entity_id)
+
+            # 3. Handle Incidents
+            source_incidents = [
+                row for row in self.list_incidents(limit=100_000)
+                if str(row.get("entity_id", "")) == source_entity_id
+            ]
+            target_incidents = [
+                row for row in self.list_incidents(limit=100_000)
+                if str(row.get("entity_id", "")) == target_entity_id
+            ]
+
+            open_target = next((i for i in target_incidents if str(i.get("status", "")).lower() == IncidentStatus.open.value), None)
+
+            for s_inc in source_incidents:
+                s_id = str(s_inc.get("incident_id", ""))
+                s_id_esc = self._escape(s_id)
+                
+                if str(s_inc.get("status", "")).lower() == IncidentStatus.open.value and open_target:
+                    # Merge alerts into target and close source incident
+                    t_alerts = self._parse_json_list(open_target.get("alert_ids", "[]"))
+                    s_alerts = self._parse_json_list(s_inc.get("alert_ids", "[]"))
+                    merged_alerts = list(set(t_alerts + s_alerts))
+                    
+                    # Update target incident object
+                    open_target["alert_ids"] = merged_alerts
+                    open_target["alert_count"] = len(merged_alerts)
+                    
+                    # Update last seen time if source is newer
+                    s_last = str(s_inc.get("last_seen_time", ""))
+                    t_last = str(open_target.get("last_seen_time", ""))
+                    if s_last > t_last:
+                        open_target["last_seen_time"] = s_last
+                    
+                    # Persist target update
+                    target_model = IncidentRecord(
+                        incident_id=str(open_target.get("incident_id", "")),
+                        entity_id=str(open_target.get("entity_id", "")),
+                        status=IncidentStatus.open,
+                        start_time=str(open_target.get("start_time", "")),
+                        last_seen_time=str(open_target.get("last_seen_time", "")),
+                        alert_ids=open_target.get("alert_ids", []),
+                        alert_count=int(open_target.get("alert_count", 0)),
+                        severity=AlertSeverity(str(open_target.get("severity", "low"))),
+                        summary=str(open_target.get("summary", "")),
+                        last_action_at=str(open_target.get("last_action_at", ""))
+                    )
+                    self.update_incident(target_model)
+                    
+                    # Close source incident with audit action
+                    self.close_incident(s_id)
+                    self.insert_action(ActionRecord(
+                        action_id=f"merge_{s_id[:8]}_{datetime.now().timestamp()}",
+                        incident_id=s_id,
+                        action_type=ActionType.log,
+                        trigger=ActionTrigger.on_update,
+                        status=ActionStatus.success,
+                        reason=f"Merged into target incident {open_target.get('incident_id')}",
+                        context={"target_entity_id": target_entity_id, "target_incident_id": open_target.get('incident_id')}
+                    ))
+                    logger.info("Merged source incident {} into target incident {}", s_id, open_target.get('incident_id'))
+                else:
+                    # Just re-parent the incident if no conflict or already closed
+                    self.incidents.delete(f"incident_id = '{s_id_esc}'")
+                    s_inc["entity_id"] = target_entity_id
+                    self.incidents.add([self._filtered_row(self.incidents, s_inc)])
+                    logger.info("Re-parented incident {} to {}", s_id, target_entity_id)
+
+            # 4. Cleanup source if it's an unknown
+            if source_entity_id.startswith("UNK"):
+                self.delete_unknown_entity(source_entity_id)
+                logger.info("Deleted source unknown entity {}", source_entity_id)
+            
+            return True
+        except Exception as exc:
+            logger.error("Merge failed: {} -> {}: {}", source_entity_id, target_entity_id, exc)
+            return False
+
+    def get_entity_suggestions(self, entity_id: str, threshold: float = 0.50) -> list[dict[str, Any]]:
+        """Find person matches for an unknown entity based on embedding similarity."""
+        profile_rows = self._query_rows(self.unknown_profiles, where=f"entity_id = '{self._escape(entity_id)}'", limit=1)
+        if not profile_rows:
+            return []
+        
+        source_vec = np.asarray(profile_rows[0].get("embedding", []), dtype=np.float32)
+        if source_vec.shape[0] != EMBEDDING_DIM:
+            return []
+        
+        source_vec = self._normalize_vector(source_vec)
+        
+        # Compare against all person embeddings
+        person_embeddings = self._query_rows(self.embeddings, limit=100_000)
+        persons = self.list_persons()
+        person_map = {p["person_id"]: p for p in persons}
+        
+        results: dict[str, float] = {}
+        for row in person_embeddings:
+            p_id = row.get("person_id", "")
+            if not p_id:
+                continue
+            
+            target_vec = np.asarray(row.get("embedding", []), dtype=np.float32)
+            if target_vec.shape[0] != EMBEDDING_DIM:
+                continue
+            
+            target_vec = self._normalize_vector(target_vec)
+            similarity = float(np.dot(source_vec, target_vec))
+            
+            if similarity >= threshold:
+                results[p_id] = max(results.get(p_id, 0.0), similarity)
+        
+        # Format output
+        output = []
+        for p_id, sim in results.items():
+            p = person_map.get(p_id, {"name": p_id})
+            output.append({
+                "person_id": p_id,
+                "name": p.get("name", "Unknown"),
+                "category": p.get("category", "unknown"),
+                "similarity": sim,
+            })
+            
+        return sorted(output, key=lambda x: x["similarity"], reverse=True)
+
     def deduplicate_incidents(self) -> int:
         """Remove duplicate incidents caused by non-atomic delete+add operations.
 

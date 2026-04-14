@@ -13,6 +13,9 @@ class IncidentManager:
 
     @staticmethod
     def _build_summary(alert: AlertRecord) -> str:
+        # alert.type is like 'REAPPEARANCE'
+        # alert.reason is now 'Detected with X events'
+        # Result: 'REAPPEARANCE: Detected with 8 events'
         return f"{alert.type.value}: {alert.reason}"
 
     def handle_alert(self, alert: AlertRecord) -> tuple[IncidentRecord, str]:

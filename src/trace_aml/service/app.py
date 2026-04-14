@@ -298,6 +298,20 @@ def create_service_app(
             raise HTTPException(status_code=404, detail=str(exc)) from exc
         return result.model_dump(mode="json")
 
+    class EntityMergePayload(BaseModel):
+        target_entity_id: str
+
+    @app.get("/api/v1/entities/{entity_id}/suggestions")
+    def entity_suggestions(entity_id: str, threshold: float = Query(default=0.50)) -> list[dict[str, Any]]:
+        return store.get_entity_suggestions(entity_id, threshold=threshold)
+
+    @app.post("/api/v1/entities/{entity_id}/merge")
+    def entity_merge(entity_id: str, payload: EntityMergePayload) -> dict[str, Any]:
+        success = store.merge_entities(entity_id, payload.target_entity_id)
+        if not success:
+            raise HTTPException(status_code=400, detail="Merge operation failed")
+        return {"status": "success", "source": entity_id, "target": payload.target_entity_id}
+
     @app.get("/api/v1/entities/{entity_id}/timeline")
     def entity_timeline(
         entity_id: str,

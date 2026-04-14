@@ -365,8 +365,27 @@
     return _fetchJson(_url("/api/v1/entities/" + encodeURIComponent(entityId) + "/incidents"));
   }
 
-  /* ── Incidents ── */
+  /**
+   * GET /api/v1/entities/{id}/suggestions
+   * @param {string} entityId
+   * @param {number} [threshold]
+   * @returns {Promise<Array|null>}
+   */
+  function entitySuggestions(entityId, threshold) {
+    return _fetchJson(_url("/api/v1/entities/" + encodeURIComponent(entityId) + "/suggestions", threshold ? { threshold: threshold } : undefined));
+  }
 
+  /**
+   * POST /api/v1/entities/{id}/merge
+   * @param {string} entityId
+   * @param {string} targetEntityId
+   * @returns {Promise<Object|null>}
+   */
+  function entityMerge(entityId, targetEntityId) {
+    return _fetchJsonMethod(_url("/api/v1/entities/" + encodeURIComponent(entityId) + "/merge"), "POST", { target_entity_id: targetEntityId });
+  }
+
+  /* ── Incidents ── */
   /**
    * GET /api/v1/incidents
    * @param {{limit?:number, skip?:number, status?:string, entity_id?:string}} [opts]
@@ -665,6 +684,8 @@
     entityProfile: entityProfile,
     entityTimeline: entityTimeline,
     entityIncidents: entityIncidents,
+    entitySuggestions: entitySuggestions,
+    entityMerge: entityMerge,
 
     // Incidents
     incidents: incidents,
