@@ -18,7 +18,7 @@ def configure_logger(settings: Settings) -> None:
     logger.add(
         sys.stderr,
         level=settings.logging.level.upper(),
-        format="<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level}</level> | {message}",
+        format="<green>{time:DD-MM-YYYY HH:mm:ss}</green> | <level>{level}</level> | {message}",
     )
     logger.add(
         str(log_path),

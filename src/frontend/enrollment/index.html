@@ -1,10 +1,12 @@
 ﻿<!DOCTYPE html>
 <html class="dark" lang="en">
+
 <head>
   <meta charset="utf-8" />
   <meta content="width=device-width, initial-scale=1.0" name="viewport" />
   <title>TRACE-AML | Enrollment</title>
-  <meta name="description" content="TRACE-AML Person Enrollment — register persons, upload reference images, and trigger embedding training." />
+  <meta name="description"
+    content="TRACE-AML Person Enrollment — register persons, upload reference images, and trigger embedding training." />
 
   <link rel="stylesheet" href="../shared/tailwind-compiled.css" />
   <link rel="stylesheet" href="../shared/sidenav.css" />
@@ -19,23 +21,37 @@
       height: 100vh;
       gap: 0;
     }
-    .enroll-left { grid-column: 1; overflow-y: auto; }
-    .enroll-center { grid-column: 2; overflow-y: auto; }
-    .enroll-right { grid-column: 3; overflow-y: auto; }
+
+    .enroll-left {
+      grid-column: 1;
+      overflow-y: auto;
+    }
+
+    .enroll-center {
+      grid-column: 2;
+      overflow-y: auto;
+    }
+
+    .enroll-right {
+      grid-column: 3;
+      overflow-y: auto;
+    }
 
     /* Drop zone styling */
     .drop-zone {
-      border: 2px dashed rgba(255,255,255,0.15);
+      border: 2px dashed rgba(255, 255, 255, 0.15);
       transition: border-color 0.2s, background-color 0.2s;
       cursor: pointer;
       min-height: 200px;
     }
+
     .drop-zone.drag-over {
-      border-color: var(--md-primary);
-      background-color: rgba(0, 255, 200, 0.05);
+      border-color: rgba(255, 255, 255, 0.3);
+      background-color: rgba(255, 255, 255, 0.03);
     }
+
     .drop-zone:hover {
-      border-color: rgba(255,255,255,0.3);
+      border-color: rgba(255, 255, 255, 0.3);
     }
 
     /* Thumbnail grid */
@@ -44,18 +60,19 @@
       grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
       gap: 8px;
     }
+
     .thumb-grid img {
       width: 100%;
       aspect-ratio: 1;
       object-fit: cover;
-      border: 1px solid rgba(255,255,255,0.1);
+      border: 1px solid rgba(255, 255, 255, 0.1);
     }
 
     /* Form inputs */
     .enroll-input {
       width: 100%;
       background: var(--md-surface-high, #2a2a2a);
-      border: 1px solid rgba(255,255,255,0.1);
+      border: 1px solid rgba(255, 255, 255, 0.1);
       color: white;
       padding: 8px 12px;
       font-family: inherit;
@@ -63,12 +80,15 @@
       outline: none;
       transition: border-color 0.2s;
     }
+
     .enroll-input:focus {
       border-color: var(--md-primary);
     }
+
     .enroll-input::placeholder {
-      color: rgba(255,255,255,0.3);
+      color: rgba(255, 255, 255, 0.3);
     }
+
     select.enroll-input {
       appearance: none;
       -webkit-appearance: none;
@@ -81,9 +101,11 @@
       cursor: pointer;
       transition: background-color 0.15s;
     }
+
     .person-card:hover {
       background: var(--md-surface-high, #2a2a2a);
     }
+
     .person-card.active {
       background: var(--md-surface-high, #2a2a2a);
       border-left: 2px solid var(--md-primary);
@@ -91,20 +113,31 @@
 
     /* Action buttons */
     .btn-primary {
-      background: var(--md-primary);
-      color: var(--md-on-primary, #000);
+      background: var(--md-surface-high, #2a2a2a);
+      color: var(--md-on-surface-variant, #ccc);
       padding: 10px 20px;
       font-weight: 600;
       font-size: 0.8rem;
       font-family: inherit;
-      border: 0;
+      border: 1px solid rgba(255, 255, 255, 0.1);
       cursor: pointer;
       text-transform: uppercase;
       letter-spacing: 0.05em;
-      transition: opacity 0.15s;
+      transition: background-color 0.15s, border-color 0.15s;
     }
-    .btn-primary:hover { opacity: 0.85; }
-    .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .btn-primary:hover {
+      background: var(--md-surface-bright, #353535);
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    .btn-primary:disabled {
+      opacity: 1;
+      cursor: not-allowed;
+      background: var(--md-surface-high, #2a2a2a);
+      border-color: rgba(255, 255, 255, 0.1);
+      color: var(--md-on-surface-variant, #ccc);
+    }
 
     .btn-secondary {
       background: var(--md-surface-high, #2a2a2a);
@@ -113,19 +146,34 @@
       font-weight: 600;
       font-size: 0.8rem;
       font-family: inherit;
-      border: 1px solid rgba(255,255,255,0.1);
+      border: 1px solid rgba(255, 255, 255, 0.1);
       cursor: pointer;
       text-transform: uppercase;
       letter-spacing: 0.05em;
-      transition: background-color 0.15s;
+      transition: background-color 0.15s, border-color 0.15s;
     }
-    .btn-secondary:hover { background: var(--md-surface-bright, #333); }
+
+    .btn-secondary:hover {
+      background: var(--md-surface-bright, #353535);
+      border-color: rgba(255, 255, 255, 0.2);
+    }
 
     /* Lifecycle badge colors */
-    .lc-active { color: #ffffff; }
-    .lc-ready { color: #c6c6c6; }
-    .lc-draft { color: #888; }
-    .lc-blocked { color: #757575; }
+    .lc-active {
+      color: #ffffff;
+    }
+
+    .lc-ready {
+      color: #c6c6c6;
+    }
+
+    .lc-draft {
+      color: #888;
+    }
+
+    .lc-blocked {
+      color: #757575;
+    }
 
     /* ── Camera Modal ─────────────────────────────────────── */
     #camera-modal {
@@ -135,19 +183,31 @@
       display: none;
       align-items: center;
       justify-content: center;
-      background: rgba(0,0,0,0.82);
+      background: rgba(0, 0, 0, 0.82);
       backdrop-filter: blur(6px);
       -webkit-backdrop-filter: blur(6px);
       animation: fadeIn 0.18s ease;
     }
-    #camera-modal.open { display: flex; }
-    @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
+
+    #camera-modal.open {
+      display: flex;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+      }
+
+      to {
+        opacity: 1;
+      }
+    }
 
     .cam-modal-box {
       width: min(740px, 96vw);
       background: #141414;
-      border: 1px solid rgba(255,255,255,0.08);
-      box-shadow: 0 24px 72px rgba(0,0,0,0.9), 0 0 0 1px rgba(0,255,200,0.06);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      box-shadow: 0 24px 72px rgba(0, 0, 0, 0.9), 0 0 0 1px rgba(0, 255, 200, 0.06);
       display: flex;
       flex-direction: column;
       overflow: hidden;
@@ -159,9 +219,10 @@
       align-items: center;
       justify-content: space-between;
       padding: 14px 18px 12px;
-      border-bottom: 1px solid rgba(255,255,255,0.06);
-      background: rgba(255,255,255,0.02);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      background: rgba(255, 255, 255, 0.02);
     }
+
     .cam-modal-title {
       display: flex;
       align-items: center;
@@ -173,29 +234,47 @@
       text-transform: uppercase;
       color: #fff;
     }
+
     .cam-rec-dot {
-      width: 7px; height: 7px;
+      width: 7px;
+      height: 7px;
       border-radius: 50%;
       background: #ff3b3b;
       box-shadow: 0 0 6px #ff3b3b;
       animation: recPulse 1.2s ease-in-out infinite;
       display: none;
     }
-    .cam-rec-dot.active { display: inline-block; }
-    @keyframes recPulse {
-      0%,100% { opacity:1; } 50% { opacity:0.3; }
+
+    .cam-rec-dot.active {
+      display: inline-block;
     }
+
+    @keyframes recPulse {
+
+      0%,
+      100% {
+        opacity: 1;
+      }
+
+      50% {
+        opacity: 0.3;
+      }
+    }
+
     .cam-close-btn {
       background: none;
       border: none;
-      color: rgba(255,255,255,0.45);
+      color: rgba(255, 255, 255, 0.45);
       cursor: pointer;
       padding: 4px;
       display: flex;
       align-items: center;
       transition: color 0.15s;
     }
-    .cam-close-btn:hover { color: #fff; }
+
+    .cam-close-btn:hover {
+      color: #fff;
+    }
 
     .cam-video-wrap {
       position: relative;
@@ -207,13 +286,18 @@
       align-items: center;
       justify-content: center;
     }
+
     #cam-video {
       width: 100%;
       height: 100%;
       object-fit: cover;
-      transform: scaleX(-1); /* mirror effect */
+      transform: scaleX(-1);
+      /* mirror effect */
     }
-    #cam-canvas { display: none; }
+
+    #cam-canvas {
+      display: none;
+    }
 
     .cam-status-overlay {
       position: absolute;
@@ -225,31 +309,37 @@
       pointer-events: none;
       gap: 10px;
     }
+
     .cam-status-icon {
       font-size: 48px !important;
-      color: rgba(255,255,255,0.25);
+      color: rgba(255, 255, 255, 0.25);
     }
+
     .cam-status-text {
       font-size: 0.75rem;
-      color: rgba(255,255,255,0.35);
+      color: rgba(255, 255, 255, 0.35);
       font-family: inherit;
     }
 
     /* Countdown ring */
     .cam-countdown {
       position: absolute;
-      top: 50%; left: 50%;
-      transform: translate(-50%,-50%);
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
       font-size: 5rem;
       font-weight: 900;
-      color: var(--md-primary, #00ffc8);
-      text-shadow: 0 0 20px var(--md-primary, #00ffc8);
+      color: rgba(255, 255, 255, 0.6);
+      text-shadow: 0 0 20px rgba(255, 255, 255, 0.2);
       pointer-events: none;
       opacity: 0;
       transition: opacity 0.2s;
       font-family: inherit;
     }
-    .cam-countdown.show { opacity: 1; }
+
+    .cam-countdown.show {
+      opacity: 1;
+    }
 
     /* Flash effect */
     .cam-flash {
@@ -260,24 +350,32 @@
       pointer-events: none;
       transition: opacity 0.05s;
     }
-    .cam-flash.bang { opacity: 0.85; transition: opacity 0.05s; }
-    .cam-flash.fade { opacity: 0; transition: opacity 0.35s; }
+
+    .cam-flash.bang {
+      opacity: 0.85;
+      transition: opacity 0.05s;
+    }
+
+    .cam-flash.fade {
+      opacity: 0;
+      transition: opacity 0.35s;
+    }
 
     .cam-controls {
       display: flex;
       align-items: center;
       gap: 10px;
       padding: 12px 18px;
-      border-top: 1px solid rgba(255,255,255,0.06);
-      background: rgba(0,0,0,0.4);
+      border-top: 1px solid rgba(255, 255, 255, 0.06);
+      background: rgba(0, 0, 0, 0.4);
     }
 
     .cam-btn {
       display: flex;
       align-items: center;
       gap: 6px;
-      background: rgba(255,255,255,0.07);
-      border: 1px solid rgba(255,255,255,0.12);
+      background: rgba(255, 255, 255, 0.07);
+      border: 1px solid rgba(255, 255, 255, 0.12);
       color: #fff;
       padding: 8px 14px;
       font-family: inherit;
@@ -288,71 +386,106 @@
       cursor: pointer;
       transition: background 0.15s, border-color 0.15s;
     }
-    .cam-btn:hover { background: rgba(255,255,255,0.13); border-color: rgba(255,255,255,0.25); }
-    .cam-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+    .cam-btn:hover {
+      background: rgba(255, 255, 255, 0.13);
+      border-color: rgba(255, 255, 255, 0.25);
+    }
+
+    .cam-btn:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+    }
 
     .cam-btn-snap {
-      background: var(--md-primary, #00ffc8);
-      border-color: var(--md-primary, #00ffc8);
-      color: #000;
+      background: var(--md-surface-high, #2a2a2a);
+      border-color: rgba(255, 255, 255, 0.2);
+      color: var(--md-on-surface-variant, #ccc);
       flex-shrink: 0;
     }
-    .cam-btn-snap:hover { opacity: 0.88; background: var(--md-primary, #00ffc8); }
+
+    .cam-btn-snap:hover {
+      opacity: 0.88;
+      background: var(--md-surface-bright, #353535);
+      border-color: rgba(255, 255, 255, 0.3);
+    }
 
     .cam-btn-timer {
       position: relative;
     }
+
     .cam-btn-timer.active {
       border-color: #ffd740;
       color: #ffd740;
     }
 
-    .cam-switch-wrap { margin-left: auto; display: flex; gap: 8px; align-items: center; }
+    .cam-switch-wrap {
+      margin-left: auto;
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
 
     .cam-captured-bar {
       display: flex;
       align-items: center;
       gap: 6px;
       padding: 8px 18px;
-      background: rgba(255,255,255,0.02);
-      border-top: 1px solid rgba(255,255,255,0.05);
+      background: rgba(255, 255, 255, 0.02);
+      border-top: 1px solid rgba(255, 255, 255, 0.05);
       overflow-x: auto;
       min-height: 60px;
     }
-    .cam-captured-bar::-webkit-scrollbar { height: 4px; }
-    .cam-captured-bar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); }
+
+    .cam-captured-bar::-webkit-scrollbar {
+      height: 4px;
+    }
+
+    .cam-captured-bar::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.1);
+    }
 
     .cam-captured-thumb {
       position: relative;
       flex-shrink: 0;
-      width: 52px; height: 52px;
-      border: 1px solid rgba(255,255,255,0.12);
+      width: 52px;
+      height: 52px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
       overflow: hidden;
       cursor: pointer;
       transition: border-color 0.15s;
     }
+
     .cam-captured-thumb img {
-      width: 100%; height: 100%;
+      width: 100%;
+      height: 100%;
       object-fit: cover;
       display: block;
       transform: scaleX(-1);
     }
-    .cam-captured-thumb:hover { border-color: #ff4444; }
+
+    .cam-captured-thumb:hover {
+      border-color: #ff4444;
+    }
+
     .cam-captured-thumb .cam-remove-badge {
       position: absolute;
       inset: 0;
-      background: rgba(255,0,0,0.55);
+      background: rgba(255, 0, 0, 0.55);
       display: none;
       align-items: center;
       justify-content: center;
       font-size: 18px;
       color: #fff;
     }
-    .cam-captured-thumb:hover .cam-remove-badge { display: flex; }
+
+    .cam-captured-thumb:hover .cam-remove-badge {
+      display: flex;
+    }
 
     .cam-captured-empty {
       font-size: 0.65rem;
-      color: rgba(255,255,255,0.2);
+      color: rgba(255, 255, 255, 0.2);
       font-family: inherit;
       text-align: center;
       width: 100%;
@@ -363,13 +496,14 @@
       align-items: center;
       gap: 10px;
       padding: 12px 18px;
-      border-top: 1px solid rgba(255,255,255,0.06);
-      background: rgba(0,0,0,0.3);
+      border-top: 1px solid rgba(255, 255, 255, 0.06);
+      background: rgba(0, 0, 0, 0.3);
     }
+
     .cam-captured-count {
       font-size: 0.65rem;
       font-family: inherit;
-      color: rgba(255,255,255,0.4);
+      color: rgba(255, 255, 255, 0.4);
       margin-right: auto;
     }
 
@@ -378,23 +512,24 @@
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      background: transparent;
-      border: 1px solid rgba(255,255,255,0.18);
-      color: rgba(255,255,255,0.75);
-      padding: 5px 12px;
+      background: var(--md-surface-high, #2a2a2a);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: var(--md-on-surface-variant, #ccc);
+      padding: 10px 20px;
       font-family: inherit;
-      font-size: 0.7rem;
+      font-size: 0.8rem;
       font-weight: 600;
-      letter-spacing: 0.06em;
+      letter-spacing: 0.05em;
       text-transform: uppercase;
       cursor: pointer;
-      transition: border-color 0.15s, color 0.15s, background 0.15s;
+      transition: background-color 0.15s, border-color 0.15s;
     }
+
     .btn-open-camera:hover {
-      border-color: var(--md-primary, #00ffc8);
-      color: var(--md-primary, #00ffc8);
-      background: rgba(0,255,200,0.04);
+      background: var(--md-surface-bright, #353535);
+      border-color: rgba(255, 255, 255, 0.2);
     }
+
     .btn-open-camera .material-symbols-outlined {
       font-size: 16px !important;
     }
@@ -405,301 +540,310 @@
 
 
 
-<div class="app-shell">
+  <div class="app-shell">
 
-<!-- SIDE NAV -->
-<aside class="sidenav" id="sidenav">
-  <div class="sidenav-header">
-    <button class="hamburger-btn" id="sidenav-toggle" title="Toggle sidebar (Ctrl+B)">
-      <span class="material-symbols-outlined">menu</span>
-    </button>
-    <span class="sidenav-brand">TRACE-AML</span>
-  </div>
-  <div class="sidenav-status">
-    <span class="status-dot" id="connection-badge"></span>
-    <span class="status-label"></span>
-  </div>
-  <nav class="sidenav-nav">
-    <a class="nav-item " href="../live_ops/index.html" data-tooltip="Live Ops">
-      <span class="material-symbols-outlined nav-icon">monitoring</span>
-      <span class="nav-label">Live Ops</span>
-    </a>
-    <a class="nav-item " href="../incidents/index.html" data-tooltip="Incidents">
-      <span class="material-symbols-outlined nav-icon">timeline</span>
-      <span class="nav-label">Incidents</span>
-    </a>
-    <a class="nav-item " href="../entities/index.html" data-tooltip="Entities">
-      <span class="material-symbols-outlined nav-icon">hub</span>
-      <span class="nav-label">Entities</span>
-    </a>
-    <a class="nav-item " href="../history/index.html" data-tooltip="History">
-      <span class="material-symbols-outlined nav-icon">history</span>
-      <span class="nav-label">History</span>
-    </a>
-    <a class="nav-item " href="../database/index.html" data-tooltip="Database">
-      <span class="material-symbols-outlined nav-icon">database</span>
-      <span class="nav-label">Database</span>
-    </a>
-  </nav>
-  <div class="sidenav-divider"></div>
-  <nav class="sidenav-nav">
-    <a class="nav-item active" href="../enrollment/index.html" data-tooltip="Enrollment">
-      <span class="material-symbols-outlined nav-icon">person_add</span>
-      <span class="nav-label">Enrollment</span>
-    </a>
-  </nav>
-  <div class="sidenav-spacer"></div>
-  <div class="sidenav-bottom">
-    <a class="nav-item " href="../settings/index.html" data-tooltip="Settings">
-      <span class="material-symbols-outlined nav-icon">settings</span>
-      <span class="nav-label">Settings</span>
-    </a>
-    <button class="nav-item nav-btn" type="button" data-tooltip="Admin">
-      <span class="material-symbols-outlined nav-icon">person</span>
-      <span class="nav-label">Admin</span>
-    </button>
-    <div class="sidenav-divider"></div>
-    <button class="nav-item nav-btn" type="button" data-tooltip="Help">
-      <span class="material-symbols-outlined nav-icon">help_outline</span>
-      <span class="nav-label">Help</span>
-    </button>
-    <button class="nav-item nav-btn" type="button" data-tooltip="Exit">
-      <span class="material-symbols-outlined nav-icon">logout</span>
-      <span class="nav-label">Exit</span>
-    </button>
-  </div>
-  <div class="sidenav-splitter" id="sidenav-splitter"></div>
-</aside>
-
-<!-- MAIN CANVAS -->
-<main class="main-content">
-<!-- MAIN -->
-<main class="main-content">
-  <div class="enroll-grid">
-
-    <!-- LEFT: Person List -->
-    <section class="enroll-left bg-surface-low p-4 flex flex-col border-r border-outline-variant/10">
-      <div class="flex items-center justify-between mb-4">
-        <h2 class="section-header">Registered Persons</h2>
-        <span class="font-mono text-[0.6rem] text-outline" id="person-count">--</span>
+    <!-- SIDE NAV -->
+    <aside class="sidenav" id="sidenav">
+      <div class="sidenav-header">
+        <button class="hamburger-btn" id="sidenav-toggle" title="Toggle sidebar (Ctrl+B)">
+          <span class="material-symbols-outlined">menu</span>
+        </button>
+        <span class="sidenav-brand">TRACE-AML</span>
       </div>
-      <div class="flex-1 overflow-y-auto space-y-1" id="person-list-root">
-        <div class="text-center py-8 text-outline text-[0.75rem]">Loading...</div>
+      <div class="sidenav-status">
+        <span class="status-dot" id="connection-badge"></span>
+        <span class="status-label"></span>
       </div>
-    </section>
-
-    <!-- CENTER: Enrollment Form + Image Upload -->
-    <section class="enroll-center bg-surface p-6 flex flex-col gap-6">
-      <!-- Header -->
-      <header>
-        <span class="flex items-center gap-2 mb-1">
-          <span class="w-1 h-1 bg-primary inline-block"></span>
-          <span class="text-[0.6875rem] font-mono uppercase tracking-[0.2em] text-outline">Person Enrollment</span>
-        </span>
-        <h1 class="text-2xl font-headline font-bold text-white tracking-tight leading-none uppercase">Register New Person</h1>
-      </header>
-
-      <!-- Form -->
-      <div class="grid grid-cols-2 gap-4">
-        <div class="col-span-2">
-          <label class="stat-label mb-1 block">Full Name *</label>
-          <input type="text" id="enroll-name" class="enroll-input" placeholder="Enter person's full name" required />
-        </div>
-        <div>
-          <label class="stat-label mb-1 block">Category *</label>
-          <select id="enroll-category" class="enroll-input">
-            <option value="criminal">Criminal</option>
-            <option value="missing">Missing</option>
-            <option value="employee">Employee</option>
-            <option value="vip">VIP</option>
-          </select>
-        </div>
-        <div>
-          <label class="stat-label mb-1 block">Severity</label>
-          <select id="enroll-severity" class="enroll-input">
-            <option value="">-- None --</option>
-            <option value="1-low">Low</option>
-            <option value="2-medium">Medium</option>
-            <option value="3-high">High</option>
-          </select>
-        </div>
-        <div>
-          <label class="stat-label mb-1 block">Date of Birth</label>
-          <input type="text" id="enroll-dob" class="enroll-input" placeholder="YYYY-MM-DD" />
-        </div>
-        <div>
-          <label class="stat-label mb-1 block">Gender</label>
-          <select id="enroll-gender" class="enroll-input">
-            <option value="">-- Select --</option>
-            <option value="male">Male</option>
-            <option value="female">Female</option>
-            <option value="other">Other</option>
-          </select>
-        </div>
-        <div>
-          <label class="stat-label mb-1 block">City</label>
-          <input type="text" id="enroll-city" class="enroll-input" placeholder="Last known city" />
-        </div>
-        <div>
-          <label class="stat-label mb-1 block">Country</label>
-          <input type="text" id="enroll-country" class="enroll-input" placeholder="Country" />
-        </div>
-        <div class="col-span-2">
-          <label class="stat-label mb-1 block">Notes</label>
-          <textarea id="enroll-notes" class="enroll-input" rows="2" placeholder="Additional notes..."></textarea>
-        </div>
+      <nav class="sidenav-nav">
+        <a class="nav-item " href="../live_ops/index.html" data-tooltip="Live Ops">
+          <span class="material-symbols-outlined nav-icon">monitoring</span>
+          <span class="nav-label">Live Ops</span>
+        </a>
+        <a class="nav-item " href="../incidents/index.html" data-tooltip="Incidents">
+          <span class="material-symbols-outlined nav-icon">timeline</span>
+          <span class="nav-label">Incidents</span>
+        </a>
+        <a class="nav-item " href="../entities/index.html" data-tooltip="Entities">
+          <span class="material-symbols-outlined nav-icon">hub</span>
+          <span class="nav-label">Entities</span>
+        </a>
+        <a class="nav-item " href="../history/index.html" data-tooltip="History">
+          <span class="material-symbols-outlined nav-icon">history</span>
+          <span class="nav-label">History</span>
+        </a>
+        <a class="nav-item " href="../database/index.html" data-tooltip="Database">
+          <span class="material-symbols-outlined nav-icon">database</span>
+          <span class="nav-label">Database</span>
+        </a>
+      </nav>
+      <div class="sidenav-divider"></div>
+      <nav class="sidenav-nav">
+        <a class="nav-item active" href="../enrollment/index.html" data-tooltip="Enrollment">
+          <span class="material-symbols-outlined nav-icon">person_add</span>
+          <span class="nav-label">Enrollment</span>
+        </a>
+      </nav>
+      <div class="sidenav-spacer"></div>
+      <div class="sidenav-bottom">
+        <a class="nav-item " href="../settings/index.html" data-tooltip="Settings">
+          <span class="material-symbols-outlined nav-icon">settings</span>
+          <span class="nav-label">Settings</span>
+        </a>
+        <button class="nav-item nav-btn" type="button" data-tooltip="Admin">
+          <span class="material-symbols-outlined nav-icon">person</span>
+          <span class="nav-label">Admin</span>
+        </button>
+        <div class="sidenav-divider"></div>
+        <button class="nav-item nav-btn" type="button" data-tooltip="Help">
+          <span class="material-symbols-outlined nav-icon">help_outline</span>
+          <span class="nav-label">Help</span>
+        </button>
+        <button class="nav-item nav-btn" type="button" data-tooltip="Exit">
+          <span class="material-symbols-outlined nav-icon">logout</span>
+          <span class="nav-label">Exit</span>
+        </button>
       </div>
+      <div class="sidenav-splitter" id="sidenav-splitter"></div>
+    </aside>
 
-      <!-- Image Upload Zone -->
-      <div>
-        <div class="flex items-center justify-between mb-2">
-          <label class="stat-label">Reference Images</label>
-          <button type="button" class="btn-open-camera" id="btn-open-camera" title="Capture from camera">
-            <span class="material-symbols-outlined">photo_camera</span>
-            Open Camera
-          </button>
-        </div>
-        <div class="drop-zone flex flex-col items-center justify-center p-8" id="drop-zone">
-          <span class="material-symbols-outlined text-outline-variant text-[36px] mb-2">cloud_upload</span>
-          <p class="font-mono text-[0.75rem] text-outline mb-1">Drag & drop images here</p>
-          <p class="font-mono text-[0.6rem] text-outline-variant">or click to browse (JPG, PNG, BMP)</p>
-          <input type="file" id="file-input" accept="image/jpeg,image/png,image/bmp" multiple style="display:none" />
-        </div>
-        <div class="thumb-grid mt-3" id="thumb-preview"></div>
-        <p class="font-mono text-[0.6rem] text-outline mt-2" id="file-count">0 images selected</p>
-      </div>
+    <!-- MAIN CANVAS -->
+    <main class="main-content">
+      <!-- MAIN -->
+      <main class="main-content">
+        <div class="enroll-grid">
 
-      <!-- Camera Capture Modal -->
-      <div id="camera-modal" role="dialog" aria-modal="true" aria-label="Camera Capture">
-        <div class="cam-modal-box">
-
-          <!-- Modal header -->
-          <div class="cam-modal-header">
-            <div class="cam-modal-title">
-              <span class="material-symbols-outlined" style="font-size:16px">photo_camera</span>
-              Live Camera Capture
-              <span class="cam-rec-dot" id="cam-rec-dot"></span>
+          <!-- LEFT: Person List -->
+          <section class="enroll-left bg-surface-low p-4 flex flex-col border-r border-outline-variant/10">
+            <div class="flex items-center justify-between mb-4">
+              <h2 class="section-header">Registered Persons</h2>
+              <span class="font-mono text-[0.6rem] text-outline" id="person-count">--</span>
             </div>
-            <button class="cam-close-btn" id="cam-close-btn" title="Close (Esc)">
-              <span class="material-symbols-outlined" style="font-size:20px">close</span>
-            </button>
-          </div>
+            <div class="flex-1 overflow-y-auto space-y-1" id="person-list-root">
+              <div class="text-center py-8 text-outline text-[0.75rem]">Loading...</div>
+            </div>
+          </section>
 
-          <!-- Video feed -->
-          <div class="cam-video-wrap">
-            <video id="cam-video" autoplay playsinline muted></video>
-            <canvas id="cam-canvas"></canvas>
+          <!-- CENTER: Enrollment Form + Image Upload -->
+          <section class="enroll-center bg-surface p-6 flex flex-col gap-6">
+            <!-- Header -->
+            <header>
+              <span class="flex items-center gap-2 mb-1">
+                <span class="w-1 h-1 bg-primary inline-block"></span>
+                <span class="text-[0.6875rem] font-mono uppercase tracking-[0.2em] text-outline">Person
+                  Enrollment</span>
+              </span>
+              <h1 class="text-2xl font-headline font-bold text-white tracking-tight leading-none uppercase">Register New
+                Person</h1>
+            </header>
 
-            <!-- Idle / error overlay -->
-            <div class="cam-status-overlay" id="cam-status-overlay">
-              <span class="material-symbols-outlined cam-status-icon">videocam_off</span>
-              <span class="cam-status-text" id="cam-status-text">Initializing camera...</span>
+            <!-- Form -->
+            <div class="grid grid-cols-2 gap-4">
+              <div class="col-span-2">
+                <label class="stat-label mb-1 block">Full Name *</label>
+                <input type="text" id="enroll-name" class="enroll-input" placeholder="Enter person's full name"
+                  required />
+              </div>
+              <div>
+                <label class="stat-label mb-1 block">Category *</label>
+                <select id="enroll-category" class="enroll-input">
+                  <option value="criminal">Criminal</option>
+                  <option value="missing">Missing</option>
+                  <option value="employee">Employee</option>
+                  <option value="vip">VIP</option>
+                </select>
+              </div>
+              <div>
+                <label class="stat-label mb-1 block">Severity</label>
+                <select id="enroll-severity" class="enroll-input">
+                  <option value="">-- None --</option>
+                  <option value="1-low">Low</option>
+                  <option value="2-medium">Medium</option>
+                  <option value="3-high">High</option>
+                </select>
+              </div>
+              <div>
+                <label class="stat-label mb-1 block">Date of Birth</label>
+                <input type="text" id="enroll-dob" class="enroll-input" placeholder="DD-MM-YYYY" />
+              </div>
+              <div>
+                <label class="stat-label mb-1 block">Gender</label>
+                <select id="enroll-gender" class="enroll-input">
+                  <option value="">-- Select --</option>
+                  <option value="male">Male</option>
+                  <option value="female">Female</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+              <div>
+                <label class="stat-label mb-1 block">City</label>
+                <input type="text" id="enroll-city" class="enroll-input" placeholder="Last known city" />
+              </div>
+              <div>
+                <label class="stat-label mb-1 block">Country</label>
+                <input type="text" id="enroll-country" class="enroll-input" placeholder="Country" />
+              </div>
+              <div class="col-span-2">
+                <label class="stat-label mb-1 block">Notes</label>
+                <textarea id="enroll-notes" class="enroll-input" rows="2" placeholder="Additional notes..."></textarea>
+              </div>
             </div>
 
-            <!-- Countdown number -->
-            <div class="cam-countdown" id="cam-countdown"></div>
-            <!-- Flash -->
-            <div class="cam-flash" id="cam-flash"></div>
-          </div>
-
-          <!-- Camera controls -->
-          <div class="cam-controls">
-            <button class="cam-btn cam-btn-snap" id="cam-snap-btn" disabled>
-              <span class="material-symbols-outlined" style="font-size:16px">photo_camera</span>
-              Snap
-            </button>
-            <button class="cam-btn cam-btn-timer" id="cam-timer-btn" title="Toggle 3-second countdown before snap">
-              <span class="material-symbols-outlined" style="font-size:16px">timer_3</span>
-              Timer
-            </button>
-            <div class="cam-switch-wrap">
-              <button class="cam-btn" id="cam-switch-btn" title="Switch camera (if multiple)" disabled>
-                <span class="material-symbols-outlined" style="font-size:16px">flip_camera_android</span>
-                Switch
-              </button>
+            <!-- Image Upload Zone -->
+            <div>
+              <div class="flex items-center justify-between mb-2">
+                <label class="stat-label">Reference Images</label>
+                <button type="button" class="btn-open-camera" id="btn-open-camera" title="Capture from camera">
+                  <span class="material-symbols-outlined">photo_camera</span>
+                  Open Camera
+                </button>
+              </div>
+              <div class="drop-zone flex flex-col items-center justify-center p-8" id="drop-zone">
+                <span class="material-symbols-outlined text-outline-variant text-[36px] mb-2">cloud_upload</span>
+                <p class="font-mono text-[0.75rem] text-outline mb-1">Drag & drop images here</p>
+                <p class="font-mono text-[0.6rem] text-outline-variant">or click to browse (JPG, PNG, BMP)</p>
+                <input type="file" id="file-input" accept="image/jpeg,image/png,image/bmp" multiple
+                  style="display:none" />
+              </div>
+              <div class="thumb-grid mt-3" id="thumb-preview"></div>
+              <p class="font-mono text-[0.6rem] text-outline mt-2" id="file-count">0 images selected</p>
             </div>
-          </div>
 
-          <!-- Captured thumbnails strip -->
-          <div class="cam-captured-bar" id="cam-captured-bar">
-            <span class="cam-captured-empty" id="cam-captured-empty">No captures yet -- click Snap to capture a frame</span>
-          </div>
+            <!-- Camera Capture Modal -->
+            <div id="camera-modal" role="dialog" aria-modal="true" aria-label="Camera Capture">
+              <div class="cam-modal-box">
 
-          <!-- Footer -->
-          <div class="cam-footer">
-            <span class="cam-captured-count" id="cam-captured-count">0 captured</span>
-            <button class="cam-btn" id="cam-discard-btn" style="color:#ff6b6b;border-color:rgba(255,107,107,0.35)">
-              <span class="material-symbols-outlined" style="font-size:15px">delete_sweep</span>
-              Discard All
-            </button>
-            <button class="cam-btn cam-btn-snap" id="cam-add-btn" disabled>
-              <span class="material-symbols-outlined" style="font-size:15px">check</span>
-              Add to Upload
-            </button>
-          </div>
+                <!-- Modal header -->
+                <div class="cam-modal-header">
+                  <div class="cam-modal-title">
+                    <span class="material-symbols-outlined" style="font-size:16px">photo_camera</span>
+                    Live Camera Capture
+                    <span class="cam-rec-dot" id="cam-rec-dot"></span>
+                  </div>
+                  <button class="cam-close-btn" id="cam-close-btn" title="Close (Esc)">
+                    <span class="material-symbols-outlined" style="font-size:20px">close</span>
+                  </button>
+                </div>
+
+                <!-- Video feed -->
+                <div class="cam-video-wrap">
+                  <video id="cam-video" autoplay playsinline muted></video>
+                  <canvas id="cam-canvas"></canvas>
+
+                  <!-- Idle / error overlay -->
+                  <div class="cam-status-overlay" id="cam-status-overlay">
+                    <span class="material-symbols-outlined cam-status-icon">videocam_off</span>
+                    <span class="cam-status-text" id="cam-status-text">Initializing camera...</span>
+                  </div>
+
+                  <!-- Countdown number -->
+                  <div class="cam-countdown" id="cam-countdown"></div>
+                  <!-- Flash -->
+                  <div class="cam-flash" id="cam-flash"></div>
+                </div>
+
+                <!-- Camera controls -->
+                <div class="cam-controls">
+                  <button class="cam-btn cam-btn-snap" id="cam-snap-btn" disabled>
+                    <span class="material-symbols-outlined" style="font-size:16px">photo_camera</span>
+                    Snap
+                  </button>
+                  <button class="cam-btn cam-btn-timer" id="cam-timer-btn"
+                    title="Toggle 3-second countdown before snap">
+                    <span class="material-symbols-outlined" style="font-size:16px">timer_3</span>
+                    Timer
+                  </button>
+                  <div class="cam-switch-wrap">
+                    <button class="cam-btn" id="cam-switch-btn" title="Switch camera (if multiple)" disabled>
+                      <span class="material-symbols-outlined" style="font-size:16px">flip_camera_android</span>
+                      Switch
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Captured thumbnails strip -->
+                <div class="cam-captured-bar" id="cam-captured-bar">
+                  <span class="cam-captured-empty" id="cam-captured-empty">No captures yet -- click Snap to capture a
+                    frame</span>
+                </div>
+
+                <!-- Footer -->
+                <div class="cam-footer">
+                  <span class="cam-captured-count" id="cam-captured-count">0 captured</span>
+                  <button class="cam-btn" id="cam-discard-btn"
+                    style="color:#ff6b6b;border-color:rgba(255,107,107,0.35)">
+                    <span class="material-symbols-outlined" style="font-size:15px">delete_sweep</span>
+                    Discard All
+                  </button>
+                  <button class="cam-btn cam-btn-snap" id="cam-add-btn" disabled>
+                    <span class="material-symbols-outlined" style="font-size:15px">check</span>
+                    Add to Upload
+                  </button>
+                </div>
+
+              </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="flex items-center gap-3">
+              <button type="button" class="btn-primary" id="btn-create-upload" disabled>Create & Upload</button>
+              <button type="button" class="btn-secondary" id="btn-clear-form">Clear</button>
+              <span class="font-mono text-[0.7rem] text-outline ml-auto" id="enroll-status"></span>
+            </div>
+          </section>
+
+          <!-- RIGHT: Training & Status -->
+          <section class="enroll-right bg-surface-low p-4 flex flex-col gap-4 border-l border-outline-variant/10">
+            <!-- Training Panel -->
+            <div>
+              <h2 class="section-header mb-3">Embedding Training</h2>
+              <button type="button" class="btn-primary w-full mb-3" id="btn-train-rebuild">Rebuild All
+                Embeddings</button>
+              <div class="bg-surface-container p-3 space-y-2" id="train-status-panel">
+                <div class="flex justify-between">
+                  <span class="stat-label">Status</span>
+                  <span class="font-mono text-[0.7rem]" id="train-running">Idle</span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="stat-label">Last Run</span>
+                  <span class="font-mono text-[0.65rem] text-outline" id="train-last-run">—</span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="stat-label">Embeddings</span>
+                  <span class="font-mono text-[0.7rem] text-primary" id="train-embeddings">—</span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="stat-label">Active</span>
+                  <span class="font-mono text-[0.7rem] lc-active" id="train-active">—</span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="stat-label">Ready</span>
+                  <span class="font-mono text-[0.7rem] lc-ready" id="train-ready">—</span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="stat-label">Blocked</span>
+                  <span class="font-mono text-[0.7rem] lc-blocked" id="train-blocked">—</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Selected Person Detail -->
+            <div>
+              <h2 class="section-header mb-3">Person Detail</h2>
+              <div class="bg-surface-container p-3 space-y-2" id="person-detail-panel">
+                <p class="text-[0.75rem] text-outline text-center py-4">Select a person from the list</p>
+              </div>
+            </div>
+          </section>
 
         </div>
-      </div>
+      </main>
 
-      <!-- Action Buttons -->
-      <div class="flex items-center gap-3">
-        <button type="button" class="btn-primary" id="btn-create-upload" disabled>Create & Upload</button>
-        <button type="button" class="btn-secondary" id="btn-clear-form">Clear</button>
-        <span class="font-mono text-[0.7rem] text-outline ml-auto" id="enroll-status"></span>
-      </div>
-    </section>
+      <script src="../shared/trace_client.js"></script>
+      <script src="../shared/trace_render.js"></script>
+      <script src="../shared/sidenav.js"></script>
+      <script src="./enrollment.js"></script>
 
-    <!-- RIGHT: Training & Status -->
-    <section class="enroll-right bg-surface-low p-4 flex flex-col gap-4 border-l border-outline-variant/10">
-      <!-- Training Panel -->
-      <div>
-        <h2 class="section-header mb-3">Embedding Training</h2>
-        <button type="button" class="btn-primary w-full mb-3" id="btn-train-rebuild">Rebuild All Embeddings</button>
-        <div class="bg-surface-container p-3 space-y-2" id="train-status-panel">
-          <div class="flex justify-between">
-            <span class="stat-label">Status</span>
-            <span class="font-mono text-[0.7rem]" id="train-running">Idle</span>
-          </div>
-          <div class="flex justify-between">
-            <span class="stat-label">Last Run</span>
-            <span class="font-mono text-[0.65rem] text-outline" id="train-last-run">—</span>
-          </div>
-          <div class="flex justify-between">
-            <span class="stat-label">Embeddings</span>
-            <span class="font-mono text-[0.7rem] text-primary" id="train-embeddings">—</span>
-          </div>
-          <div class="flex justify-between">
-            <span class="stat-label">Active</span>
-            <span class="font-mono text-[0.7rem] lc-active" id="train-active">—</span>
-          </div>
-          <div class="flex justify-between">
-            <span class="stat-label">Ready</span>
-            <span class="font-mono text-[0.7rem] lc-ready" id="train-ready">—</span>
-          </div>
-          <div class="flex justify-between">
-            <span class="stat-label">Blocked</span>
-            <span class="font-mono text-[0.7rem] lc-blocked" id="train-blocked">—</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Selected Person Detail -->
-      <div>
-        <h2 class="section-header mb-3">Person Detail</h2>
-        <div class="bg-surface-container p-3 space-y-2" id="person-detail-panel">
-          <p class="text-[0.75rem] text-outline text-center py-4">Select a person from the list</p>
-        </div>
-      </div>
-    </section>
-
-  </div>
-</main>
-
-<script src="../shared/trace_client.js"></script>
-<script src="../shared/trace_render.js"></script>
-<script src="../shared/sidenav.js"></script>
-<script src="./enrollment.js"></script>
-
-</div><!-- /app-shell -->
+  </div><!-- /app-shell -->
 </body>
+
 </html>

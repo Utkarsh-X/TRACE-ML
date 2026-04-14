@@ -2482,7 +2482,7 @@ function formatDateTime(iso) {
 }
 ```
 
-This returns `2026-04-06 14:21:30` format which is cleaner. But the screenshot might be using an older cached version. The format is actually fine — `YYYY-MM-DD HH:MM:SS`. The screenshot from the subagent might have been using the old code before the fix was applied.
+This returns `2026-04-06 14:21:30` format which is cleaner. But the screenshot might be using an older cached version. The format is actually fine — `DD-MM-YYYY HH:MM:SS`. The screenshot from the subagent might have been using the old code before the fix was applied.
 
 Now let me check the Entities page — the "Last Updated" shows raw ISO too. Let me fix the entities controller:
 
@@ -2508,7 +2508,7 @@ Good progress visible in screenshots:
 
 The two remaining issues:
 1. **Footer stats `--`** — The `ERR_INSUFFICIENT_RESOURCES` from cumulative polling is still happening because the old browser tab kept running before the interval was reduced. Fresh load should be fine.
-2. **Incidents dates still raw ISO** — The `entity.created_at` field coming from the backend is already formatted as ISO, and `formatDateTime` returns `"YYYY-MM-DD HH:MM:SS"`. The incidents page JS uses `formatDateTime` but the HTML element rendering happens OUTSIDE my controller — those date fields in the entity profile sidebar are rendered by the controller's `renderEntityProfile()` function. Let me check what `entity.created_at` actually contains — it might be returning `null` and the raw value is coming from static HTML:
+2. **Incidents dates still raw ISO** — The `entity.created_at` field coming from the backend is already formatted as ISO, and `formatDateTime` returns `"DD-MM-YYYY HH:MM:SS"`. The incidents page JS uses `formatDateTime` but the HTML element rendering happens OUTSIDE my controller — those date fields in the entity profile sidebar are rendered by the controller's `renderEntityProfile()` function. Let me check what `entity.created_at` actually contains — it might be returning `null` and the raw value is coming from static HTML:
 
 *Viewed [index.html](file:///d:/github%20FORK/TRACE-ML/src/frontend/incidents/index.html) *
 

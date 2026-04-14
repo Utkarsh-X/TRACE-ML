@@ -76,9 +76,9 @@
   function setTZ(tz) {
     var key = String(tz).toUpperCase();
     if (!(key in TZ_OFFSETS)) return;
-    try { localStorage.setItem("trace_tz", key); } catch (e) {}
+    try { localStorage.setItem("trace_tz", key); } catch (e) { }
     // Dispatch a custom event so any page can refresh its clocks.
-    try { window.dispatchEvent(new CustomEvent("trace:tz-change", { detail: key })); } catch (e) {}
+    try { window.dispatchEvent(new CustomEvent("trace:tz-change", { detail: key })); } catch (e) { }
   }
 
   /** Apply offset minutes to a Date and return the shifted Date. */
@@ -103,7 +103,7 @@
   }
 
   /**
-   * Format ISO timestamp to YYYY-MM-DD HH:MM:SS in the selected timezone.
+   * Format ISO timestamp to DD-MM-YYYY HH:MM:SS in the selected timezone.
    * @param {string} iso
    * @returns {string}
    */

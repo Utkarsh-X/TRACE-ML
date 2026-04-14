@@ -190,7 +190,7 @@ SOLUTION:
   1. Date input field with HTML5 picker
   2. Server-side validation (not future, not extreme past)
   3. Calculate age for optional display
-  4. Store in ISO 8601 format (YYYY-MM-DD)
+  4. Store in ISO 8601 format (DD-MM-YYYY)
 
 CONSTRAINTS:
   - Age >= 0 (not born in future)
