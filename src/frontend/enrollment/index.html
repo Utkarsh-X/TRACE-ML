@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html class="dark" lang="en">
 <head>
   <meta charset="utf-8" />
@@ -126,6 +126,278 @@
     .lc-ready { color: #c6c6c6; }
     .lc-draft { color: #888; }
     .lc-blocked { color: #757575; }
+
+    /* ── Camera Modal ─────────────────────────────────────── */
+    #camera-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0,0,0,0.82);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      animation: fadeIn 0.18s ease;
+    }
+    #camera-modal.open { display: flex; }
+    @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
+
+    .cam-modal-box {
+      width: min(740px, 96vw);
+      background: #141414;
+      border: 1px solid rgba(255,255,255,0.08);
+      box-shadow: 0 24px 72px rgba(0,0,0,0.9), 0 0 0 1px rgba(0,255,200,0.06);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .cam-modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 18px 12px;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      background: rgba(255,255,255,0.02);
+    }
+    .cam-modal-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-family: inherit;
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: #fff;
+    }
+    .cam-rec-dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: #ff3b3b;
+      box-shadow: 0 0 6px #ff3b3b;
+      animation: recPulse 1.2s ease-in-out infinite;
+      display: none;
+    }
+    .cam-rec-dot.active { display: inline-block; }
+    @keyframes recPulse {
+      0%,100% { opacity:1; } 50% { opacity:0.3; }
+    }
+    .cam-close-btn {
+      background: none;
+      border: none;
+      color: rgba(255,255,255,0.45);
+      cursor: pointer;
+      padding: 4px;
+      display: flex;
+      align-items: center;
+      transition: color 0.15s;
+    }
+    .cam-close-btn:hover { color: #fff; }
+
+    .cam-video-wrap {
+      position: relative;
+      background: #000;
+      width: 100%;
+      aspect-ratio: 16/9;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    #cam-video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transform: scaleX(-1); /* mirror effect */
+    }
+    #cam-canvas { display: none; }
+
+    .cam-status-overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+      gap: 10px;
+    }
+    .cam-status-icon {
+      font-size: 48px !important;
+      color: rgba(255,255,255,0.25);
+    }
+    .cam-status-text {
+      font-size: 0.75rem;
+      color: rgba(255,255,255,0.35);
+      font-family: inherit;
+    }
+
+    /* Countdown ring */
+    .cam-countdown {
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%,-50%);
+      font-size: 5rem;
+      font-weight: 900;
+      color: var(--md-primary, #00ffc8);
+      text-shadow: 0 0 20px var(--md-primary, #00ffc8);
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.2s;
+      font-family: inherit;
+    }
+    .cam-countdown.show { opacity: 1; }
+
+    /* Flash effect */
+    .cam-flash {
+      position: absolute;
+      inset: 0;
+      background: #fff;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.05s;
+    }
+    .cam-flash.bang { opacity: 0.85; transition: opacity 0.05s; }
+    .cam-flash.fade { opacity: 0; transition: opacity 0.35s; }
+
+    .cam-controls {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 18px;
+      border-top: 1px solid rgba(255,255,255,0.06);
+      background: rgba(0,0,0,0.4);
+    }
+
+    .cam-btn {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(255,255,255,0.07);
+      border: 1px solid rgba(255,255,255,0.12);
+      color: #fff;
+      padding: 8px 14px;
+      font-family: inherit;
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .cam-btn:hover { background: rgba(255,255,255,0.13); border-color: rgba(255,255,255,0.25); }
+    .cam-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+    .cam-btn-snap {
+      background: var(--md-primary, #00ffc8);
+      border-color: var(--md-primary, #00ffc8);
+      color: #000;
+      flex-shrink: 0;
+    }
+    .cam-btn-snap:hover { opacity: 0.88; background: var(--md-primary, #00ffc8); }
+
+    .cam-btn-timer {
+      position: relative;
+    }
+    .cam-btn-timer.active {
+      border-color: #ffd740;
+      color: #ffd740;
+    }
+
+    .cam-switch-wrap { margin-left: auto; display: flex; gap: 8px; align-items: center; }
+
+    .cam-captured-bar {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 18px;
+      background: rgba(255,255,255,0.02);
+      border-top: 1px solid rgba(255,255,255,0.05);
+      overflow-x: auto;
+      min-height: 60px;
+    }
+    .cam-captured-bar::-webkit-scrollbar { height: 4px; }
+    .cam-captured-bar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); }
+
+    .cam-captured-thumb {
+      position: relative;
+      flex-shrink: 0;
+      width: 52px; height: 52px;
+      border: 1px solid rgba(255,255,255,0.12);
+      overflow: hidden;
+      cursor: pointer;
+      transition: border-color 0.15s;
+    }
+    .cam-captured-thumb img {
+      width: 100%; height: 100%;
+      object-fit: cover;
+      display: block;
+      transform: scaleX(-1);
+    }
+    .cam-captured-thumb:hover { border-color: #ff4444; }
+    .cam-captured-thumb .cam-remove-badge {
+      position: absolute;
+      inset: 0;
+      background: rgba(255,0,0,0.55);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      color: #fff;
+    }
+    .cam-captured-thumb:hover .cam-remove-badge { display: flex; }
+
+    .cam-captured-empty {
+      font-size: 0.65rem;
+      color: rgba(255,255,255,0.2);
+      font-family: inherit;
+      text-align: center;
+      width: 100%;
+    }
+
+    .cam-footer {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 18px;
+      border-top: 1px solid rgba(255,255,255,0.06);
+      background: rgba(0,0,0,0.3);
+    }
+    .cam-captured-count {
+      font-size: 0.65rem;
+      font-family: inherit;
+      color: rgba(255,255,255,0.4);
+      margin-right: auto;
+    }
+
+    /* btn-cam-open: the trigger button */
+    .btn-open-camera {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: transparent;
+      border: 1px solid rgba(255,255,255,0.18);
+      color: rgba(255,255,255,0.75);
+      padding: 5px 12px;
+      font-family: inherit;
+      font-size: 0.7rem;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: border-color 0.15s, color 0.15s, background 0.15s;
+    }
+    .btn-open-camera:hover {
+      border-color: var(--md-primary, #00ffc8);
+      color: var(--md-primary, #00ffc8);
+      background: rgba(0,255,200,0.04);
+    }
+    .btn-open-camera .material-symbols-outlined {
+      font-size: 16px !important;
+    }
   </style>
 </head>
 
@@ -280,7 +552,13 @@
 
       <!-- Image Upload Zone -->
       <div>
-        <label class="stat-label mb-2 block">Reference Images</label>
+        <div class="flex items-center justify-between mb-2">
+          <label class="stat-label">Reference Images</label>
+          <button type="button" class="btn-open-camera" id="btn-open-camera" title="Capture from camera">
+            <span class="material-symbols-outlined">photo_camera</span>
+            Open Camera
+          </button>
+        </div>
         <div class="drop-zone flex flex-col items-center justify-center p-8" id="drop-zone">
           <span class="material-symbols-outlined text-outline-variant text-[36px] mb-2">cloud_upload</span>
           <p class="font-mono text-[0.75rem] text-outline mb-1">Drag & drop images here</p>
@@ -289,6 +567,78 @@
         </div>
         <div class="thumb-grid mt-3" id="thumb-preview"></div>
         <p class="font-mono text-[0.6rem] text-outline mt-2" id="file-count">0 images selected</p>
+      </div>
+
+      <!-- Camera Capture Modal -->
+      <div id="camera-modal" role="dialog" aria-modal="true" aria-label="Camera Capture">
+        <div class="cam-modal-box">
+
+          <!-- Modal header -->
+          <div class="cam-modal-header">
+            <div class="cam-modal-title">
+              <span class="material-symbols-outlined" style="font-size:16px">photo_camera</span>
+              Live Camera Capture
+              <span class="cam-rec-dot" id="cam-rec-dot"></span>
+            </div>
+            <button class="cam-close-btn" id="cam-close-btn" title="Close (Esc)">
+              <span class="material-symbols-outlined" style="font-size:20px">close</span>
+            </button>
+          </div>
+
+          <!-- Video feed -->
+          <div class="cam-video-wrap">
+            <video id="cam-video" autoplay playsinline muted></video>
+            <canvas id="cam-canvas"></canvas>
+
+            <!-- Idle / error overlay -->
+            <div class="cam-status-overlay" id="cam-status-overlay">
+              <span class="material-symbols-outlined cam-status-icon">videocam_off</span>
+              <span class="cam-status-text" id="cam-status-text">Initializing camera...</span>
+            </div>
+
+            <!-- Countdown number -->
+            <div class="cam-countdown" id="cam-countdown"></div>
+            <!-- Flash -->
+            <div class="cam-flash" id="cam-flash"></div>
+          </div>
+
+          <!-- Camera controls -->
+          <div class="cam-controls">
+            <button class="cam-btn cam-btn-snap" id="cam-snap-btn" disabled>
+              <span class="material-symbols-outlined" style="font-size:16px">photo_camera</span>
+              Snap
+            </button>
+            <button class="cam-btn cam-btn-timer" id="cam-timer-btn" title="Toggle 3-second countdown before snap">
+              <span class="material-symbols-outlined" style="font-size:16px">timer_3</span>
+              Timer
+            </button>
+            <div class="cam-switch-wrap">
+              <button class="cam-btn" id="cam-switch-btn" title="Switch camera (if multiple)" disabled>
+                <span class="material-symbols-outlined" style="font-size:16px">flip_camera_android</span>
+                Switch
+              </button>
+            </div>
+          </div>
+
+          <!-- Captured thumbnails strip -->
+          <div class="cam-captured-bar" id="cam-captured-bar">
+            <span class="cam-captured-empty" id="cam-captured-empty">No captures yet -- click Snap to capture a frame</span>
+          </div>
+
+          <!-- Footer -->
+          <div class="cam-footer">
+            <span class="cam-captured-count" id="cam-captured-count">0 captured</span>
+            <button class="cam-btn" id="cam-discard-btn" style="color:#ff6b6b;border-color:rgba(255,107,107,0.35)">
+              <span class="material-symbols-outlined" style="font-size:15px">delete_sweep</span>
+              Discard All
+            </button>
+            <button class="cam-btn cam-btn-snap" id="cam-add-btn" disabled>
+              <span class="material-symbols-outlined" style="font-size:15px">check</span>
+              Add to Upload
+            </button>
+          </div>
+
+        </div>
       </div>
 
       <!-- Action Buttons -->

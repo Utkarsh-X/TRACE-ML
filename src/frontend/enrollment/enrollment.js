@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Enrollment Page Controller
  *
  * - Lists registered persons (left sidebar)
@@ -289,6 +289,281 @@
     });
   }
 
+
+  /* --- Camera Capture Controller ---------------------------------------- */
+
+  var _camStream = null;
+  var _camDevices = [];
+  var _camDeviceIndex = 0;
+  var _camCaptures = []; // Array of {blob, dataUrl}
+  var _camTimerEnabled = false;
+  var _camCountdownTimer = null;
+
+  function openCameraModal() {
+    var modal = document.getElementById("camera-modal");
+    if (!modal) return;
+    modal.classList.add("open");
+    _camCaptures = [];
+    renderCapturedBar();
+    startCameraStream();
+  }
+
+  function closeCameraModal() {
+    var modal = document.getElementById("camera-modal");
+    if (!modal) return;
+    modal.classList.remove("open");
+    stopCameraStream();
+    if (_camCountdownTimer) { clearTimeout(_camCountdownTimer); _camCountdownTimer = null; }
+    var cd = document.getElementById("cam-countdown");
+    if (cd) { cd.textContent = ""; cd.classList.remove("show"); }
+    var snapBtn = document.getElementById("cam-snap-btn");
+    if (snapBtn) snapBtn.disabled = false;
+  }
+
+  function stopCameraStream() {
+    if (_camStream) {
+      _camStream.getTracks().forEach(function (t) { t.stop(); });
+      _camStream = null;
+    }
+    var video = document.getElementById("cam-video");
+    if (video) { video.srcObject = null; }
+    var recDot = document.getElementById("cam-rec-dot");
+    if (recDot) recDot.classList.remove("active");
+    setCamOverlay(true, "videocam_off", "Camera stopped");
+  }
+
+  function setCamOverlay(visible, icon, text) {
+    var overlay = document.getElementById("cam-status-overlay");
+    var textEl = document.getElementById("cam-status-text");
+    if (!overlay) return;
+    overlay.style.display = visible ? "flex" : "none";
+    if (icon) {
+      var iconEl = overlay.querySelector(".cam-status-icon");
+      if (iconEl) iconEl.textContent = icon;
+    }
+    if (text && textEl) textEl.textContent = text;
+  }
+
+  function enumerateCameraDevices() {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) {
+      _camDevices = [];
+      return Promise.resolve([]);
+    }
+    return navigator.mediaDevices.enumerateDevices().then(function (devices) {
+      _camDevices = devices.filter(function (d) { return d.kind === "videoinput"; });
+      var switchBtn = document.getElementById("cam-switch-btn");
+      if (switchBtn) switchBtn.disabled = _camDevices.length < 2;
+      return _camDevices;
+    });
+  }
+
+  function startCameraStream(deviceId) {
+    setCamOverlay(true, "hourglass_top", "Requesting camera access...");
+    var snapBtn = document.getElementById("cam-snap-btn");
+    if (snapBtn) snapBtn.disabled = true;
+    if (_camStream) { stopCameraStream(); }
+
+    var constraints = {
+      video: deviceId
+        ? { deviceId: { exact: deviceId }, width: { ideal: 1280 }, height: { ideal: 720 } }
+        : { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: "user" },
+      audio: false
+    };
+
+    navigator.mediaDevices.getUserMedia(constraints)
+      .then(function (stream) {
+        _camStream = stream;
+        var video = document.getElementById("cam-video");
+        if (video) {
+          video.srcObject = stream;
+          video.onloadedmetadata = function () {
+            video.play();
+            setCamOverlay(false);
+            if (snapBtn) snapBtn.disabled = false;
+            var recDot = document.getElementById("cam-rec-dot");
+            if (recDot) recDot.classList.add("active");
+          };
+        }
+        enumerateCameraDevices();
+      })
+      .catch(function (err) {
+        console.warn("Camera access error:", err);
+        var msg = "Camera access denied";
+        if (err && err.name === "NotFoundError") msg = "No camera found";
+        if (err && err.name === "NotAllowedError") msg = "Permission denied - allow camera in browser";
+        setCamOverlay(true, "videocam_off", msg);
+        if (snapBtn) snapBtn.disabled = true;
+      });
+  }
+
+  function switchCamera() {
+    if (_camDevices.length < 2) return;
+    _camDeviceIndex = (_camDeviceIndex + 1) % _camDevices.length;
+    startCameraStream(_camDevices[_camDeviceIndex].deviceId);
+  }
+
+  function doSnapNow() {
+    var video = document.getElementById("cam-video");
+    var canvas = document.getElementById("cam-canvas");
+    if (!video || !canvas || !_camStream) return;
+
+    canvas.width = video.videoWidth || 1280;
+    canvas.height = video.videoHeight || 720;
+    var ctx = canvas.getContext("2d");
+
+    // Draw mirrored to match the CSS mirror on the video
+    ctx.save();
+    ctx.scale(-1, 1);
+    ctx.drawImage(video, -canvas.width, 0, canvas.width, canvas.height);
+    ctx.restore();
+
+    triggerFlash();
+
+    canvas.toBlob(function (blob) {
+      if (!blob) return;
+      var reader = new FileReader();
+      reader.onload = function (e) {
+        _camCaptures.push({ blob: blob, dataUrl: e.target.result });
+        renderCapturedBar();
+      };
+      reader.readAsDataURL(blob);
+    }, "image/jpeg", 0.92);
+  }
+
+  function triggerFlash() {
+    var flash = document.getElementById("cam-flash");
+    if (!flash) return;
+    flash.classList.remove("fade");
+    flash.classList.add("bang");
+    setTimeout(function () {
+      flash.classList.remove("bang");
+      flash.classList.add("fade");
+    }, 80);
+    setTimeout(function () { flash.classList.remove("fade"); }, 500);
+  }
+
+  function snapWithCountdown() {
+    var snapBtn = document.getElementById("cam-snap-btn");
+    var cd = document.getElementById("cam-countdown");
+    if (!cd) { doSnapNow(); return; }
+    if (snapBtn) snapBtn.disabled = true;
+
+    var count = 3;
+    cd.textContent = String(count);
+    cd.classList.add("show");
+
+    function tick() {
+      count--;
+      if (count > 0) {
+        cd.textContent = String(count);
+        _camCountdownTimer = setTimeout(tick, 1000);
+      } else {
+        cd.textContent = "";
+        cd.classList.remove("show");
+        _camCountdownTimer = null;
+        doSnapNow();
+        if (snapBtn) snapBtn.disabled = false;
+      }
+    }
+    _camCountdownTimer = setTimeout(tick, 1000);
+  }
+
+  function handleSnap() {
+    if (!_camStream) return;
+    if (_camTimerEnabled) { snapWithCountdown(); } else { doSnapNow(); }
+  }
+
+  function renderCapturedBar() {
+    var bar = document.getElementById("cam-captured-bar");
+    var emptyEl = document.getElementById("cam-captured-empty");
+    var countEl = document.getElementById("cam-captured-count");
+    var addBtn = document.getElementById("cam-add-btn");
+    if (!bar) return;
+
+    if (countEl) countEl.textContent = _camCaptures.length + " captured";
+    if (addBtn) addBtn.disabled = _camCaptures.length === 0;
+
+    var existing = bar.querySelectorAll(".cam-captured-thumb");
+    existing.forEach(function (el) { el.remove(); });
+
+    if (_camCaptures.length === 0) {
+      if (emptyEl) emptyEl.style.display = "";
+      return;
+    }
+    if (emptyEl) emptyEl.style.display = "none";
+
+    _camCaptures.forEach(function (cap, idx) {
+      var thumb = document.createElement("div");
+      thumb.className = "cam-captured-thumb";
+      thumb.title = "Click to remove capture";
+      thumb.innerHTML = '<img src="' + cap.dataUrl + '" alt="Capture ' + (idx + 1) + '" />'
+        + '<div class="cam-remove-badge"><span class="material-symbols-outlined" style="font-size:20px">delete</span></div>';
+      thumb.addEventListener("click", function () {
+        _camCaptures.splice(idx, 1);
+        renderCapturedBar();
+      });
+      bar.appendChild(thumb);
+    });
+  }
+
+  function addCapturesToUpload() {
+    if (_camCaptures.length === 0) return;
+    _camCaptures.forEach(function (cap, idx) {
+      var filename = "camera_" + Date.now() + "_" + idx + ".jpg";
+      var file = new File([cap.blob], filename, { type: "image/jpeg" });
+      _selectedFiles.push(file);
+    });
+    renderThumbnails();
+    updateCreateButton();
+    closeCameraModal();
+  }
+
+  function initCameraModal() {
+    var openBtn = document.getElementById("btn-open-camera");
+    if (openBtn) openBtn.addEventListener("click", openCameraModal);
+
+    var closeBtn = document.getElementById("cam-close-btn");
+    if (closeBtn) closeBtn.addEventListener("click", closeCameraModal);
+
+    var modal = document.getElementById("camera-modal");
+    if (modal) {
+      modal.addEventListener("click", function (e) {
+        if (e.target === modal) closeCameraModal();
+      });
+    }
+
+    var snapBtn = document.getElementById("cam-snap-btn");
+    if (snapBtn) snapBtn.addEventListener("click", handleSnap);
+
+    var timerBtn = document.getElementById("cam-timer-btn");
+    if (timerBtn) {
+      timerBtn.addEventListener("click", function () {
+        _camTimerEnabled = !_camTimerEnabled;
+        timerBtn.classList.toggle("active", _camTimerEnabled);
+      });
+    }
+
+    var switchBtn = document.getElementById("cam-switch-btn");
+    if (switchBtn) switchBtn.addEventListener("click", switchCamera);
+
+    var discardBtn = document.getElementById("cam-discard-btn");
+    if (discardBtn) {
+      discardBtn.addEventListener("click", function () {
+        _camCaptures = [];
+        renderCapturedBar();
+      });
+    }
+
+    var addBtn = document.getElementById("cam-add-btn");
+    if (addBtn) addBtn.addEventListener("click", addCapturesToUpload);
+
+    document.addEventListener("keydown", function (e) {
+      var m = document.getElementById("camera-modal");
+      if (e.key === "Escape" && m && m.classList.contains("open")) {
+        closeCameraModal();
+      }
+    });
+  }
   /* ─── Init ─── */
 
   function init() {
@@ -298,6 +573,7 @@
     }
 
     initDropZone();
+    initCameraModal();
 
     // Wire form events
     var nameInput = $("enroll-name");
