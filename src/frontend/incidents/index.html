@@ -76,10 +76,25 @@
     /* ── 2-column content area ────────────────── */
     .inc-body {
       display: grid;
-      grid-template-columns: 260px 1fr;
+      grid-template-columns: 320px 1fr;
       min-height: 0;
       flex: 1;
       overflow: hidden;
+      gap: 1.25rem;
+      padding: 1.25rem 1.5rem 1.5rem;
+    }
+
+    /* ── Content Panels ─────────────────────────── */
+    .inc-panel {
+      background: var(--surface-container);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 2px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .inc-panel--timeline {
+      background: var(--surface);
     }
 
     /* ── Timeline entry cards ───────────────────────── */
@@ -223,6 +238,17 @@
 
 <!-- MAIN CANVAS -->
 <main class="main-content flex flex-col overflow-hidden">
+  <!-- Page Header -->
+  <header class="p-6 pb-4 border-b border-outline-variant/5 flex-shrink-0 bg-background">
+    <div>
+      <div class="flex items-center gap-2 mb-1">
+        <span class="w-1 h-1 bg-primary inline-block"></span>
+        <span class="font-mono text-[0.6875rem] uppercase tracking-[0.2em] text-outline">Incident Management</span>
+      </div>
+      <h1 class="text-3xl font-headline font-bold text-white tracking-tight uppercase">Incident Manager</h1>
+    </div>
+  </header>
+
   <!-- ═══ CARD STRIP with arrow nav ═══ -->
   <div class="strip-wrapper">
     <!-- Left arrow -->
