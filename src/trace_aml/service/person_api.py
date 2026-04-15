@@ -4,16 +4,29 @@ Endpoints for person CRUD, image upload, and embedding training —
 the service-layer equivalent of CLI ``person add``, ``person capture``,
 ``train rebuild``, etc.
 
+Auto-enrollment
+---------------
+When images are uploaded via ``POST /api/v1/persons/{id}/images``, the
+endpoint automatically queues the person for incremental embedding
+computation.  A single background ``EnrollmentWorker`` thread processes the
+queue and calls ``enroll_person()`` for just that person — all other
+persons' embeddings are left completely untouched.
+
+This eliminates the need for the operator to manually press "Rebuild
+Embeddings" after every registration.
+
 Note: ``from __future__ import annotations`` is intentionally omitted —
 FastAPI needs real type objects at runtime for parameter resolution.
 """
 
+import queue
 import shutil
 import threading
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Annotated, Any, Optional
 
+from loguru import logger
 from pydantic import BaseModel, Field
 
 from trace_aml.core.config import Settings
@@ -23,7 +36,7 @@ from trace_aml.pipeline.collect import person_image_dir
 from trace_aml.store.vector_store import VectorStore
 
 
-# ── Request / response models ──────────────────────────────────────
+# ── Request / response models ──────────────────────────────────────────
 
 class PersonCreatePayload(BaseModel):
     name: str
@@ -50,7 +63,7 @@ class TrainRebuildPayload(BaseModel):
     scope: str = Field(default="all", pattern=r"^(all|new_only|person_id=.+)$")
 
 
-# ── Shared training state ─────────────────────────────────────────
+# ── Shared full-rebuild training state ────────────────────────────────
 
 _train_lock = threading.Lock()
 _train_status: dict[str, Any] = {
@@ -61,6 +74,106 @@ _train_status: dict[str, Any] = {
 }
 
 
+# ── Per-person incremental enrollment worker ──────────────────────────
+#
+# A single background thread drains a queue of person_ids that need
+# (re-)enrollment.  Loading ArcFace once and reusing it across all
+# jobs avoids the expensive ONNX model initialisation overhead.
+
+_enrollment_queue: queue.Queue[str] = queue.Queue(maxsize=2_000)
+_enrollment_lock = threading.Lock()
+_enrollment_worker_started = False
+_enrollment_per_person: dict[str, str] = {}  # pid → "queued"|"processing"|"done"|"error:…"
+_enrollment_recognizer: Any = None  # lazily-created ArcFaceRecognizer, reused
+
+
+def _start_enrollment_worker(settings: "Settings", store: "VectorStore") -> None:
+    """Start the background enrollment thread (idempotent — safe to call multiple times)."""
+    global _enrollment_worker_started
+
+    with _enrollment_lock:
+        if _enrollment_worker_started:
+            return
+        _enrollment_worker_started = True
+
+    def _worker() -> None:
+        global _enrollment_recognizer
+
+        while True:
+            try:
+                person_id = _enrollment_queue.get(timeout=1.0)
+            except queue.Empty:
+                continue
+
+            with _enrollment_lock:
+                _enrollment_per_person[person_id] = "processing"
+
+            try:
+                # Lazily initialise the recognizer once and reuse across jobs.
+                if _enrollment_recognizer is None:
+                    from trace_aml.liveness.base import MiniFASNetStub
+                    from trace_aml.recognizers.arcface import ArcFaceRecognizer
+
+                    _enrollment_recognizer = ArcFaceRecognizer(settings)
+                    if settings.liveness.enabled:
+                        _enrollment_recognizer.set_liveness_checker(
+                            MiniFASNetStub(
+                                model_path=settings.liveness.model_path,
+                                threshold=settings.liveness.threshold,
+                            )
+                        )
+
+                from trace_aml.pipeline.train import enroll_person
+
+                created, skipped = enroll_person(
+                    person_id=person_id,
+                    settings=settings,
+                    store=store,
+                    recognizer=_enrollment_recognizer,
+                )
+                with _enrollment_lock:
+                    _enrollment_per_person[person_id] = "done"
+                logger.info(
+                    "Auto-enrollment complete: {} ({} embeddings, {} skipped)",
+                    person_id,
+                    created,
+                    skipped,
+                )
+
+            except Exception as exc:
+                logger.error("Auto-enrollment failed for {}: {}", person_id, exc)
+                with _enrollment_lock:
+                    _enrollment_per_person[person_id] = f"error: {exc}"
+            finally:
+                _enrollment_queue.task_done()
+
+    t = threading.Thread(
+        target=_worker,
+        name="trace-aml-enrollment-worker",
+        daemon=True,
+    )
+    t.start()
+
+
+def _queue_enrollment(person_id: str) -> bool:
+    """Queue a person for incremental enrollment.  Returns False if already queued."""
+    with _enrollment_lock:
+        current = _enrollment_per_person.get(person_id, "")
+        if current in ("queued", "processing"):
+            return False  # already in flight
+        _enrollment_per_person[person_id] = "queued"
+    try:
+        _enrollment_queue.put_nowait(person_id)
+        return True
+    except queue.Full:
+        with _enrollment_lock:
+            _enrollment_per_person[person_id] = "error: queue full"
+        logger.warning("Enrollment queue full — could not enqueue {}", person_id)
+        return False
+
+
+# ── Router factory ─────────────────────────────────────────────────────
+
 def create_person_router(settings: "Settings", store: "VectorStore") -> Any:
     """Build and return a FastAPI APIRouter with all person management routes."""
 
@@ -69,9 +182,13 @@ def create_person_router(settings: "Settings", store: "VectorStore") -> Any:
     except ImportError as exc:
         raise RuntimeError("Person API needs FastAPI: pip install fastapi") from exc
 
+    # Start the enrollment worker the first time the router is created
+    # (i.e., at service startup).
+    _start_enrollment_worker(settings, store)
+
     router = APIRouter(prefix="/api/v1", tags=["persons"])
 
-    # ── GET /api/v1/persons ────────────────────────────────────────
+    # ── GET /api/v1/persons ────────────────────────────────────────────
 
     @router.get("/persons")
     def list_persons():
@@ -101,7 +218,7 @@ def create_person_router(settings: "Settings", store: "VectorStore") -> Any:
             })
         return result
 
-    # ── POST /api/v1/persons ───────────────────────────────────────
+    # ── POST /api/v1/persons ───────────────────────────────────────────
 
     @router.post("/persons", status_code=201)
     def create_person(payload: PersonCreatePayload) -> dict[str, Any]:
@@ -135,7 +252,7 @@ def create_person_router(settings: "Settings", store: "VectorStore") -> Any:
             "created_at": now,
         }
 
-    # ── GET /api/v1/persons/{person_id} ────────────────────────────
+    # ── GET /api/v1/persons/{person_id} ───────────────────────────────
 
     @router.get("/persons/{person_id}")
     def get_person(person_id: str) -> dict[str, Any]:
@@ -167,7 +284,7 @@ def create_person_router(settings: "Settings", store: "VectorStore") -> Any:
             "updated_at": p.get("updated_at", ""),
         }
 
-    # ── PATCH /api/v1/persons/{person_id} ──────────────────────────
+    # ── PATCH /api/v1/persons/{person_id} ─────────────────────────────
 
     @router.patch("/persons/{person_id}")
     def update_person(person_id: str, payload: PersonUpdatePayload) -> dict[str, Any]:
@@ -209,7 +326,7 @@ def create_person_router(settings: "Settings", store: "VectorStore") -> Any:
         )
         return {"person_id": person_id, "status": "updated"}
 
-    # ── DELETE /api/v1/persons/{person_id} ─────────────────────────
+    # ── DELETE /api/v1/persons/{person_id} ────────────────────────────
 
     @router.delete("/persons/{person_id}")
     def delete_person(person_id: str) -> dict[str, Any]:
@@ -223,14 +340,20 @@ def create_person_router(settings: "Settings", store: "VectorStore") -> Any:
             shutil.rmtree(img_dir, ignore_errors=True)
         return {"person_id": person_id, "status": "deleted"}
 
-    # ── POST /api/v1/persons/{person_id}/images ────────────────────
+    # ── POST /api/v1/persons/{person_id}/images ────────────────────────
 
     @router.post("/persons/{person_id}/images")
     async def upload_images(
         person_id: str,
         files: Annotated[list[UploadFile], File(description="Image files to upload")],
     ) -> dict[str, Any]:
-        """Upload one or more images for a person (multipart/form-data)."""
+        """Upload one or more images for a person.
+
+        After saving the files, the person is automatically queued for
+        incremental embedding computation.  The response returns immediately;
+        the embedding job runs in the background.  Poll
+        ``GET /api/v1/enroll/status/{person_id}`` to track completion.
+        """
         current = store.get_person(person_id)
         if not current:
             raise HTTPException(status_code=404, detail=f"Person not found: {person_id}")
@@ -253,8 +376,8 @@ def create_person_router(settings: "Settings", store: "VectorStore") -> Any:
             out_path.write_bytes(content)
             saved.append(str(out_path))
 
-        # Update person state to indicate images exist
         if saved:
+            # Update state to show images arrived (embedding still pending)
             store.set_person_state(
                 person_id=person_id,
                 lifecycle_state=PersonLifecycleStatus.draft,
@@ -264,25 +387,75 @@ def create_person_router(settings: "Settings", store: "VectorStore") -> Any:
                 valid_images=int(current.get("valid_images", 0)),
                 total_images=existing_count + len(saved),
             )
+            # ── AUTO-ENROLL ────────────────────────────────────────────
+            # Kick off incremental embedding for just this person.
+            # No other persons are touched.  The job runs in the background
+            # EnrollmentWorker thread and completes in a few seconds.
+            queued = _queue_enrollment(person_id)
+            enrollment_note = (
+                "enrollment queued" if queued else "enrollment already in progress"
+            )
+            # ──────────────────────────────────────────────────────────
+        else:
+            enrollment_note = "no images saved"
 
         return {
             "person_id": person_id,
             "uploaded": len(saved),
             "total_images": existing_count + len(saved),
+            "enrollment": enrollment_note,
         }
 
-    # ── POST /api/v1/train/rebuild ─────────────────────────────────
+    # ── GET /api/v1/enroll/status ──────────────────────────────────────
+
+    @router.get("/enroll/status")
+    def enrollment_status_all() -> dict[str, Any]:
+        """Return per-person enrollment status for all persons that
+        have been processed since service startup."""
+        with _enrollment_lock:
+            return {
+                "queue_depth": _enrollment_queue.qsize(),
+                "persons": dict(_enrollment_per_person),
+            }
+
+    @router.get("/enroll/status/{person_id}")
+    def enrollment_status_person(person_id: str) -> dict[str, Any]:
+        """Return enrollment status for a single person."""
+        with _enrollment_lock:
+            status = _enrollment_per_person.get(person_id, "never_queued")
+        return {"person_id": person_id, "status": status}
+
+    # ── POST /api/v1/train/rebuild ─────────────────────────────────────
 
     @router.post("/train/rebuild", status_code=202)
     def train_rebuild(payload: Optional[TrainRebuildPayload] = None) -> dict[str, Any]:
-        """Trigger embedding rebuild in background thread."""
+        """Trigger embedding rebuild in a background thread.
+
+        scope values:
+          ``"all"``              — rebuild every person (full refresh)
+          ``"new_only"``         — only persons currently in ``draft`` state
+          ``"person_id=<id>"``   — a single specific person
+        """
         with _train_lock:
             if _train_status["running"]:
                 return {"status": "already_running", "started_at": _train_status["last_started_at"]}
 
         scope = payload.scope if payload else "all"
 
-        def _worker():
+        # Resolve scope → person_ids_filter
+        person_ids_filter: set[str] | None = None
+        if scope == "new_only":
+            draft_persons = [
+                p for p in store.list_persons()
+                if str(p.get("lifecycle_state", "")) == PersonLifecycleStatus.draft.value
+            ]
+            person_ids_filter = {p["person_id"] for p in draft_persons}
+            if not person_ids_filter:
+                return {"status": "nothing_to_do", "scope": scope, "reason": "no draft persons found"}
+        elif scope.startswith("person_id="):
+            person_ids_filter = {scope.split("=", 1)[1]}
+
+        def _worker() -> None:
             with _train_lock:
                 _train_status["running"] = True
                 _train_status["last_started_at"] = datetime.now(timezone.utc).isoformat()
@@ -299,7 +472,12 @@ def create_person_router(settings: "Settings", store: "VectorStore") -> Any:
                             threshold=settings.liveness.threshold,
                         )
                     )
-                stats = rebuild_embeddings(settings, store, recognizer)
+                stats = rebuild_embeddings(
+                    settings,
+                    store,
+                    recognizer,
+                    person_ids_filter=person_ids_filter,
+                )
                 with _train_lock:
                     _train_status["last_result"] = {
                         "persons_total": stats.persons_total,
@@ -319,9 +497,9 @@ def create_person_router(settings: "Settings", store: "VectorStore") -> Any:
                     _train_status["last_completed_at"] = datetime.now(timezone.utc).isoformat()
 
         threading.Thread(target=_worker, name="trace-aml-train-rebuild", daemon=True).start()
-        return {"status": "started", "scope": scope}
+        return {"status": "started", "scope": scope, "filter_count": len(person_ids_filter) if person_ids_filter else "all"}
 
-    # ── GET /api/v1/train/status ───────────────────────────────────
+    # ── GET /api/v1/train/status ───────────────────────────────────────
 
     @router.get("/train/status")
     def train_status() -> dict[str, Any]:

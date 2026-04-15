@@ -181,22 +181,30 @@ class ArcFaceRecognizer:
         min_det = self.settings.quality.min_detector_score
         candidates = [c for c in candidates if c.detector_score >= min_det]
         # ─────────────────────────────────────────────────────────────────────
-        active_ids = vector_store.active_person_ids()
+        active_ids = vector_store.active_person_ids()  # served from cache — no DB query
         outputs: list[tuple[RecognitionMatch, list[float], LivenessResult]] = []
         for candidate in candidates:
 
             x, y, w, h = candidate.bbox
             crop = frame_bgr[max(0, y) : max(0, y + h), max(0, x) : max(0, x + w)]
             liveness = self._liveness.evaluate(crop)
-            active_rows = vector_store.search_embeddings_for_person_ids(
-                candidate.embedding,
-                person_ids=active_ids,
-                top_k=max(self.settings.recognition.active_gallery_search_k, self.settings.recognition.top_k),
+
+            # Primary path: BLAS in-memory search (O(1) per-person, no Python loop)
+            search_top_k = max(
+                self.settings.recognition.active_gallery_search_k,
+                self.settings.recognition.top_k,
             )
+            active_rows = vector_store.search_active_gallery(
+                candidate.embedding,
+                top_k=search_top_k,
+            )
+
+            # If the cache returned nothing at all, fall back to LanceDB ANN
             best_rows = active_rows
             if not best_rows:
                 best_rows = vector_store.search_embeddings(
-                    candidate.embedding, top_k=max(self.settings.recognition.top_k * 8, 32)
+                    candidate.embedding,
+                    top_k=max(self.settings.recognition.top_k * 8, 32),
                 )
             candidate_scores = self._aggregate_person_scores(best_rows, vector_store, active_ids)
             best = candidate_scores[0] if candidate_scores else None

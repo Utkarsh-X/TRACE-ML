@@ -1,4 +1,13 @@
-"""LanceDB-backed storage for persons, quality metadata, embeddings and detections."""
+"""LanceDB-backed storage for persons, quality metadata, embeddings and detections.
+
+Embedding gallery search
+------------------------
+All live-recognition similarity queries are served from an in-memory
+``EmbeddingGalleryCache`` (see ``store/embedding_cache.py``).  The cache is
+populated from LanceDB once at startup and updated *incrementally* whenever
+a single person's embeddings change.  This eliminates the O(N)-per-frame
+Python loop that previously degraded as the gallery grew.
+"""
 
 from __future__ import annotations
 
@@ -15,6 +24,7 @@ import pyarrow as pa
 from loguru import logger
 
 from trace_aml.core.config import Settings
+from trace_aml.store.embedding_cache import EmbeddingGalleryCache
 from trace_aml.core.errors import StorageError
 from trace_aml.core.ids import next_unknown_entity_id
 from trace_aml.core.models import (
@@ -64,6 +74,10 @@ class VectorStore:
         except Exception as exc:
             raise StorageError(f"Failed to connect LanceDB: {exc}") from exc
         self._ensure_tables()
+        # In-memory gallery cache — populated from DB, then kept in sync
+        # incrementally.  All per-frame recognition queries go here.
+        self.gallery_cache = EmbeddingGalleryCache()
+        self._init_gallery_cache()
 
     def _ensure_tables(self) -> None:
         self.persons = self._open_or_create(
@@ -438,6 +452,24 @@ class VectorStore:
                 return parsed
         return {}
 
+    def _init_gallery_cache(self) -> None:
+        """Load all embeddings from LanceDB into the in-memory cache.
+
+        Called once during ``__init__``.  Subsequent mutations go through
+        ``replace_person_embeddings`` / ``delete_person`` / ``set_person_state``
+        which keep the cache in sync incrementally.
+        """
+        try:
+            all_records = self._query_rows(self.embeddings, limit=500_000)
+            active_pids: set[str] = {
+                str(row.get("person_id", ""))
+                for row in self.list_person_states()
+                if str(row.get("lifecycle_state", "")) == PersonLifecycleStatus.active.value
+            }
+            self.gallery_cache.load_from_records(all_records, active_pids)
+        except Exception as exc:  # never crash startup because of cache
+            logger.warning("Gallery cache init failed (will use DB fallback): {}", exc)
+
     def add_or_update_person(self, person: PersonRecord) -> None:
         self.delete_person(person.person_id, delete_detections=False)
         self.persons.add([self._filtered_row(self.persons, person.model_dump())])
@@ -474,6 +506,9 @@ class VectorStore:
             "updated_at": utc_now_iso(),
         }
         self.person_states.add([self._filtered_row(self.person_states, payload)])
+        # Keep cache active-status in sync
+        is_active = str(lifecycle_state) == PersonLifecycleStatus.active.value
+        self.gallery_cache.set_active(person_id, is_active)
 
     def get_person_state(self, person_id: str) -> dict[str, Any] | None:
         escaped = self._escape(person_id)
@@ -520,15 +555,8 @@ class VectorStore:
             person["total_images"] = int(state.get("total_images", 0))
         return persons
 
-    def active_person_ids(self) -> set[str]:
-        states = self.list_person_states()
-        if not states:
-            return set()
-        return {
-            row.get("person_id", "")
-            for row in states
-            if str(row.get("lifecycle_state", "")) == PersonLifecycleStatus.active.value
-        }
+    # active_person_ids() is defined further below (after _init_gallery_cache)
+    # and delegates to the gallery cache to avoid per-frame DB queries.
 
     def delete_person(self, person_id: str, delete_detections: bool = True) -> None:
         escaped = self._escape(person_id)
@@ -551,6 +579,8 @@ class VectorStore:
                 self.actions.delete(f"incident_id = '{incident_id}'")
             if delete_detections:
                 self.detections.delete(f"person_id = '{escaped}'")
+            # Evict from gallery cache immediately
+            self.gallery_cache.remove_person(person_id)
         except Exception as exc:
             raise StorageError(f"Delete failed for {person_id}: {exc}") from exc
 
@@ -577,10 +607,21 @@ class VectorStore:
         return rows
 
     def replace_person_embeddings(self, person_id: str, records: list[EmbeddingRecord]) -> None:
+        """Persist embeddings to LanceDB and update the in-memory cache.
+
+        This is an *incremental* operation — only this person's rows are
+        touched.  All other persons remain completely unchanged in both the
+        database and the cache.
+        """
         escaped = self._escape(person_id)
         self.embeddings.delete(f"person_id = '{escaped}'")
+
+        # Update cache first (works whether records is empty or not)
+        embedding_vectors = [[float(v) for v in rec.embedding] for rec in records]
+        self.gallery_cache.upsert_person(person_id, embedding_vectors)
+
         if not records:
-            logger.warning("No embeddings provided for person {}", person_id)
+            logger.warning("No valid embeddings for person {} — cache cleared for them.", person_id)
             return
 
         payload = []
@@ -596,6 +637,41 @@ class VectorStore:
             escaped = self._escape(person_id)
             return len(self._query_rows(self.embeddings, where=f"person_id = '{escaped}'", limit=100_000))
         return len(self._query_rows(self.embeddings, limit=100_000))
+
+    def active_person_ids(self) -> set[str]:
+        """Return active person IDs from the in-memory cache (no DB query).
+
+        Falls back to querying person_states if the cache is somehow empty
+        but the DB has active persons (e.g., during very early startup).
+        """
+        cached = self.gallery_cache.active_person_ids()
+        if cached:
+            return cached
+        # Fallback: query DB (original behaviour, only hit if cache is cold)
+        states = self.list_person_states()
+        if not states:
+            return set()
+        return {
+            row.get("person_id", "")
+            for row in states
+            if str(row.get("lifecycle_state", "")) == PersonLifecycleStatus.active.value
+        }
+
+    def search_active_gallery(
+        self,
+        embedding: list[float],
+        top_k: int = 5,
+    ) -> list[dict[str, Any]]:
+        """Search the active gallery using the in-memory BLAS cache.
+
+        Returns per-embedding ``{person_id, similarity}`` rows that the
+        recogniser's ``_aggregate_person_scores`` can consume directly.
+        Falls back to the LanceDB ANN index if the cache is not yet warm.
+        """
+        if not self.gallery_cache.is_empty():
+            return self.gallery_cache.search(embedding, top_k=top_k)
+        # Cold-cache fallback — LanceDB cosine ANN
+        return self.search_embeddings(embedding, top_k=top_k)
 
     def search_embeddings(self, embedding: list[float], top_k: int = 5) -> list[dict[str, Any]]:
         if len(embedding) != EMBEDDING_DIM:
