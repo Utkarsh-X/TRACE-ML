@@ -662,18 +662,20 @@
     var left = $("enroll-left");
     var splitter = $("enroll-splitter");
     var toggle = $("index-toggle");
+    var reopen = $("index-reopen");
     if (!left || !splitter || !toggle) return;
 
-    // Toggle logic
+    // Toggle logic (icon rotation handled by CSS)
     toggle.addEventListener("click", function() {
       left.classList.toggle("collapsed");
-      var icon = toggle.querySelector(".material-symbols-outlined");
-      if (left.classList.contains("collapsed")) {
-        icon.textContent = "chevron_right";
-      } else {
-        icon.textContent = "chevron_left";
-      }
     });
+
+    // Reopen button logic (shows when panel is collapsed)
+    if (reopen) {
+      reopen.addEventListener("click", function() {
+        left.classList.remove("collapsed");
+      });
+    }
 
     // Keyboard shortcut (Ctrl+I)
     document.addEventListener("keydown", function(e) {

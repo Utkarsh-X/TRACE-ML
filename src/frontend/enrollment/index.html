@@ -84,29 +84,81 @@
     background: var(--md-primary);
   }
 
-  /* Index Toggle Button */
+  /* Index Toggle Button - sticky, always visible */
+  /* Toggle Button - in header, hides when panel collapses */
   .index-toggle-btn {
-    position: absolute;
-    right: -32px;
-    top: 12px;
+    position: relative;
     width: 32px;
     height: 32px;
-    background: #0a0a0a;
-    border: 1px solid rgba(255, 255, 255, 0.05);
-    border-left: 0;
-    color: var(--md-outline);
+    flex-shrink: 0;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: var(--md-outline-variant);
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    z-index: 30;
-    transition: color 0.2s, background 0.2s;
-    border-radius: 0 4px 4px 0;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    border-radius: 4px;
+    z-index: 20;
   }
 
   .index-toggle-btn:hover {
     color: white;
-    background: #141414;
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.2);
+  }
+
+  .index-toggle-btn:active {
+    background: rgba(255, 255, 255, 0.15);
+  }
+
+  .index-toggle-btn .material-symbols-outlined {
+    font-size: 18px;
+  }
+
+  /* Hide toggle button when panel is collapsed */
+  .enroll-left.collapsed .index-toggle-btn {
+    display: none;
+  }
+
+  /* Reopen Button - shown in center panel header when left panel is collapsed */
+  .index-reopen-btn {
+    position: absolute;
+    top: 50%;
+    right: 24px;
+    transform: translateY(-50%);
+    width: 36px;
+    height: 36px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: var(--md-outline-variant);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    border-radius: 4px;
+    z-index: 20;
+  }
+
+  .index-reopen-btn:hover {
+    color: white;
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.2);
+  }
+
+  .index-reopen-btn:active {
+    background: rgba(255, 255, 255, 0.15);
+  }
+
+  .index-reopen-btn .material-symbols-outlined {
+    font-size: 20px;
+  }
+
+  /* Show reopen button when panel is collapsed */
+  .enroll-left.collapsed ~ .enroll-center .index-reopen-btn {
+    display: flex;
   }
 
   /* Enhanced Person Card */
@@ -827,12 +879,12 @@
 
           <!-- LEFT: Person Index -->
           <section class="enroll-left bg-surface-low flex flex-col border-r border-outline-variant/10" id="enroll-left">
-            <button class="index-toggle-btn" id="index-toggle" title="Toggle Index (Ctrl+I)">
-              <span class="material-symbols-outlined">chevron_left</span>
-            </button>
             <header class="p-4 border-b border-outline-variant/10">
-              <div class="flex items-center justify-between mb-3">
-                <h2 class="section-header">Enrollment Index</h2>
+              <div class="flex items-center justify-between mb-3 gap-2">
+                <h2 class="section-header flex-1">Enrollment Index</h2>
+                <button class="index-toggle-btn" id="index-toggle" title="Toggle Index (Ctrl+I)" aria-label="Toggle enrollment index panel">
+                  <span class="material-symbols-outlined">chevron_left</span>
+                </button>
                 <span class="font-mono text-[0.6rem] text-outline" id="person-count">--</span>
               </div>
               <div class="relative">
@@ -849,7 +901,10 @@
 
           <!-- CENTER: Enrollment Workspace -->
           <section class="enroll-center bg-surface flex flex-col overflow-hidden">
-            <header class="p-6 border-b border-outline-variant/10 flex-shrink-0">
+            <header class="p-6 border-b border-outline-variant/10 flex-shrink-0 relative">
+              <button class="index-reopen-btn" id="index-reopen" title="Show Enrollment Index (Ctrl+I)" aria-label="Show enrollment index panel">
+                <span class="material-symbols-outlined">chevron_left</span>
+              </button>
               <div class="mb-2">
                 <span class="flex items-center gap-2 mb-1">
                   <span class="w-1 h-1 bg-white inline-block"></span>
