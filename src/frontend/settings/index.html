@@ -203,6 +203,51 @@
         <!-- Dynamic Config Sections Inserted Here -->
         <div id="config-sections-root"></div>
 
+        <!-- Section: Neural Index -->
+        <div id="section-neural" class="mb-12 scroll-mt-8">
+          <div class="flex items-center justify-between mb-4 border-b border-outline-variant/10 pb-2">
+            <h3 class="font-mono text-[0.8rem] text-primary uppercase tracking-widest">Neural Index (Gallery)</h3>
+            <div class="flex items-center gap-2">
+              <span class="status-dot status-dot--idle" id="train-status-dot"></span>
+              <span class="font-mono text-[0.65rem] text-outline uppercase tracking-wider" id="train-running">Idle</span>
+            </div>
+          </div>
+          
+          <div class="bg-surface-container/30 border border-outline-variant/10 p-6">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+              <div class="flex flex-col">
+                <span class="font-mono text-[0.55rem] text-outline uppercase mb-1">Active Index</span>
+                <span class="text-2xl font-headline font-bold text-white" id="train-active">0</span>
+                <span class="font-mono text-[0.6rem] text-outline mt-1 uppercase opacity-60">Verified Entities</span>
+              </div>
+              <div class="flex flex-col">
+                <span class="font-mono text-[0.55rem] text-outline uppercase mb-1">Pending Enrollment</span>
+                <span class="text-2xl font-headline font-bold text-warning" id="train-ready">0</span>
+                <span class="font-mono text-[0.6rem] text-outline mt-1 uppercase opacity-60">Requires Training</span>
+              </div>
+              <div class="flex flex-col">
+                <span class="font-mono text-[0.55rem] text-outline uppercase mb-1">Blocked Records</span>
+                <span class="text-2xl font-headline font-bold text-error" id="train-blocked">0</span>
+                <span class="font-mono text-[0.6rem] text-outline mt-1 uppercase opacity-60">Insufficient Data</span>
+              </div>
+            </div>
+
+            <div class="flex items-center justify-between pt-6 border-t border-outline-variant/10">
+              <div class="flex flex-col">
+                <span class="font-mono text-[0.55rem] text-outline uppercase">Last Index Rebuild</span>
+                <span class="font-mono text-[0.75rem] text-on-surface-variant" id="train-last-run">—</span>
+              </div>
+              <button id="btn-train-rebuild" class="px-6 py-2.5 bg-primary/10 hover:bg-primary/20 text-primary border border-primary/30 font-mono text-[0.7rem] uppercase font-bold tracking-wider transition-all flex items-center gap-2">
+                <span class="material-symbols-outlined text-sm">database_sync</span>
+                <span>Force Full Rebuild</span>
+              </button>
+            </div>
+            <p class="font-mono text-[0.6rem] text-outline mt-4 leading-relaxed max-w-2xl opacity-70 italic">
+              * The neural index is automatically maintained during enrollment. Force rebuild is only recommended if forensic integrity is compromised or after a bulk vector purge.
+            </p>
+          </div>
+        </div>
+
         <!-- Danger Zone -->
         <div class="mt-16 pt-8 border-t border-error/20">
           <h3 class="text-error font-mono text-[0.7rem] uppercase tracking-widest mb-4 flex items-center gap-2">

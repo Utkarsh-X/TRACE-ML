@@ -11,6 +11,7 @@
 
   var currentConfig = null;
   var isRefreshing = false;
+  var _trainPollTimer = null;
 
   function loadSystemInfo() {
     TraceClient.probe().then(function (info) {
@@ -253,7 +254,7 @@
     // Scroll listener for active state
     scrollContainer.addEventListener("scroll", function() {
       // Throttle or just simple check
-      var sections = ["section-health", "section-recognition", "section-rules", "section-actions", "section-camera"];
+      var sections = ["section-health", "section-recognition", "section-rules", "section-actions", "section-neural", "section-camera"];
       var current = "";
       
       for (var id of sections) {
@@ -275,6 +276,99 @@
         });
       }
     }, { passive: true });
+  }
+
+  /* ─── Neural Index (Gallery Rebuild) ─── */
+
+  function handleTrainRebuild() {
+    // This is an emergency full-rebuild — prompt the user first.
+    if (!confirm("Force a full gallery rebuild?\n\nThis is not normally needed — enrollment is automatic. Continue only if you believe the gallery is out of sync.")) return;
+
+    var btn = $("btn-train-rebuild");
+    var runningEl = $("train-running");
+    var dot = $("train-status-dot");
+    if (btn) btn.disabled = true;
+    if (runningEl) runningEl.textContent = "REBUILDING...";
+    if (dot) dot.className = "status-dot status-dot--active";
+
+    TraceClient.rebuildGallery({ scope: "all" }).then(function (result) {
+      if (result && (result.status === "started" || result.status === "already_running")) {
+        startTrainPoll();
+      } else {
+        if (runningEl) runningEl.textContent = "FAILED";
+        if (dot) dot.className = "status-dot status-dot--critical";
+        if (btn) btn.disabled = false;
+      }
+    });
+  }
+
+  function startTrainPoll() {
+    if (_trainPollTimer) return;
+    pollTrainStatus();
+    _trainPollTimer = setInterval(pollTrainStatus, 2000);
+  }
+
+  function pollTrainStatus() {
+    TraceClient.trainStatus().then(function (status) {
+      if (!status) return;
+      var runningEl = $("train-running");
+      var lastRunEl = $("train-last-run");
+      var activeEl = $("train-active");
+      var readyEl = $("train-ready");
+      var blockedEl = $("train-blocked");
+      var btn = $("btn-train-rebuild");
+      var dot = $("train-status-dot");
+
+      if (status.running) {
+        if (runningEl) runningEl.textContent = "REBUILDING...";
+        if (dot) dot.className = "status-dot status-dot--active";
+        if (btn) btn.disabled = true;
+      } else {
+        if (runningEl) runningEl.textContent = "IDLE";
+        if (dot) dot.className = "status-dot status-dot--idle";
+        if (btn) btn.disabled = false;
+        if (_trainPollTimer) {
+          clearInterval(_trainPollTimer);
+          _trainPollTimer = null;
+        }
+      }
+
+      if (status.last_completed_at) {
+        if (lastRunEl) lastRunEl.textContent = TraceClient.formatDateTime(status.last_completed_at);
+      }
+
+      var r = status.last_result;
+      if (r && !r.error) {
+        if (activeEl) activeEl.textContent = String(r.active_persons || 0);
+        if (readyEl) readyEl.textContent = String(r.ready_persons || 0);
+        if (blockedEl) blockedEl.textContent = String(r.blocked_persons || 0);
+      }
+    });
+
+    // Also poll per-person enrollment queue to update status badge if needed
+    if (typeof TraceClient.enrollStatus === "function") {
+      TraceClient.enrollStatus().then(function (info) {
+        if (!info) return;
+        var runningEl = $("train-running");
+        var dot = $("train-status-dot");
+        var q = info.queue_depth || 0;
+        var persons = info.persons || {};
+
+        // Only update if not already being handled by rebuild status
+        if (runningEl && (runningEl.textContent === "IDLE" || runningEl.textContent === "")) {
+          var processing = Object.values(persons).filter(function(s) { return s === "processing"; }).length;
+          var queued = Object.values(persons).filter(function(s) { return s === "queued"; }).length;
+
+          if (processing > 0) {
+            if (dot) dot.className = "status-dot status-dot--active";
+            if (runningEl) runningEl.textContent = "ENROLLING...";
+          } else if (queued > 0 || q > 0) {
+            if (dot) dot.className = "status-dot status-dot--pending";
+            if (runningEl) runningEl.textContent = q + " IN QUEUE";
+          }
+        }
+      });
+    }
   }
 
   function init() {
@@ -314,11 +408,18 @@
       });
     }
 
+    // Train rebuild button
+    var btnRebuild = $("btn-train-rebuild");
+    if (btnRebuild) {
+      btnRebuild.addEventListener("click", handleTrainRebuild);
+    }
+
     TraceClient.probe().then(function (info) {
       if (info) {
         loadSystemInfo();
         loadHealth();
         startPolling();
+        pollTrainStatus(); // Initial poll
         TraceClient.getConfig().then(function(cfg) {
           currentConfig = cfg;
           renderConfig();

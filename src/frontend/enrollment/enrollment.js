@@ -3,7 +3,6 @@
  *
  * - Lists registered persons (left sidebar)
  * - Person creation form + image upload (center)
- * - Training trigger + status polling (right sidebar)
  */
 (function () {
   "use strict";
@@ -12,7 +11,6 @@
 
   var _allPersons = [];
   var _selectedFiles = [];
-  var _trainPollTimer = null;
 
   /* ─── Person list (left sidebar) ─── */
 
@@ -300,10 +298,7 @@
       // Upload images
       TraceClient.uploadPersonImages(result.person_id, _selectedFiles).then(function (uploadResult) {
         if (uploadResult) {
-          // Show that auto-enrollment kicked off — not just that it "succeeded"
-          if (statusEl) statusEl.textContent = "✓ " + result.person_id + " — TRAINING IN PROGRESS";
-          // Start polling so the status panel updates
-          startTrainPoll();
+          if (statusEl) statusEl.textContent = "✓ " + result.person_id + " — ENROLLED";
         } else {
           if (statusEl) statusEl.textContent = "RECORD CREATED, BIOMETRIC UPLOAD FAILED";
         }
@@ -316,109 +311,6 @@
       if (btn) btn.disabled = false;
     });
   }
-
-  /* ─── Training ─── */
-
-  function handleTrainRebuild() {
-    // This is an emergency full-rebuild — prompt the user first.
-    if (!confirm("Force a full gallery rebuild?\n\nThis is not normally needed — enrollment is automatic. Continue only if you believe the gallery is out of sync.")) return;
-
-    var btn = $("btn-train-rebuild");
-    var runningEl = $("train-running");
-    var dot = $("train-status-dot");
-    if (btn) btn.disabled = true;
-    if (runningEl) runningEl.textContent = "REBUILDING...";
-    if (dot) dot.className = "status-dot status-dot--active";
-
-    TraceClient.trainRebuild({ scope: "all" }).then(function (result) {
-      if (result && (result.status === "started" || result.status === "already_running")) {
-        startTrainPoll();
-      } else {
-        if (runningEl) runningEl.textContent = "FAILED";
-        if (dot) dot.className = "status-dot status-dot--critical";
-        if (btn) btn.disabled = false;
-      }
-    });
-  }
-
-  function startTrainPoll() {
-    if (_trainPollTimer) return;
-    pollTrainStatus();
-    _trainPollTimer = setInterval(pollTrainStatus, 2000);
-  }
-
-  function pollTrainStatus() {
-    TraceClient.trainStatus().then(function (status) {
-      if (!status) return;
-      var runningEl = $("train-running");
-      var lastRunEl = $("train-last-run");
-      var activeEl = $("train-active");
-      var readyEl = $("train-ready");
-      var blockedEl = $("train-blocked");
-      var btn = $("btn-train-rebuild");
-      var dot = $("train-status-dot");
-
-      if (status.running) {
-        if (runningEl) runningEl.textContent = "REBUILDING...";
-        if (dot) dot.className = "status-dot status-dot--active";
-        if (btn) btn.disabled = true;
-      } else {
-        if (runningEl) runningEl.textContent = "IDLE";
-        if (dot) dot.className = "status-dot status-dot--idle";
-        if (btn) btn.disabled = false;
-        if (_trainPollTimer) {
-          clearInterval(_trainPollTimer);
-          _trainPollTimer = null;
-        }
-        // Refresh list after any rebuild
-        loadPersonList();
-      }
-
-      if (status.last_completed_at) {
-        if (lastRunEl) lastRunEl.textContent = TraceClient.formatTime(status.last_completed_at);
-      }
-
-      var r = status.last_result;
-      if (r && !r.error) {
-        if (activeEl) activeEl.textContent = String(r.active_persons || 0);
-        if (readyEl) readyEl.textContent = String(r.ready_persons || 0);
-        if (blockedEl) blockedEl.textContent = String(r.blocked_persons || 0);
-      }
-    });
-
-    // Also poll per-person enrollment queue to update status badge
-    if (typeof TraceClient.enrollStatus === "function") {
-      TraceClient.enrollStatus().then(function (info) {
-        if (!info) return;
-        var runningEl = $("train-running");
-        var dot = $("train-status-dot");
-        var lastRunEl = $("train-last-run");
-        var q = info.queue_depth || 0;
-        var persons = info.persons || {};
-
-        // Count how many are currently being processed
-        var processing = Object.values(persons).filter(function(s) { return s === "processing"; }).length;
-        var queued = Object.values(persons).filter(function(s) { return s === "queued"; }).length;
-
-        if (processing > 0) {
-          if (dot) dot.className = "status-dot status-dot--active";
-          if (runningEl) runningEl.textContent = "ENROLLING...";
-        } else if (queued > 0 || q > 0) {
-          if (dot) dot.className = "status-dot status-dot--pending";
-          if (runningEl) runningEl.textContent = q + " IN QUEUE";
-        } else if (!$("train-running") || ($("train-running")).textContent === "IDLE" || ($("train-running")).textContent === "") {
-          // Compute most recent "done" timestamp
-          var doneTimes = Object.entries(persons)
-            .filter(function(e) { return e[1] === "done"; })
-            .map(function(e) { return e[0]; });
-          if (doneTimes.length > 0 && lastRunEl && (lastRunEl.textContent === "\u2014" || lastRunEl.textContent === "")) {
-            lastRunEl.textContent = "just now";
-          }
-        }
-      });
-    }
-  }
-
 
   /* --- Camera Capture Controller ---------------------------------------- */
 
@@ -773,14 +665,10 @@
     var clearBtn = $("btn-clear-form");
     if (clearBtn) clearBtn.addEventListener("click", clearForm);
 
-    var trainBtn = $("btn-train-rebuild");
-    if (trainBtn) trainBtn.addEventListener("click", handleTrainRebuild);
-
     // Initial load
     TraceClient.probe().then(function (info) {
       if (info) {
         loadPersonList();
-        pollTrainStatus(); // Show last training result
       }
     });
   }

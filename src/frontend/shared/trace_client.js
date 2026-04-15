@@ -743,6 +743,9 @@
     uploadPersonImages: uploadPersonImages,
 
     // Training
+    rebuildGallery: function(data) {
+      return _fetchJsonMethod(_url("/api/v1/train/rebuild"), "POST", data || { scope: "all" });
+    },
     trainRebuild: trainRebuild,
     trainStatus: trainStatus,
     enrollStatus: enrollStatus,
