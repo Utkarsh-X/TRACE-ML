@@ -107,6 +107,43 @@ def create_service_app(
         snapshot = read_models.get_live_ops_snapshot(entity_limit=3, incident_limit=3, alert_limit=3)
         return snapshot.system_health.model_dump(mode="json")
 
+    @app.get("/api/v1/config")
+    def get_config() -> dict[str, Any]:
+        """Get current live configuration."""
+        return settings.model_dump(mode="json")
+
+    @app.patch("/api/v1/config")
+    def patch_config(payload: dict[str, Any]) -> dict[str, Any]:
+        """Update live configuration. Only hot-tunable fields are supported."""
+        # Deep update for nested Pydantic models
+        # For MVP, we update recognition thresholds and rules cooldowns
+        if "recognition" in payload:
+            rec = payload["recognition"]
+            for k, v in rec.items():
+                if hasattr(settings.recognition, k):
+                    setattr(settings.recognition, k, v)
+        
+        if "rules" in payload:
+            rul = payload["rules"]
+            for k, v in rul.items():
+                if hasattr(settings.rules, k):
+                    if isinstance(v, dict) and hasattr(settings.rules, k):
+                        sub = getattr(settings.rules, k)
+                        for sk, sv in v.items():
+                            if hasattr(sub, sk):
+                                setattr(sub, sk, sv)
+                    else:
+                        setattr(settings.rules, k, v)
+        
+        if "actions" in payload:
+            act = payload["actions"]
+            if "enabled" in act:
+                settings.actions.enabled = bool(act["enabled"])
+            if "cooldown_sec" in act:
+                settings.actions.cooldown_sec = int(act["cooldown_sec"])
+
+        return settings.model_dump(mode="json")
+
     # ── Camera Control Endpoints (Frontend-driven) ────────────────────────────
     @app.get("/api/v1/camera/status")
     def camera_status() -> dict[str, Any]:

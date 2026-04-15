@@ -708,6 +708,14 @@
     // Health
     health: health,
 
+    // Config
+    getConfig: function() {
+      return _fetchJson(_url("/api/v1/config"));
+    },
+    updateConfig: function(data) {
+      return _fetchJsonMethod(_url("/api/v1/config"), "PATCH", data);
+    },
+
     // Persons
     listPersons: listPersons,
     createPerson: createPerson,
