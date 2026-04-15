@@ -15,10 +15,12 @@
     .strip-wrapper {
       position: relative;
       background: var(--surface-low);
-      border-bottom: 1px solid rgba(255,255,255,0.06);
       flex-shrink: 0;
       display: flex;
       align-items: stretch;
+      border: 1px solid rgba(255,255,255,0.08);
+      margin: 1rem 1.5rem;
+      border-radius: 3px;
     }
 
     /* Arrow nav buttons */
@@ -27,7 +29,7 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      background: rgba(19,19,19,0.92);
+      background: transparent;
       border: none;
       cursor: pointer;
       color: var(--outline);
@@ -35,7 +37,7 @@
       transition: color 0.15s, background 0.15s;
       z-index: 2;
     }
-    .strip-arrow:hover { color: #fff; background: rgba(42,42,42,0.95); }
+    .strip-arrow:hover { color: #fff; background: rgba(255,255,255,0.06); }
     .strip-arrow:disabled { opacity: 0.2; cursor: default; }
     .strip-arrow .material-symbols-outlined { font-size: 16px; }
 
@@ -55,7 +57,7 @@
       flex-shrink: 0;
       width: 210px;
       padding: 0.85rem 1rem 0.75rem;
-      border-right: 1px solid rgba(255,255,255,0.05);
+      border-right: 1px solid rgba(255,255,255,0.04);
       border-top: 2px solid transparent;
       cursor: pointer;
       transition: background 0.12s;
@@ -239,7 +241,7 @@
 <!-- MAIN CANVAS -->
 <main class="main-content flex flex-col overflow-hidden">
   <!-- Page Header -->
-  <header class="p-6 pb-4 border-b border-outline-variant/5 flex-shrink-0 bg-background">
+  <header class="p-6 pb-4 flex-shrink-0 bg-background">
     <div>
       <div class="flex items-center gap-2 mb-1">
         <span class="w-1 h-1 bg-primary inline-block"></span>
