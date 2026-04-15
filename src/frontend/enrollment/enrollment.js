@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Enrollment Page Controller
  *
  * - Lists registered persons (left sidebar)
@@ -276,7 +276,7 @@
     var btn = $("btn-create-upload");
     var statusEl = $("enroll-status");
     if (btn) btn.disabled = true;
-    if (statusEl) statusEl.textContent = "COMMITING ENROLLMENT...";
+    if (statusEl) statusEl.textContent = "COMMITTING ENROLLMENT...";
 
     var payload = {
       name: ($("enroll-name") || {}).value || "",
@@ -300,11 +300,14 @@
       // Upload images
       TraceClient.uploadPersonImages(result.person_id, _selectedFiles).then(function (uploadResult) {
         if (uploadResult) {
-          if (statusEl) statusEl.textContent = "SUCCESS: " + result.person_id + " ENROLLED";
+          // Show that auto-enrollment kicked off — not just that it "succeeded"
+          if (statusEl) statusEl.textContent = "✓ " + result.person_id + " — TRAINING IN PROGRESS";
+          // Start polling so the status panel updates
+          startTrainPoll();
         } else {
           if (statusEl) statusEl.textContent = "RECORD CREATED, BIOMETRIC UPLOAD FAILED";
         }
-        setTimeout(function() { if(statusEl) statusEl.textContent = ""; }, 3000);
+        setTimeout(function() { if(statusEl) statusEl.textContent = ""; }, 4000);
         clearForm();
         loadPersonList();
       });
@@ -317,12 +320,15 @@
   /* ─── Training ─── */
 
   function handleTrainRebuild() {
+    // This is an emergency full-rebuild — prompt the user first.
+    if (!confirm("Force a full gallery rebuild?\n\nThis is not normally needed — enrollment is automatic. Continue only if you believe the gallery is out of sync.")) return;
+
     var btn = $("btn-train-rebuild");
     var runningEl = $("train-running");
     var dot = $("train-status-dot");
     if (btn) btn.disabled = true;
-    if (runningEl) runningEl.textContent = "STARTING...";
-    if (dot) dot.className = "status-dot status-dot--pending";
+    if (runningEl) runningEl.textContent = "REBUILDING...";
+    if (dot) dot.className = "status-dot status-dot--active";
 
     TraceClient.trainRebuild({ scope: "all" }).then(function (result) {
       if (result && (result.status === "started" || result.status === "already_running")) {
@@ -364,7 +370,7 @@
           clearInterval(_trainPollTimer);
           _trainPollTimer = null;
         }
-        // Refresh list if something changed
+        // Refresh list after any rebuild
         loadPersonList();
       }
 
@@ -379,6 +385,38 @@
         if (blockedEl) blockedEl.textContent = String(r.blocked_persons || 0);
       }
     });
+
+    // Also poll per-person enrollment queue to update status badge
+    if (typeof TraceClient.enrollStatus === "function") {
+      TraceClient.enrollStatus().then(function (info) {
+        if (!info) return;
+        var runningEl = $("train-running");
+        var dot = $("train-status-dot");
+        var lastRunEl = $("train-last-run");
+        var q = info.queue_depth || 0;
+        var persons = info.persons || {};
+
+        // Count how many are currently being processed
+        var processing = Object.values(persons).filter(function(s) { return s === "processing"; }).length;
+        var queued = Object.values(persons).filter(function(s) { return s === "queued"; }).length;
+
+        if (processing > 0) {
+          if (dot) dot.className = "status-dot status-dot--active";
+          if (runningEl) runningEl.textContent = "ENROLLING...";
+        } else if (queued > 0 || q > 0) {
+          if (dot) dot.className = "status-dot status-dot--pending";
+          if (runningEl) runningEl.textContent = q + " IN QUEUE";
+        } else if (!$("train-running") || ($("train-running")).textContent === "IDLE" || ($("train-running")).textContent === "") {
+          // Compute most recent "done" timestamp
+          var doneTimes = Object.entries(persons)
+            .filter(function(e) { return e[1] === "done"; })
+            .map(function(e) { return e[0]; });
+          if (doneTimes.length > 0 && lastRunEl && (lastRunEl.textContent === "\u2014" || lastRunEl.textContent === "")) {
+            lastRunEl.textContent = "just now";
+          }
+        }
+      });
+    }
   }
 
 

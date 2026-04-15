@@ -641,6 +641,24 @@
   }
 
   /**
+   * GET /api/v1/enroll/status
+   * Returns per-person enrollment queue state {queue_depth, persons:{pid: status}}.
+   * @returns {Promise<{queue_depth:number, persons:Object}|null>}
+   */
+  function enrollStatus() {
+    return _fetchJson(_url("/api/v1/enroll/status"));
+  }
+
+  /**
+   * GET /api/v1/enroll/status/{personId}
+   * @param {string} personId
+   * @returns {Promise<{person_id:string, status:string}|null>}
+   */
+  function enrollStatusPerson(personId) {
+    return _fetchJson(_url("/api/v1/enroll/status/" + encodeURIComponent(personId)));
+  }
+
+  /**
    * Filter: only show meaningful business events, exclude metrics.
    * @param {Object} event - Event object with {topic, payload, timestamp_utc}
    * @returns {boolean} true if event should be displayed, false if it's a metric
@@ -727,6 +745,8 @@
     // Training
     trainRebuild: trainRebuild,
     trainStatus: trainStatus,
+    enrollStatus: enrollStatus,
+    enrollStatusPerson: enrollStatusPerson,
 
     // Utilities
     escapeHtml: escapeHtml,
