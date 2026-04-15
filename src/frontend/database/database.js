@@ -130,15 +130,19 @@
   function appendLog(type, message) {
     var consoleEl = $("query-console");
     if (!consoleEl) return;
-    var time = new Date().toISOString().slice(11, 19);
-    var line = '<span class="log-time">[' + time + ']</span> '
-             + '<span class="log-type">' + type + ':</span> ' + message + "\n";
-    consoleEl.innerHTML = line + consoleEl.innerHTML;
+    
+    var lineHtml = TraceRender.terminalLine(type, { message: message });
+    consoleEl.insertAdjacentHTML('afterbegin', lineHtml);
+    
+    // Cap at 100 lines
+    var lines = consoleEl.querySelectorAll('.log-line');
+    if (lines.length > 100) lines[lines.length - 1].remove();
   }
 
   function initConsole() {
     var consoleEl = $("query-console");
-    if (consoleEl) consoleEl.innerHTML = ""; // Clear mock logs
+    // Clear mock logs on load
+    if (consoleEl) consoleEl.innerHTML = "";
 
     var clearBtn = document.querySelector("[class*='cursor-pointer'][class*='hover:text-white']");
     if (clearBtn && clearBtn.textContent.indexOf("CLEAR") >= 0) {
@@ -149,14 +153,12 @@
 
     TraceClient.connectSSE(function (event) {
       if (!TraceClient.isMeaningfulEvent(event)) return;
-      var line = TraceRender.terminalLine(event.topic, event.payload, event.timestamp_utc);
+      var lineHtml = TraceRender.terminalLine(event.topic, event.payload, event.timestamp_utc);
       if (consoleEl) {
-        consoleEl.innerHTML = line + consoleEl.innerHTML;
-        // Keep only last 100 lines
-        var lines = consoleEl.innerHTML.split("\n");
-        if (lines.length > 100) {
-          consoleEl.innerHTML = lines.slice(0, 100).join("\n");
-        }
+        consoleEl.insertAdjacentHTML('afterbegin', lineHtml);
+        // Cap at 100 lines
+        var lines = consoleEl.querySelectorAll('.log-line');
+        if (lines.length > 100) lines[lines.length - 1].remove();
       }
     });
   }

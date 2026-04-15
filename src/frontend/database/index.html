@@ -218,14 +218,14 @@
         </div>
         <div class="flex items-center gap-4 text-[0.6rem] font-mono text-outline-variant">
           <span>BUF_SIZE: 1024KB</span>
-          <span class="cursor-pointer hover:text-white transition-colors">[CLEAR_CONSOLE]</span>
+          <span class="cursor-pointer hover:text-white transition-colors">[CLEAR]</span>
         </div>
       </div>
-      <div class="terminal-block flex-1 min-h-0 text-[0.65rem]" id="query-console">
-<span class="log-time">[14:02:11]</span> <span class="log-type">DB_QUERY:</span> SELECT * FROM entity_wallets WHERE risk_score > 0.85;
+      <div class="terminal-block flex-1 min-h-0 text-[0.65rem] p-4 font-mono overflow-y-auto" id="query-console">
+<span class="log-time">[14:02:11]</span> <span class="log-type">DB_QUERY:</span> SELECT * FROM detections WHERE confidence > 0.85;
 <span class="log-time">[14:02:11]</span> <span class="log-type">SYSTEM:</span> Execution successful. Returned 1,402 entries in 12ms.
-<span class="log-time">[14:02:08]</span> <span class="log-type">DB_WRITE:</span> COMMIT TRANSACTION #TX-9921-X; SUCCESS.
-<span class="log-time">[14:01:55]</span> <span class="log-type">WARNING:</span> Latency peak detected on shard EU-CENTRAL-01. Shifting load ...
+<span class="log-time">[14:02:08]</span> <span class="log-type">DB_WRITE:</span> VECTOR_INDEX: COMMIT #TX-9921-X; SUCCESS.
+<span class="log-time">[14:01:55]</span> <span class="log-type">WARNING:</span> Network latency detected on SURVEILLANCE-NODE-01. Shifting load ...
 <span class="log-time">[14:01:42]</span> <span class="log-type">NODE_HEARTBEAT:</span> 14/14 nodes responding nominal.
       </div>
     </section>

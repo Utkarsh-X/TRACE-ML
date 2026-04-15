@@ -224,6 +224,7 @@
 
   /**
    * Render a terminal log line from SSE event.
+   * Consistently used across Live Ops, Incidents and Database views.
    * @param {string} topic
    * @param {Object} payload
    * @param {string} timestamp
@@ -231,22 +232,54 @@
    */
   function terminalLine(topic, payload, timestamp) {
     var time = fmtTime(timestamp);
-    var topicUpper = String(topic || "").split(".").pop().toUpperCase();
-    var isError = topic.indexOf("alert") >= 0 || topic.indexOf("error") >= 0;
-    var cls = isError ? "log-error" : "log-type";
-    var detail = "";
+    var topicBase = String(topic || "SYSTEM").toUpperCase();
+    var topicUpper = topicBase.split(".").pop();
+    
+    // Topic classification for color
+    var t = topicBase.toLowerCase();
+    var topicCls = "ll-topic-default";
+    if      (t.indexOf("alert")    >= 0) topicCls = "ll-topic-alert";
+    else if (t.indexOf("incident") >= 0) topicCls = "ll-topic-incident";
+    else if (t.indexOf("action")   >= 0) topicCls = "ll-topic-action";
+
+    // Chip logic (severity, decision, entity)
+    var chipHtml = "";
     if (payload) {
-      var parts = [];
-      Object.keys(payload).forEach(function (key) {
-        var val = payload[key];
-        if (typeof val === "object") return;
-        parts.push(key + "=" + val);
-      });
-      detail = parts.slice(0, 5).join(" ");
+      var sev = String(payload.severity || "").toUpperCase();
+      if (sev === "HIGH" || sev === "CRITICAL") {
+        chipHtml = '<span class="ll-chip ll-chip--error">' + esc(sev) + '</span>';
+      } else if (sev) {
+        chipHtml = '<span class="ll-chip">' + esc(sev) + '</span>';
+      } else {
+        var dec = String(payload.decision || "").toUpperCase();
+        if (dec) {
+          chipHtml = '<span class="ll-chip">' + esc(dec) + '</span>';
+        } else {
+          var eid = payload.entity_id || payload.entity || "";
+          if (eid) chipHtml = '<span class="ll-chip">' + esc(String(eid)) + '</span>';
+        }
+      }
     }
-    return '<span class="log-time">[' + esc(time) + ']</span> '
-      + '<span class="' + cls + '">' + esc(topicUpper) + "</span> "
-      + esc(detail) + "\n";
+
+    // Message logic
+    var msg = (payload && (payload.message || payload.reason || payload.summary)) || "";
+    if (!msg && payload) {
+      var parts = [];
+      Object.keys(payload).forEach(function (k) {
+        var v = payload[k];
+        if (v !== null && v !== undefined && typeof v !== "object") {
+          parts.push(k + "=" + String(v).substring(0, 40));
+        }
+      });
+      msg = parts.slice(0, 4).join("  ") || topicUpper.toLowerCase() + " event";
+    }
+    msg = esc(String(msg).substring(0, 200));
+
+    return '<div class="log-line">'
+      + '<span class="ll-ts">[' + esc(time) + ']</span>'
+      + '<span class="' + topicCls + '">' + esc(topicUpper) + '</span>'
+      + '<span class="ll-msg">' + msg + chipHtml + '</span>'
+      + '</div>\n';
   }
 
   /**
