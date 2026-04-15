@@ -13,7 +13,17 @@
   var _allEntities = [];
 
   function loadEntities() {
-    TraceClient.entities({ limit: 500 }).then(function (list) {
+    var limitEl = $("db-limit");
+    var val = limitEl ? limitEl.value : "";
+    var limit = parseInt(val, 10);
+    
+    // Default fallback if not a valid number or <= 0
+    if (isNaN(limit) || limit <= 0) {
+      limit = 100;
+      if (limitEl) limitEl.value = "100";
+    }
+
+    TraceClient.entities({ limit: limit }).then(function (list) {
       if (!list) return;
       _allEntities = list;
       renderTable(list);
@@ -92,10 +102,62 @@
 
   function wireRefresh() {
     var btn = $("db-refresh");
-    if (!btn) return;
-    btn.addEventListener("click", function () {
-      loadEntities();
-      loadHealth();
+    if (btn) {
+      btn.addEventListener("click", function () {
+        loadEntities();
+        loadHealth();
+      });
+    }
+    
+    var executeBtn = $("db-execute");
+    if (executeBtn) {
+      executeBtn.addEventListener("click", function () {
+        loadEntities();
+        loadHealth();
+        appendLog("SYSTEM", "Manual index synchronization triggered.");
+      });
+    }
+
+    var limitEl = $("db-limit");
+    if (limitEl) {
+      limitEl.addEventListener("change", function () {
+        loadEntities();
+        appendLog("SYSTEM", "Query limit updated to " + limitEl.value + " records.");
+      });
+    }
+  }
+
+  function appendLog(type, message) {
+    var consoleEl = $("query-console");
+    if (!consoleEl) return;
+    var time = new Date().toISOString().slice(11, 19);
+    var line = '<span class="log-time">[' + time + ']</span> '
+             + '<span class="log-type">' + type + ':</span> ' + message + "\n";
+    consoleEl.innerHTML = line + consoleEl.innerHTML;
+  }
+
+  function initConsole() {
+    var consoleEl = $("query-console");
+    if (consoleEl) consoleEl.innerHTML = ""; // Clear mock logs
+
+    var clearBtn = document.querySelector("[class*='cursor-pointer'][class*='hover:text-white']");
+    if (clearBtn && clearBtn.textContent.indexOf("CLEAR") >= 0) {
+      clearBtn.addEventListener("click", function() {
+        if (consoleEl) consoleEl.innerHTML = "";
+      });
+    }
+
+    TraceClient.connectSSE(function (event) {
+      if (!TraceClient.isMeaningfulEvent(event)) return;
+      var line = TraceRender.terminalLine(event.topic, event.payload, event.timestamp_utc);
+      if (consoleEl) {
+        consoleEl.innerHTML = line + consoleEl.innerHTML;
+        // Keep only last 100 lines
+        var lines = consoleEl.innerHTML.split("\n");
+        if (lines.length > 100) {
+          consoleEl.innerHTML = lines.slice(0, 100).join("\n");
+        }
+      }
     });
   }
 
@@ -104,11 +166,13 @@
     TraceRender.initOfflineUI(mainContent);
     wireSearch();
     wireRefresh();
+    initConsole();
 
     TraceClient.probe().then(function (info) {
       if (info) {
         loadEntities();
         loadHealth();
+        appendLog("SYSTEM", "Connection established to " + info.name + " v" + info.version);
       }
     });
 

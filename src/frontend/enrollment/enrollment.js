@@ -10,6 +10,7 @@
 
   function $(id) { return document.getElementById(id); }
 
+  var _allPersons = [];
   var _selectedFiles = [];
   var _trainPollTimer = null;
 
@@ -18,41 +19,74 @@
   function loadPersonList() {
     TraceClient.listPersons().then(function (persons) {
       if (!persons) return;
-      var root = $("person-list-root");
-      var countEl = $("person-count");
-      if (countEl) countEl.textContent = String(persons.length);
-      if (!root) return;
+      _allPersons = persons;
+      renderPersonList(persons);
+    });
+  }
 
-      if (persons.length === 0) {
-        root.innerHTML = '<div class="text-center py-8 text-outline text-[0.75rem]">No persons registered yet</div>';
+  function renderPersonList(persons) {
+    var root = $("person-list-root");
+    var countEl = $("person-count");
+    if (countEl) countEl.textContent = String(persons.length);
+    if (!root) return;
+
+    if (persons.length === 0) {
+      root.innerHTML = '<div class="text-center py-12 text-outline text-[0.7rem] font-mono">NO ENTITIES REGISTERED</div>';
+      return;
+    }
+
+    root.innerHTML = persons.map(function (p) {
+      var stateClass = "lc-" + (p.lifecycle_state || "draft");
+      var stateLabel = (p.lifecycle_state || "draft").toUpperCase();
+      var cat = (p.category || "UNKNOWN").toUpperCase();
+      
+      return '<div class="person-card" data-person-id="' + TraceClient.escapeHtml(p.person_id) + '">'
+        + '<div class="card-avatar-frame">'
+        + '<div class="avatar-corner corner-tl"></div><div class="avatar-corner corner-tr"></div>'
+        + '<div class="avatar-corner corner-bl"></div><div class="avatar-corner corner-br"></div>'
+        + '<span class="material-symbols-outlined">person</span>'
+        + '</div>'
+        + '<div class="card-content">'
+        + '<div class="card-id">' + TraceClient.escapeHtml(p.person_id) + '</div>'
+        + '<div class="card-name">' + TraceClient.escapeHtml(p.name) + '</div>'
+        + '<div class="card-meta">'
+        + '<span class="card-badge ' + stateClass + '">' + stateLabel + '</span>'
+        + '<div class="card-metric">'
+        + '<span class="material-symbols-outlined">image</span>'
+        + '<span>' + (p.image_count_on_disk || 0) + '</span>'
+        + '</div>'
+        + '<div class="card-metric">'
+        + '<span class="material-symbols-outlined">analytics</span>'
+        + '<span>' + (p.valid_embeddings || 0) + '</span>'
+        + '</div>'
+        + '</div>'
+        + '</div>'
+        + '</div>';
+    }).join("");
+
+    // Wire click handlers
+    root.querySelectorAll(".person-card").forEach(function (card) {
+      card.addEventListener("click", function () {
+        root.querySelectorAll(".person-card").forEach(function (c) { c.classList.remove("active"); });
+        card.classList.add("active");
+        loadPersonDetail(card.getAttribute("data-person-id"));
+      });
+    });
+  }
+
+  function wireSearch() {
+    var search = $("person-search");
+    if (!search) return;
+    search.addEventListener("input", function() {
+      var q = search.value.toLowerCase().trim();
+      if (!q) {
+        renderPersonList(_allPersons);
         return;
       }
-
-      root.innerHTML = persons.map(function (p) {
-        var stateClass = "lc-" + (p.lifecycle_state || "draft");
-        var stateLabel = (p.lifecycle_state || "draft").toUpperCase();
-        return '<div class="person-card" data-person-id="' + TraceClient.escapeHtml(p.person_id) + '">'
-          + '<div class="flex items-center justify-between mb-0.5">'
-          + '<span class="font-headline font-semibold text-[0.8rem] text-primary">' + TraceClient.escapeHtml(p.person_id) + '</span>'
-          + '<span class="font-mono text-[0.55rem] ' + stateClass + '">' + stateLabel + '</span>'
-          + '</div>'
-          + '<div class="text-[0.75rem] text-on-surface">' + TraceClient.escapeHtml(p.name) + '</div>'
-          + '<div class="flex items-center gap-2 mt-0.5">'
-          + '<span class="font-mono text-[0.6rem] text-outline">' + TraceClient.escapeHtml(p.category) + '</span>'
-          + '<span class="font-mono text-[0.6rem] text-outline">imgs: ' + (p.image_count_on_disk || 0) + '</span>'
-          + '<span class="font-mono text-[0.6rem] text-outline">emb: ' + (p.valid_embeddings || 0) + '</span>'
-          + '</div>'
-          + '</div>';
-      }).join("");
-
-      // Wire click handlers for person detail
-      root.querySelectorAll(".person-card").forEach(function (card) {
-        card.addEventListener("click", function () {
-          root.querySelectorAll(".person-card").forEach(function (c) { c.classList.remove("active"); });
-          card.classList.add("active");
-          loadPersonDetail(card.getAttribute("data-person-id"));
-        });
+      var filtered = _allPersons.filter(function(p) {
+        return p.name.toLowerCase().indexOf(q) >= 0 || p.person_id.toLowerCase().indexOf(q) >= 0;
       });
+      renderPersonList(filtered);
     });
   }
 
@@ -61,41 +95,71 @@
       if (!p) return;
       var panel = $("person-detail-panel");
       if (!panel) return;
-      var score = (p.enrollment_score || 0).toFixed(2);
+      
+      var score = (p.enrollment_score || 0);
+      var scoreColor = score > 0.8 ? "text-primary" : (score > 0.5 ? "text-warning" : "text-error");
       var stateClass = "lc-" + (p.lifecycle_state || "draft");
-      panel.innerHTML =
-        '<div class="flex justify-between"><span class="stat-label">ID</span>'
-        + '<span class="font-mono text-[0.7rem] text-primary">' + TraceClient.escapeHtml(p.person_id) + '</span></div>'
-        + '<div class="flex justify-between"><span class="stat-label">Name</span>'
-        + '<span class="text-[0.7rem]">' + TraceClient.escapeHtml(p.name) + '</span></div>'
-        + '<div class="flex justify-between"><span class="stat-label">Category</span>'
-        + '<span class="text-[0.7rem]">' + TraceClient.escapeHtml(p.category) + '</span></div>'
-        + '<div class="flex justify-between"><span class="stat-label">State</span>'
-        + '<span class="font-mono text-[0.7rem] ' + stateClass + '">' + (p.lifecycle_state || "draft").toUpperCase() + '</span></div>'
-        + '<div class="flex justify-between"><span class="stat-label">Score</span>'
-        + '<span class="font-mono text-[0.7rem]">' + score + '</span></div>'
-        + '<div class="flex justify-between"><span class="stat-label">Images</span>'
-        + '<span class="font-mono text-[0.7rem]">' + (p.image_count_on_disk || 0) + '</span></div>'
-        + '<div class="flex justify-between"><span class="stat-label">Embeddings</span>'
-        + '<span class="font-mono text-[0.7rem]">' + (p.valid_embeddings || 0) + '</span></div>'
-        + '<div class="flex justify-between"><span class="stat-label">Reason</span>'
-        + '<span class="font-mono text-[0.6rem] text-outline">' + TraceClient.escapeHtml(p.lifecycle_reason || "—") + '</span></div>'
-        + '<button type="button" class="btn-secondary w-full mt-3" id="btn-delete-person" '
-        + 'data-pid="' + TraceClient.escapeHtml(p.person_id) + '">Delete Person</button>';
+      
+      panel.innerHTML = '<div class="space-y-6">'
+        + '<div>'
+        + '<div class="flex items-center justify-between mb-2">'
+        + '<span class="font-mono text-[0.6rem] text-outline uppercase">Biometric Quality</span>'
+        + '<span class="font-mono text-[0.8rem] font-bold ' + scoreColor + '">' + (score * 100).toFixed(0) + '%</span>'
+        + '</div>'
+        + '<div class="h-1 bg-surface-high w-full rounded-full overflow-hidden">'
+        + '<div class="h-full bg-current transition-all duration-500 ' + scoreColor + '" style="width:' + (score * 100) + '%"></div>'
+        + '</div>'
+        + '</div>'
+        
+        + '<div class="space-y-2.5">'
+        + detailRow("System ID", p.person_id, "text-primary font-bold font-mono")
+        + detailRow("Lifecycle", (p.lifecycle_state || "DRAFT").toUpperCase(), stateClass + " font-mono font-bold")
+        + detailRow("Enrollment", p.enrollment_status || "PENDING", "uppercase font-mono")
+        + detailRow("Record Created", TraceClient.formatDateTime(p.created_at), "text-outline font-mono")
+        + '</div>'
+        
+        + '<div class="pt-4 border-t border-outline-variant/10">'
+        + '<h4 class="font-mono text-[0.6rem] text-outline uppercase mb-3">Intelligence Metadata</h4>'
+        + '<div class="space-y-2.5">'
+        + detailRow("Priority", (p.severity || "NORMAL").toUpperCase())
+        + detailRow("Gender", (p.gender || "UNKNOWN").toUpperCase())
+        + detailRow("D.O.B", p.dob || "UNKNOWN")
+        + detailRow("Origin", (p.city || "") + (p.city && p.country ? ", " : "") + (p.country || "UNKNOWN"))
+        + '</div>'
+        + '</div>'
+        
+        + '<div class="pt-4 border-t border-outline-variant/10">'
+        + '<h4 class="font-mono text-[0.6rem] text-outline uppercase mb-2">Internal Notes</h4>'
+        + '<p class="text-[0.7rem] text-outline-variant leading-relaxed">' + TraceClient.escapeHtml(p.notes || "No intelligence notes recorded for this entity.") + '</p>'
+        + '</div>'
+        
+        + '<div class="pt-6">'
+        + '<button type="button" class="w-full py-2 bg-background border border-error/30 text-error font-mono text-[0.65rem] font-bold uppercase tracking-wider hover:bg-error/10 transition-all" id="btn-delete-person" data-pid="' + TraceClient.escapeHtml(p.person_id) + '">Terminate Record</button>'
+        + '</div>'
+        + '</div>';
 
       // Wire delete
       var delBtn = $("btn-delete-person");
       if (delBtn) {
         delBtn.addEventListener("click", function () {
           var pid = delBtn.getAttribute("data-pid");
-          if (!confirm("Delete " + pid + " and all linked data?")) return;
+          if (!confirm("Confirm record termination for " + pid + "? This action is irreversible.")) return;
           TraceClient.deletePerson(pid).then(function () {
             loadPersonList();
-            panel.innerHTML = '<p class="text-[0.75rem] text-outline text-center py-4">Person deleted</p>';
+            panel.innerHTML = '<div class="flex flex-col items-center justify-center h-full text-center opacity-30">'
+              + '<span class="material-symbols-outlined text-[48px] mb-2">delete_forever</span>'
+              + '<p class="font-mono text-[0.65rem] uppercase tracking-widest">Record terminated</p></div>';
           });
         });
       }
     });
+  }
+
+  function detailRow(label, value, valueClass) {
+    return '<div class="flex justify-between items-baseline">'
+      + '<span class="stat-label">' + label + '</span>'
+      + '<span class="text-[0.7rem] ' + (valueClass || "text-white") + ' text-right">' + TraceClient.escapeHtml(value || "—") + '</span>'
+      + '</div>';
   }
 
   /* ─── Image upload & drag-drop ─── */
@@ -124,6 +188,16 @@
       addFiles(fileInput.files);
       fileInput.value = "";
     });
+
+    var clearImgBtn = $("btn-clear-images");
+    if (clearImgBtn) {
+      clearImgBtn.addEventListener("click", function(e) {
+        e.stopPropagation();
+        _selectedFiles = [];
+        renderThumbnails();
+        updateCreateButton();
+      });
+    }
   }
 
   function addFiles(fileList) {
@@ -140,24 +214,41 @@
   function renderThumbnails() {
     var grid = $("thumb-preview");
     var countEl = $("file-count");
-    if (countEl) countEl.textContent = _selectedFiles.length + " images selected";
+    var previewArea = $("preview-area");
+    
+    if (countEl) countEl.textContent = _selectedFiles.length + " SAMPLES SELECTED";
+    if (previewArea) {
+      if (_selectedFiles.length > 0) previewArea.classList.remove("hidden");
+      else previewArea.classList.add("hidden");
+    }
+    
     if (!grid) return;
 
     grid.innerHTML = "";
     _selectedFiles.forEach(function (file, idx) {
+      var wrapper = document.createElement("div");
+      wrapper.className = "relative group cursor-pointer aspect-square overflow-hidden border border-outline-variant/10";
+      
       var img = document.createElement("img");
       img.alt = file.name;
-      img.title = file.name;
+      img.className = "w-full h-full object-cover grayscale hover:grayscale-0 transition-all duration-300";
       var url = URL.createObjectURL(file);
       img.src = url;
-      img.addEventListener("click", function () {
+      
+      var overlay = document.createElement("div");
+      overlay.className = "absolute inset-0 bg-error/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity";
+      overlay.innerHTML = '<span class="material-symbols-outlined text-white">delete</span>';
+      
+      wrapper.appendChild(img);
+      wrapper.appendChild(overlay);
+      
+      wrapper.addEventListener("click", function (e) {
+        e.stopPropagation();
         _selectedFiles.splice(idx, 1);
         renderThumbnails();
         updateCreateButton();
       });
-      img.style.cursor = "pointer";
-      img.title = "Click to remove: " + file.name;
-      grid.appendChild(img);
+      grid.appendChild(wrapper);
     });
   }
 
@@ -185,7 +276,7 @@
     var btn = $("btn-create-upload");
     var statusEl = $("enroll-status");
     if (btn) btn.disabled = true;
-    if (statusEl) statusEl.textContent = "Creating person...";
+    if (statusEl) statusEl.textContent = "COMMITING ENROLLMENT...";
 
     var payload = {
       name: ($("enroll-name") || {}).value || "",
@@ -200,24 +291,25 @@
 
     TraceClient.createPerson(payload).then(function (result) {
       if (!result || !result.person_id) {
-        if (statusEl) statusEl.textContent = "Failed to create person";
+        if (statusEl) statusEl.textContent = "ENROLLMENT FAILED";
         if (btn) btn.disabled = false;
         return;
       }
-      if (statusEl) statusEl.textContent = "Created " + result.person_id + ". Uploading images...";
+      if (statusEl) statusEl.textContent = "UPLOADING BIOMETRICS...";
 
       // Upload images
       TraceClient.uploadPersonImages(result.person_id, _selectedFiles).then(function (uploadResult) {
         if (uploadResult) {
-          if (statusEl) statusEl.textContent = "Done! " + result.person_id + " — " + uploadResult.uploaded + " images uploaded.";
+          if (statusEl) statusEl.textContent = "SUCCESS: " + result.person_id + " ENROLLED";
         } else {
-          if (statusEl) statusEl.textContent = "Person created but image upload failed.";
+          if (statusEl) statusEl.textContent = "RECORD CREATED, BIOMETRIC UPLOAD FAILED";
         }
+        setTimeout(function() { if(statusEl) statusEl.textContent = ""; }, 3000);
         clearForm();
         loadPersonList();
       });
     }).catch(function () {
-      if (statusEl) statusEl.textContent = "Error creating person";
+      if (statusEl) statusEl.textContent = "SYSTEM ERROR";
       if (btn) btn.disabled = false;
     });
   }
@@ -227,18 +319,17 @@
   function handleTrainRebuild() {
     var btn = $("btn-train-rebuild");
     var runningEl = $("train-running");
+    var dot = $("train-status-dot");
     if (btn) btn.disabled = true;
-    if (runningEl) runningEl.textContent = "Starting...";
+    if (runningEl) runningEl.textContent = "STARTING...";
+    if (dot) dot.className = "status-dot status-dot--pending";
 
     TraceClient.trainRebuild({ scope: "all" }).then(function (result) {
-      if (result && result.status === "started") {
-        if (runningEl) runningEl.textContent = "Running...";
-        startTrainPoll();
-      } else if (result && result.status === "already_running") {
-        if (runningEl) runningEl.textContent = "Already running...";
+      if (result && (result.status === "started" || result.status === "already_running")) {
         startTrainPoll();
       } else {
-        if (runningEl) runningEl.textContent = "Failed to start";
+        if (runningEl) runningEl.textContent = "FAILED";
+        if (dot) dot.className = "status-dot status-dot--critical";
         if (btn) btn.disabled = false;
       }
     });
@@ -246,6 +337,7 @@
 
   function startTrainPoll() {
     if (_trainPollTimer) return;
+    pollTrainStatus();
     _trainPollTimer = setInterval(pollTrainStatus, 2000);
   }
 
@@ -254,37 +346,37 @@
       if (!status) return;
       var runningEl = $("train-running");
       var lastRunEl = $("train-last-run");
-      var embEl = $("train-embeddings");
       var activeEl = $("train-active");
       var readyEl = $("train-ready");
       var blockedEl = $("train-blocked");
       var btn = $("btn-train-rebuild");
+      var dot = $("train-status-dot");
 
       if (status.running) {
-        if (runningEl) runningEl.textContent = "Running...";
+        if (runningEl) runningEl.textContent = "REBUILDING...";
+        if (dot) dot.className = "status-dot status-dot--active";
+        if (btn) btn.disabled = true;
       } else {
-        if (runningEl) runningEl.textContent = "Idle";
+        if (runningEl) runningEl.textContent = "IDLE";
+        if (dot) dot.className = "status-dot status-dot--idle";
         if (btn) btn.disabled = false;
         if (_trainPollTimer) {
           clearInterval(_trainPollTimer);
           _trainPollTimer = null;
         }
-        // Refresh person list after training completes
+        // Refresh list if something changed
         loadPersonList();
       }
 
       if (status.last_completed_at) {
-        if (lastRunEl) lastRunEl.textContent = TraceClient.formatDateTime(status.last_completed_at);
+        if (lastRunEl) lastRunEl.textContent = TraceClient.formatTime(status.last_completed_at);
       }
 
       var r = status.last_result;
       if (r && !r.error) {
-        if (embEl) embEl.textContent = String(r.embeddings_created || 0);
         if (activeEl) activeEl.textContent = String(r.active_persons || 0);
         if (readyEl) readyEl.textContent = String(r.ready_persons || 0);
         if (blockedEl) blockedEl.textContent = String(r.blocked_persons || 0);
-      } else if (r && r.error) {
-        if (embEl) embEl.textContent = "Error";
       }
     });
   }
@@ -566,14 +658,70 @@
   }
   /* ─── Init ─── */
 
+  function initResizableIndex() {
+    var left = $("enroll-left");
+    var splitter = $("enroll-splitter");
+    var toggle = $("index-toggle");
+    if (!left || !splitter || !toggle) return;
+
+    // Toggle logic
+    toggle.addEventListener("click", function() {
+      left.classList.toggle("collapsed");
+      var icon = toggle.querySelector(".material-symbols-outlined");
+      if (left.classList.contains("collapsed")) {
+        icon.textContent = "chevron_right";
+      } else {
+        icon.textContent = "chevron_left";
+      }
+    });
+
+    // Keyboard shortcut (Ctrl+I)
+    document.addEventListener("keydown", function(e) {
+      if (e.ctrlKey && e.key.toLowerCase() === "i") {
+        e.preventDefault();
+        toggle.click();
+      }
+    });
+
+    // Resizer logic
+    var isDragging = false;
+    splitter.addEventListener("mousedown", function(e) {
+      isDragging = true;
+      splitter.classList.add("dragging");
+      document.body.style.cursor = "col-resize";
+      document.body.style.userSelect = "none";
+    });
+
+    document.addEventListener("mousemove", function(e) {
+      if (!isDragging) return;
+      var containerRect = document.querySelector(".enroll-grid").getBoundingClientRect();
+      var newWidth = e.clientX - containerRect.left;
+      
+      // Constraints: 240px to 600px
+      if (newWidth >= 240 && newWidth <= 600) {
+        document.documentElement.style.setProperty("--enroll-left-width", newWidth + "px");
+      }
+    });
+
+    document.addEventListener("mouseup", function() {
+      if (!isDragging) return;
+      isDragging = false;
+      splitter.classList.remove("dragging");
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+    });
+  }
+
   function init() {
     var mainContent = document.querySelector("main");
     if (typeof TraceRender !== "undefined" && TraceRender.initOfflineUI) {
       TraceRender.initOfflineUI(mainContent);
     }
 
+    initResizableIndex();
     initDropZone();
     initCameraModal();
+    wireSearch();
 
     // Wire form events
     var nameInput = $("enroll-name");

@@ -46,6 +46,10 @@
     .db-table tbody tr {
       transition: background-color 0.1s ease;
     }
+    .terminal-block {
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
   </style>
   <link rel="stylesheet" href="../shared/sidenav.css" />
 </head>
@@ -133,7 +137,7 @@
             <span class="font-mono text-[0.6875rem] uppercase tracking-[0.2em] text-outline">Database Explorer</span>
           </span>
           <h1 class="text-2xl font-headline font-bold text-white tracking-tight uppercase">Database Explorer</h1>
-          <p class="font-mono text-[0.65rem] text-outline mt-1">GLOBAL INVESTIGATIVE INDEX / SHARDS-EU-WEST-1</p>
+          <p class="font-mono text-[0.65rem] text-outline mt-1">LOCAL INTELLIGENCE NODE / CAM-SESSION-001</p>
         </div>
         
         <!-- Top Control Bar -->
@@ -141,22 +145,21 @@
           <div class="flex items-center gap-3 flex-1">
             <div class="flex-1 relative">
               <span class="material-symbols-outlined absolute left-3 top-2 text-outline-variant text-[18px]">search</span>
-              <input type="text" placeholder="Query entity hash or node ID..." class="w-full bg-surface-high font-mono text-[0.7rem] text-white border-0 px-3 py-2 pl-9 placeholder-outline-variant focus:ring-1 focus:ring-primary rounded-sm" id="db-search" />
+              <input type="text" placeholder="Search entities by name, ID or category..." class="w-full bg-surface-high font-mono text-[0.7rem] text-white border-0 px-3 py-2 pl-9 placeholder-outline-variant focus:ring-1 focus:ring-primary rounded-sm" id="db-search" />
             </div>
-            <button class="px-4 py-2 bg-white text-background font-mono text-[0.65rem] font-semibold uppercase hover:bg-gray-100 cursor-pointer border-0 transition-colors rounded-sm" id="db-execute">EXECUTE QUERY</button>
+            <button class="px-4 py-2 bg-white text-background font-mono text-[0.65rem] font-semibold uppercase hover:bg-gray-100 cursor-pointer border-0 transition-colors rounded-sm" id="db-execute">REFRESH INDEX</button>
             <button class="px-3 py-2 bg-surface-high text-on-surface-variant font-mono text-[0.65rem] uppercase hover:bg-surface-bright cursor-pointer border-0 transition-colors" id="db-refresh">⟳ Filters</button>
           </div>
           
           <!-- Health Indicators (compact inline) -->
           <div class="flex items-center gap-6 ml-auto flex-shrink-0">
             <div class="flex items-center gap-2">
-              <span class="stat-label">Node Connectivity</span>
-              <span class="font-mono text-[0.9rem] text-white font-semibold" id="db-stat-entities">14 / 14</span>
+              <span class="stat-label">Total Entities</span>
+              <span class="font-mono text-[0.9rem] text-white font-semibold" id="db-stat-entities">0</span>
             </div>
             <div class="flex items-center gap-2">
-              <span class="stat-label">Throughput</span>
-              <span class="font-mono text-[0.9rem] text-white font-semibold" id="db-stat-detections">12.4K</span>
-              <span class="font-mono text-[0.6rem] text-outline-variant">ops/sec</span>
+              <span class="stat-label">Total Detections</span>
+              <span class="font-mono text-[0.9rem] text-white font-semibold" id="db-stat-detections">0</span>
             </div>
           </div>
         </div>
@@ -167,48 +170,23 @@
         <table class="db-table w-full">
           <thead>
             <tr class="bg-surface-low sticky top-0 z-10">
-              <th class="font-mono text-[0.6rem] text-outline uppercase tracking-widest font-medium">ID Hash</th>
-              <th class="font-mono text-[0.6rem] text-outline uppercase tracking-widest font-medium">Type</th>
+              <th class="font-mono text-[0.6rem] text-outline uppercase tracking-widest font-medium">Entity ID</th>
+              <th class="font-mono text-[0.6rem] text-outline uppercase tracking-widest font-medium">Name</th>
+              <th class="font-mono text-[0.6rem] text-outline uppercase tracking-widest font-medium">Category</th>
               <th class="font-mono text-[0.6rem] text-outline uppercase tracking-widest font-medium">Status</th>
-              <th class="font-mono text-[0.6rem] text-outline uppercase tracking-widest font-medium">Last Sync</th>
-              <th class="font-mono text-[0.6rem] text-outline uppercase tracking-widest font-medium">Data Integrity</th>
+              <th class="font-mono text-[0.6rem] text-outline uppercase tracking-widest font-medium">Alerts</th>
+              <th class="font-mono text-[0.6rem] text-outline uppercase tracking-widest font-medium">Incidents</th>
+              <th class="font-mono text-[0.6rem] text-outline uppercase tracking-widest font-medium">Last Activity</th>
             </tr>
           </thead>
           <tbody class="text-[0.75rem]">
-            <tr class="bg-surface cursor-pointer">
-              <td class="font-mono text-on-surface">0x8F2A...E4C9</td>
-              <td class="text-on-surface">ENTITY_WALLETS</td>
-              <td><span class="badge badge--filled">SYNCED</span></td>
-              <td class="font-mono text-on-surface-variant">2023-10-27 14:02:11</td>
-              <td class="font-mono text-on-surface-variant">99.98%</td>
-            </tr>
-            <tr class="bg-surface-container cursor-pointer">
-              <td class="font-mono text-on-surface">0x1B4D...A82F</td>
-              <td class="text-on-surface">TRANS_LOGS</td>
-              <td><span class="badge badge--neutral">PENDING</span></td>
-              <td class="font-mono text-on-surface-variant">2023-10-27 14:01:58</td>
-              <td class="font-mono text-on-surface-variant">100.00%</td>
-            </tr>
-            <tr class="bg-surface cursor-pointer">
-              <td class="font-mono text-on-surface">0xC923...F11B</td>
-              <td class="text-on-surface">NODE_MESH_V4</td>
-              <td><span class="badge badge--error">ERROR</span></td>
-              <td class="font-mono text-on-surface-variant">2023-10-27 13:59:02</td>
-              <td class="font-mono text-on-surface-variant">42.10%</td>
-            </tr>
-            <tr class="bg-surface-container cursor-pointer">
-              <td class="font-mono text-on-surface">0x77E1...B592</td>
-              <td class="text-on-surface">SYS_METRIC</td>
-              <td><span class="badge badge--filled">SYNCED</span></td>
-              <td class="font-mono text-on-surface-variant">2023-10-27 13:58:45</td>
-              <td class="font-mono text-on-surface-variant">99.99%</td>
-            </tr>
-            <tr class="bg-surface cursor-pointer">
-              <td class="font-mono text-on-surface">0x44A2...C119</td>
-              <td class="text-on-surface">ENTITY_KYC</td>
-              <td><span class="badge badge--filled">SYNCED</span></td>
-              <td class="font-mono text-on-surface-variant">2023-10-27 13:55:12</td>
-              <td class="font-mono text-on-surface-variant">99.94%</td>
+            <tr>
+              <td colspan="7" class="text-center py-20">
+                <div class="flex flex-col items-center gap-4">
+                  <div class="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+                  <span class="font-mono text-[0.7rem] text-outline animate-pulse">SYNCHRONIZING GLOBAL INDEX...</span>
+                </div>
+              </td>
             </tr>
           </tbody>
         </table>
@@ -216,13 +194,14 @@
 
       <!-- Table Footer -->
       <div class="flex items-center justify-between px-5 py-3 flex-shrink-0 border-t border-outline-variant/10 bg-surface-container text-[0.6rem]">
-        <span class="font-mono text-outline">Showing 5 of 5 database nodes</span>
+        <span class="font-mono text-outline">Showing 0 of 0 entities</span>
         <div class="flex items-center gap-2">
           <span class="font-mono text-outline">Rows per page:</span>
-          <select class="bg-surface-high font-mono text-[0.65rem] text-white border-0 px-2 py-1 cursor-pointer">
-            <option>25</option>
-            <option>50</option>
-            <option>100</option>
+          <select class="bg-surface-high font-mono text-[0.65rem] text-white border-0 px-2 py-1 cursor-pointer" id="db-limit">
+            <option value="25">25</option>
+            <option value="50">50</option>
+            <option value="100" selected>100</option>
+            <option value="500">500</option>
           </select>
         </div>
       </div>
