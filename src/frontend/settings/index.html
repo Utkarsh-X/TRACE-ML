@@ -99,237 +99,127 @@
   <div class="settings-grid">
 
     <!-- LEFT: Settings Navigation -->
-    <section class="bg-surface-container p-6 overflow-y-auto">
-      <h2 class="section-header mb-6">System Panel</h2>
-      <div class="space-y-1">
-        <div class="bg-surface-high px-4 py-3 text-primary font-mono text-[0.75rem] cursor-pointer border-l-2 border-white">
-          <span class="flex items-center gap-2">
-            <span class="material-symbols-outlined text-[16px]">monitor_heart</span>
-            System Health
-          </span>
-        </div>
-        <div class="px-4 py-3 text-on-surface-variant font-mono text-[0.75rem] cursor-pointer hover:bg-surface-high transition-colors">
-          <span class="flex items-center gap-2">
-            <span class="material-symbols-outlined text-[16px]">tune</span>
-            Configuration
-          </span>
-        </div>
-        <div class="px-4 py-3 text-on-surface-variant font-mono text-[0.75rem] cursor-pointer hover:bg-surface-high transition-colors">
-          <span class="flex items-center gap-2">
-            <span class="material-symbols-outlined text-[16px]">videocam</span>
-            Camera
-          </span>
-        </div>
-        <div class="px-4 py-3 text-on-surface-variant font-mono text-[0.75rem] cursor-pointer hover:bg-surface-high transition-colors">
-          <span class="flex items-center gap-2">
-            <span class="material-symbols-outlined text-[16px]">psychology</span>
-            Recognition
-          </span>
-        </div>
-        <div class="px-4 py-3 text-on-surface-variant font-mono text-[0.75rem] cursor-pointer hover:bg-surface-high transition-colors">
-          <span class="flex items-center gap-2">
-            <span class="material-symbols-outlined text-[16px]">gavel</span>
-            Rules Engine
-          </span>
-        </div>
-        <div class="px-4 py-3 text-on-surface-variant font-mono text-[0.75rem] cursor-pointer hover:bg-surface-high transition-colors">
-          <span class="flex items-center gap-2">
-            <span class="material-symbols-outlined text-[16px]">bolt</span>
-            Actions Policy
-          </span>
-        </div>
-        <div class="px-4 py-3 text-on-surface-variant font-mono text-[0.75rem] cursor-pointer hover:bg-surface-high transition-colors">
-          <span class="flex items-center gap-2">
-            <span class="material-symbols-outlined text-[16px]">storage</span>
-            Storage
-          </span>
+    <section class="bg-surface-container p-6 border-r border-outline-variant/10 flex flex-col overflow-y-auto overflow-x-hidden">
+      <div class="mb-8">
+        <h2 class="font-mono text-[0.6rem] text-outline uppercase tracking-[0.2em] mb-4">System Panel</h2>
+        <div class="space-y-1" id="settings-nav">
+          <div class="nav-pill active bg-surface-high text-primary border-l-2 border-white px-4 py-3 font-mono text-[0.75rem] cursor-pointer transition-colors flex items-center gap-2" data-section="section-health">
+            <span class="material-symbols-outlined text-[18px]">monitor_heart</span>
+            <span>Diagnostics</span>
+          </div>
+          <div class="nav-pill text-on-surface-variant hover:bg-surface-high px-4 py-3 font-mono text-[0.75rem] cursor-pointer transition-colors flex items-center gap-2" data-section="section-recognition">
+            <span class="material-symbols-outlined text-[18px]">psychology</span>
+            <span>Recognition</span>
+          </div>
+          <div class="nav-pill text-on-surface-variant hover:bg-surface-high px-4 py-3 font-mono text-[0.75rem] cursor-pointer transition-colors flex items-center gap-2" data-section="section-rules">
+            <span class="material-symbols-outlined text-[18px]">gavel</span>
+            <span>Intelligence</span>
+          </div>
+          <div class="nav-pill text-on-surface-variant hover:bg-surface-high px-4 py-3 font-mono text-[0.75rem] cursor-pointer transition-colors flex items-center gap-2" data-section="section-actions">
+            <span class="material-symbols-outlined text-[18px]">bolt</span>
+            <span>Actions</span>
+          </div>
+          <div class="nav-pill text-on-surface-variant hover:bg-surface-high px-4 py-3 font-mono text-[0.75rem] cursor-pointer transition-colors flex items-center gap-2" data-section="section-camera">
+            <span class="material-symbols-outlined text-[18px]">videocam</span>
+            <span>Hardware</span>
+          </div>
         </div>
       </div>
 
-      <!-- Timezone Preference -->
-      <div class="mt-6 pt-6 border-t border-outline-variant/10">
-        <span class="font-mono text-[0.6rem] text-outline uppercase tracking-widest block mb-2">Display Timezone</span>
-        <select id="tz-select" class="bg-surface-high font-mono text-[0.8rem] text-white border-0 px-3 py-2 w-full cursor-pointer focus:ring-1 focus:ring-white">
-          <option value="UTC">UTC — Coordinated Universal Time</option>
-          <option value="IST">IST — India Standard Time (+5:30)</option>
-        </select>
-        <p class="font-mono text-[0.6rem] text-outline mt-2">Applies to all timestamp displays across the system.</p>
-      </div>
-
-      <!-- Version Info -->
-      <div class="mt-6 pt-6 border-t border-outline-variant/10">
-        <div class="space-y-2">
-          <div class="flex justify-between">
-            <span class="font-mono text-[0.6rem] text-outline uppercase">Version</span>
-            <span class="font-mono text-[0.7rem] text-on-surface-variant">3.0.0</span>
+      <!-- Version Info (Stick to bottom) -->
+      <div class="mt-auto pt-6 border-t border-outline-variant/10">
+        <div class="space-y-3">
+          <div class="flex flex-col">
+            <span class="font-mono text-[0.55rem] text-outline uppercase">Core Version</span>
+            <span class="font-mono text-[0.75rem] text-primary" id="core-version">3.0.0</span>
           </div>
-          <div class="flex justify-between">
-            <span class="font-mono text-[0.6rem] text-outline uppercase">Environment</span>
-            <span class="font-mono text-[0.7rem] text-on-surface-variant">demo</span>
+          <div class="flex flex-col">
+            <span class="font-mono text-[0.55rem] text-outline uppercase">Environment</span>
+            <span class="font-mono text-[0.75rem] text-on-surface-variant" id="core-env">demo</span>
           </div>
-          <div class="flex justify-between">
-            <span class="font-mono text-[0.6rem] text-outline uppercase">Config</span>
-            <span class="font-mono text-[0.65rem] text-outline truncate ml-2">config/config.yaml</span>
+          <div class="flex flex-col">
+            <span class="font-mono text-[0.55rem] text-outline uppercase">Config Path</span>
+            <span class="font-mono text-[0.6rem] text-outline truncate" id="core-config-path">config/config.yaml</span>
           </div>
         </div>
       </div>
     </section>
 
-    <!-- CENTER: Health Checks + Configuration (read-only) -->
-    <section class="bg-surface p-6 overflow-y-auto">
+    <!-- CENTER: Main Content Area -->
+    <section class="bg-surface overflow-y-auto" id="settings-scroll-container">
+      <div class="max-w-4xl mx-auto p-8 pb-24">
+        
+        <div class="flex justify-between items-end mb-10">
+          <div>
+            <span class="flex items-center gap-2 mb-2">
+              <span class="w-1.5 h-1.5 bg-primary rounded-full shadow-[0_0_8px_rgba(var(--primary-rgb),0.6)]"></span>
+              <span class="font-mono text-[0.7rem] uppercase tracking-[0.3em] text-outline">System Control</span>
+            </span>
+            <h1 class="text-4xl font-headline font-bold text-white tracking-tight uppercase">Configuration</h1>
+          </div>
+          <div class="flex gap-3">
+            <button id="btn-refresh-health" class="px-4 py-2 bg-surface-high hover:bg-surface-container-high text-on-surface border border-outline-variant/20 font-mono text-[0.7rem] uppercase transition-colors flex items-center gap-2">
+              <span class="material-symbols-outlined text-sm">refresh</span>
+              <span>Re-run Diagnostics</span>
+            </button>
+          </div>
+        </div>
 
-      <div class="mb-6">
-        <span class="flex items-center gap-2 mb-1">
-          <span class="w-1 h-1 bg-primary inline-block"></span>
-          <span class="font-mono text-[0.6875rem] uppercase tracking-[0.2em] text-outline">System Health</span>
-        </span>
-        <h1 class="text-3xl font-headline font-bold text-white tracking-tight uppercase">Diagnostics</h1>
-      </div>
+        <!-- Section: Diagnostics -->
+        <div id="section-health" class="mb-12 scroll-mt-8">
+          <div class="flex items-center justify-between mb-4 border-b border-outline-variant/10 pb-2">
+            <h3 class="font-mono text-[0.8rem] text-primary uppercase tracking-widest">System Health</h3>
+            <span class="px-2 py-0.5 bg-success/10 text-success text-[0.65rem] font-mono uppercase tracking-wider border border-success/20" id="overall-status">Operational</span>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3" id="health-grid">
+             <!-- Dynamic Health Cards -->
+          </div>
+        </div>
 
-      <!-- Health Check Results -->
-      <div class="mb-8">
-        <h3 class="section-header mb-4">Health Checks</h3>
-        <div class="space-y-1">
-          <div class="bg-surface-container p-4 flex items-center justify-between">
-            <div class="flex items-center gap-3">
-              <span class="status-dot status-dot--active"></span>
-              <span class="text-[0.8rem] text-on-surface">LanceDB Vector Store</span>
+        <!-- Section: Global Preferences -->
+        <div id="section-global" class="mb-12 bg-surface-container/30 border border-outline-variant/10 p-6">
+          <h3 class="font-mono text-[0.8rem] text-primary uppercase tracking-widest mb-6">Global Preferences</h3>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div>
+              <label class="block font-mono text-[0.65rem] text-outline uppercase mb-2">Display Timezone</label>
+              <select id="tz-select" class="bg-surface-high font-mono text-[0.8rem] text-white border border-outline-variant/20 px-3 py-2.5 w-full cursor-pointer focus:ring-1 focus:ring-primary focus:border-primary transition-all outline-none appearance-none">
+                <option value="UTC">UTC — Coordinated Universal Time</option>
+                <option value="IST">IST — India Standard Time (+5:30)</option>
+              </select>
+              <p class="font-mono text-[0.6rem] text-outline mt-2 italic opacity-60">Affects all forensic timelines and incident logs.</p>
             </div>
-            <div class="flex items-center gap-3">
-              <span class="font-mono text-[0.65rem] text-on-surface-variant">81 embeddings loaded</span>
-              <span class="badge badge--filled">OK</span>
-            </div>
-          </div>
-          <div class="bg-surface-container p-4 flex items-center justify-between">
-            <div class="flex items-center gap-3">
-              <span class="status-dot status-dot--active"></span>
-              <span class="text-[0.8rem] text-on-surface">ArcFace Recognition Model</span>
-            </div>
-            <div class="flex items-center gap-3">
-              <span class="font-mono text-[0.65rem] text-on-surface-variant">buffalo_sc / CPU</span>
-              <span class="badge badge--filled">OK</span>
-            </div>
-          </div>
-          <div class="bg-surface-container p-4 flex items-center justify-between">
-            <div class="flex items-center gap-3">
-              <span class="status-dot status-dot--active"></span>
-              <span class="text-[0.8rem] text-on-surface">Camera Device</span>
-            </div>
-            <div class="flex items-center gap-3">
-              <span class="font-mono text-[0.65rem] text-on-surface-variant">index 0, 1280x720</span>
-              <span class="badge badge--filled">OK</span>
-            </div>
-          </div>
-          <div class="bg-surface-container p-4 flex items-center justify-between">
-            <div class="flex items-center gap-3">
-              <span class="status-dot status-dot--active"></span>
-              <span class="text-[0.8rem] text-on-surface">Data Directory</span>
-            </div>
-            <div class="flex items-center gap-3">
-              <span class="font-mono text-[0.65rem] text-on-surface-variant">data/ — 142 MB</span>
-              <span class="badge badge--filled">OK</span>
-            </div>
-          </div>
-          <div class="bg-surface-container p-4 flex items-center justify-between">
-            <div class="flex items-center gap-3">
-              <span class="status-dot status-dot--idle"></span>
-              <span class="text-[0.8rem] text-on-surface">Liveness Detection</span>
-            </div>
-            <div class="flex items-center gap-3">
-              <span class="font-mono text-[0.65rem] text-outline">disabled</span>
-              <span class="badge badge--ghost">SKIP</span>
+            <div class="flex flex-col justify-end">
+               <div class="flex items-center justify-between p-3 bg-surface-high/50 border border-outline-variant/10 rounded-sm">
+                  <span class="font-mono text-[0.65rem] text-on-surface">Auto-Refresh Diagnostics</span>
+                  <label class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" id="auto-refresh-toggle" class="sr-only peer" checked>
+                    <div class="w-8 h-4 bg-surface-container-high rounded-full peer peer-checked:bg-primary after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:after:translate-x-4"></div>
+                  </label>
+               </div>
             </div>
           </div>
         </div>
-      </div>
 
-      <!-- Current Configuration (read-only display) -->
-      <div class="mb-8">
-        <h3 class="section-header mb-4">Active Configuration</h3>
-        <p class="text-[0.7rem] text-outline mb-4 font-mono">Read-only view of current runtime configuration</p>
-        <div class="space-y-3">
+        <!-- Dynamic Config Sections Inserted Here -->
+        <div id="config-sections-root"></div>
 
-          <div class="bg-surface-container p-4">
-            <h4 class="font-mono text-[0.65rem] text-primary uppercase tracking-widest mb-3">Recognition</h4>
-            <div class="grid grid-cols-2 gap-x-8 gap-y-2">
-              <div class="flex justify-between">
-                <span class="font-mono text-[0.65rem] text-outline">model</span>
-                <span class="font-mono text-[0.7rem] text-on-surface-variant">buffalo_sc</span>
-              </div>
-              <div class="flex justify-between">
-                <span class="font-mono text-[0.65rem] text-outline">provider</span>
-                <span class="font-mono text-[0.7rem] text-on-surface-variant">CPU</span>
-              </div>
-              <div class="flex justify-between">
-                <span class="font-mono text-[0.65rem] text-outline">similarity_threshold</span>
-                <span class="font-mono text-[0.7rem] text-on-surface-variant">0.45</span>
-              </div>
-              <div class="flex justify-between">
-                <span class="font-mono text-[0.65rem] text-outline">accept_threshold</span>
-                <span class="font-mono text-[0.7rem] text-on-surface-variant">0.72</span>
-              </div>
-              <div class="flex justify-between">
-                <span class="font-mono text-[0.65rem] text-outline">review_threshold</span>
-                <span class="font-mono text-[0.7rem] text-on-surface-variant">0.58</span>
-              </div>
-              <div class="flex justify-between">
-                <span class="font-mono text-[0.65rem] text-outline">top_k</span>
-                <span class="font-mono text-[0.7rem] text-on-surface-variant">5</span>
-              </div>
-            </div>
+        <!-- Danger Zone -->
+        <div class="mt-16 pt-8 border-t border-error/20">
+          <h3 class="text-error font-mono text-[0.7rem] uppercase tracking-widest mb-4 flex items-center gap-2">
+            <span class="material-symbols-outlined text-[16px]">warning</span>
+            Critical Actions
+          </h3>
+          <div class="flex gap-4">
+            <button class="px-4 py-2 bg-error/10 hover:bg-error/20 text-error border border-error/30 font-mono text-[0.7rem] uppercase transition-colors" onclick="alert('System restart requires physical console access.')">
+              Restart Inference Engine
+            </button>
+            <button class="px-4 py-2 bg-surface-high hover:bg-surface-container-high text-on-surface border border-outline-variant/20 font-mono text-[0.7rem] uppercase transition-colors" onclick="confirm('Wipe all local vector caches?')">
+              Purge Vector Cache
+            </button>
           </div>
-
-          <div class="bg-surface-container p-4">
-            <h4 class="font-mono text-[0.65rem] text-primary uppercase tracking-widest mb-3">Rules Engine</h4>
-            <div class="grid grid-cols-2 gap-x-8 gap-y-2">
-              <div class="flex justify-between">
-                <span class="font-mono text-[0.65rem] text-outline">cooldown_sec</span>
-                <span class="font-mono text-[0.7rem] text-on-surface-variant">15</span>
-              </div>
-              <div class="flex justify-between">
-                <span class="font-mono text-[0.65rem] text-outline">reappearance.window</span>
-                <span class="font-mono text-[0.7rem] text-on-surface-variant">10s</span>
-              </div>
-              <div class="flex justify-between">
-                <span class="font-mono text-[0.65rem] text-outline">reappearance.min_events</span>
-                <span class="font-mono text-[0.7rem] text-on-surface-variant">3</span>
-              </div>
-              <div class="flex justify-between">
-                <span class="font-mono text-[0.65rem] text-outline">unknown.window</span>
-                <span class="font-mono text-[0.7rem] text-on-surface-variant">10s</span>
-              </div>
-              <div class="flex justify-between">
-                <span class="font-mono text-[0.65rem] text-outline">unknown.min_events</span>
-                <span class="font-mono text-[0.7rem] text-on-surface-variant">3</span>
-              </div>
-              <div class="flex justify-between">
-                <span class="font-mono text-[0.65rem] text-outline">instability.std_threshold</span>
-                <span class="font-mono text-[0.7rem] text-on-surface-variant">0.15</span>
-              </div>
-            </div>
-          </div>
-
-          <div class="bg-surface-container p-4">
-            <h4 class="font-mono text-[0.65rem] text-primary uppercase tracking-widest mb-3">Action Policy</h4>
-            <div class="grid grid-cols-3 gap-4 text-center">
-              <div>
-                <span class="stat-label block mb-2">On Create — Low</span>
-                <span class="font-mono text-[0.7rem] text-outline">—</span>
-              </div>
-              <div>
-                <span class="stat-label block mb-2">On Create — Med</span>
-                <span class="font-mono text-[0.7rem] text-on-surface-variant">log</span>
-              </div>
-              <div>
-                <span class="stat-label block mb-2">On Create — High</span>
-                <span class="font-mono text-[0.7rem] text-primary">log, email, alarm</span>
-              </div>
-            </div>
-          </div>
-
         </div>
-      </div>
 
+      </div>
     </section>
 
   </div>
