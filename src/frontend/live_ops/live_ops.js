@@ -605,24 +605,30 @@
       // Bottom-right
       ctx.beginPath(); ctx.moveTo(x + w - bracketLen, y + h); ctx.lineTo(x + w, y + h); ctx.lineTo(x + w, y + h - bracketLen); ctx.stroke();
 
-      // Label: decision + name + confidence
-      var label = decision.toUpperCase() + " " + (box.label || "Unknown") + " " + (box.confidence || 0).toFixed(1) + "%";
+      // ── Label: clean tactical minimal display ─────────────────────────
+      // For KNOWN persons: show name only (no misleading %).
+      // For UNKNOWN faces: show "UNKNOWN ●" with face detector quality.
+      // Gallery-match confidence is NOT shown — it's meaningless for new people.
+      var isUnknown = box.is_unknown === true || decision === "reject";
+      var label;
+      if (!isUnknown && box.label && box.label !== "Unknown") {
+        // Known identified person
+        label = "▶ " + box.label;
+      } else {
+        // Unknown face — show detector quality if available
+        var detPct = box.detector_score ? Math.round(box.detector_score * 100) : null;
+        label = detPct !== null ? ("UNKNOWN  det " + detPct + "%") : "UNKNOWN ●";
+      }
+
       ctx.font = "bold 11px 'JetBrains Mono', monospace";
       var textW = ctx.measureText(label).width;
-      // Label background
-      ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
-      ctx.fillRect(x, Math.max(0, y - 20), textW + 8, 18);
+      // Label background pill
+      ctx.fillStyle = "rgba(0, 0, 0, 0.72)";
+      ctx.fillRect(x, Math.max(0, y - 22), textW + 10, 19);
       // Label text
       ctx.fillStyle = color;
-      ctx.fillText(label, x + 4, Math.max(13, y - 6));
-
-      // Track ID below box
-      if (box.track_id) {
-        var trackLabel = box.track_id;
-        ctx.font = "10px 'JetBrains Mono', monospace";
-        ctx.fillStyle = "rgba(200, 200, 200, 0.7)";
-        ctx.fillText(trackLabel, x, y + h + 14);
-      }
+      ctx.fillText(label, x + 5, Math.max(13, y - 7));
+      // ─────────────────────────────────────────────────────────────────
     }
   }
 

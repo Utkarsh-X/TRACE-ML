@@ -51,7 +51,14 @@ class RecognitionSettings(BaseModel):
     unknown_reuse_threshold: float = 0.55
     # Minimum smoothed confidence (0-100) for an unknown to become a surfaced entity.
     # Below this, the face is logged internally but no UNK record is created.
+    # NOTE: This is a legacy threshold now only used by the known-person path.
     min_unknown_surface_threshold: float = 35.0
+    # Minimum InsightFace detector_score (0.0-1.0) for an UNKNOWN entity to be
+    # committed and stored.  This is purely a face-detection confidence —
+    # completely independent of who is enrolled in the gallery.
+    # A new person with perfect lighting will score 0.85-0.99 even if their
+    # gallery similarity is only 5%.  Set to 0.0 to disable (accept all faces).
+    min_unknown_detector_score: float = 0.65
 
 
 class PipelineSettings(BaseModel):
@@ -91,7 +98,10 @@ class TemporalSettings(BaseModel):
     track_reuse_min_score: float = 0.35
     # Entity commitment gate: a track must reach this smoothed confidence (0-100)
     # before any DB write occurs. Prevents warmup-phase ghost entities.
-    min_commit_confidence: float = 45.0
+    # Note: unknown persons have near-zero gallery similarity so their
+    # smoothed_confidence is typically 10-25%; keep this low enough to let
+    # genuine unknowns through while still blocking pure noise frames.
+    min_commit_confidence: float = 20.0
     min_commit_votes: int = 2
 
 

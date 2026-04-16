@@ -301,21 +301,37 @@ class RecognitionSession:
         source: str = "webcam:0",
     ) -> None:
         decision = match.decision_state
-        # ── Layer 5: Minimum unknown surface threshold ─────────────────────────
-        # Don't create an unknown entity for faces so ambiguous the system has
-        # less than min_unknown_surface_threshold% smoothed confidence in any
-        # direction. These are noise, not persons of interest.
+        # ── Layer 5: Unknown face quality gate ────────────────────────────────
+        # For UNKNOWN faces, use the face DETECTOR score (0-1) as the gate —
+        # not the gallery similarity.  The detector score measures "is this a
+        # real face?" and is fully independent of who is enrolled.  A brand-new
+        # person with perfect lighting gets det_score ≈ 0.95 even if their
+        # gallery similarity is only 5%.
+        # For known-candidate faces (person_id set), the original similarity
+        # gate still applies via the temporal engine.
         if decision == DecisionState.reject and not match.person_id:
-            min_surface = self.settings.recognition.min_unknown_surface_threshold
-            if match.smoothed_confidence < min_surface:
-                return
+            det_score = float(match.metadata.get("detector_score", 0.0))
+            min_det = self.settings.recognition.min_unknown_detector_score
+            if det_score < min_det:
+                return  # not a confident face detection — skip
         # ─────────────────────────────────────────────────────────────────────
         resolution = self.entity_resolver.resolve(match, embedding)
 
         # ── Best-portrait update ────────────────────────────────────────────
-        # Only update for ACCEPT decisions — we never want a blurry "review"
-        # or ghost "reject" face to become someone's profile picture.
+        # For KNOWN entities: only update on ACCEPT with a confirmed person_id
+        # so blurry review/reject frames never overwrite a good capture.
+        # For UNKNOWN entities: always attempt to save — any face is better
+        # than the placeholder icon.  The PortraitStore's MIN_IMPROVEMENT
+        # guard still applies, so subsequent better frames will progressively
+        # replace earlier lower-quality ones.
         if match.decision_state == DecisionState.accept and match.bbox and match.person_id:
+            self.portrait_store.try_update_portrait(
+                entity_id=resolution.entity_id,
+                frame_bgr=frame,
+                bbox=match.bbox,
+                score=float(match.similarity),
+            )
+        elif resolution.is_unknown and match.bbox:
             self.portrait_store.try_update_portrait(
                 entity_id=resolution.entity_id,
                 frame_bgr=frame,
@@ -501,7 +517,11 @@ class RecognitionSession:
             elif match.decision_state == DecisionState.review:
                 label = f"REVIEW {match.name} {match.smoothed_confidence:.1f}%"
             else:
-                label = f"REJECT Unknown {match.smoothed_confidence:.1f}%"
+                # For unknowns show face detector quality, not gallery similarity.
+                # Gallery similarity is meaningless for people not in the system.
+                _det = match.metadata.get("detector_score", 0.0)
+                _fq  = match.metadata.get("face_quality", 0.0)
+                label = f"UNKNOWN det={_det*100:.0f}% face={_fq*100:.0f}%"
 
             draw_text(frame, label, (match.bbox[0], max(20, match.bbox[1] - 10)), color)
             draw_text(
@@ -550,8 +570,24 @@ class RecognitionSession:
                     from collections import Counter
                     non_unk = [x for x in temporal_result.identities if x != "unknown"]
                     votes = Counter(non_unk).most_common(1)[0][1] if non_unk else 0
-                conf_ok = match.smoothed_confidence >= min_commit_conf
-                votes_ok = votes >= min_commit_votes or match.decision_state.value != "reject"
+
+                # ── Two-track commitment gate ──────────────────────────────────
+                # UNKNOWN track: gate on face DETECTOR score, not gallery match.
+                # detector_score = InsightFace's confidence that this is a real
+                # human face — completely independent of who is in the gallery.
+                # A brand-new person scores 0.85-0.99 even at 5% gallery sim.
+                if match.decision_state == DecisionState.reject and not match.person_id:
+                    det_score = float(match.metadata.get("detector_score", 0.0))
+                    min_det = self.settings.recognition.min_unknown_detector_score
+                    conf_ok = det_score >= min_det
+                    # Need at least min_commit_votes consecutive frames of this face
+                    frames_seen = len(temporal_result.confidences) if temporal_result else 0
+                    votes_ok = frames_seen >= max(1, min_commit_votes)
+                else:
+                    # KNOWN candidate track: use gallery similarity as before
+                    conf_ok = match.smoothed_confidence >= min_commit_conf
+                    votes_ok = votes >= min_commit_votes or match.decision_state.value != "reject"
+                # ──────────────────────────────────────────────────────────────
                 if conf_ok and votes_ok:
                     self._committed_tracks.add(tid)
             # ─────────────────────────────────────────────────────────────────
@@ -565,6 +601,9 @@ class RecognitionSession:
                     "decision": str(match.decision_state.value),
                     "confidence": float(match.smoothed_confidence),
                     "track_id": str(match.track_id or ""),
+                    "detector_score": float(match.metadata.get("detector_score", 0.0)),
+                    "face_quality": float(match.metadata.get("face_quality", 0.0)),
+                    "is_unknown": not bool(match.person_id),
                 }
             )
         update_live_overlay(frame_width=w, frame_height=h, fps=fps, boxes=boxes)

@@ -9,13 +9,15 @@ recognition:
   review_threshold: 0.45
   active_gallery_search_k: 96
   log_cooldown_seconds: 2
-  persist_unknown: false
+  persist_unknown: true
   persist_review: true
   robust_matching: true
   enable_preprocess_fallback: true
   low_quality_threshold: 0.40
   threshold_relaxation: 0.12
   unknown_reuse_threshold: 0.55
+  min_unknown_surface_threshold: 12.0
+  min_unknown_detector_score: 0.62
 
 temporal:
   decision_window: 6
