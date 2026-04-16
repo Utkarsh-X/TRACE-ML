@@ -1050,6 +1050,69 @@
         </div>
       </main>
 
+      <!-- Camera Capture Modal -->
+      <div id="camera-modal" class="fixed inset-0 z-[9999] hidden items-center justify-center bg-black/82 backdrop-blur-md">
+        <div class="cam-modal-box">
+          <!-- Modal Header -->
+          <div class="cam-modal-header">
+            <div class="cam-modal-title">
+              <span class="material-symbols-outlined" style="font-size: 16px;">photo_camera</span>
+              <span>LIVE CAPTURE SESSION</span>
+              <span class="cam-rec-dot"></span>
+            </div>
+            <button id="cam-close-btn" class="cam-close-btn" title="Close (ESC)">
+              <span class="material-symbols-outlined">close</span>
+            </button>
+          </div>
+
+          <!-- Video Area -->
+          <div class="cam-video-wrap">
+            <video id="cam-video" playsinline muted></video>
+            <canvas id="cam-canvas"></canvas>
+            <div class="cam-status-overlay" id="cam-status-overlay">
+              <span class="cam-status-icon material-symbols-outlined">hourglass_top</span>
+              <span class="cam-status-text" id="cam-status-text">Loading camera...</span>
+            </div>
+            <div class="cam-countdown" id="cam-countdown"></div>
+            <div class="cam-flash" id="cam-flash"></div>
+          </div>
+
+          <!-- Controls -->
+          <div class="cam-controls">
+            <button id="cam-snap-btn" class="cam-btn cam-btn-snap" title="Capture frame (SPACE)">
+              <span class="material-symbols-outlined">camera</span>
+              SNAP
+            </button>
+            <button id="cam-timer-btn" class="cam-btn cam-btn-timer" title="Toggle 3s countdown timer">
+              <span class="material-symbols-outlined">schedule</span>
+              TIMER
+            </button>
+            <div class="cam-switch-wrap">
+              <button id="cam-switch-btn" class="cam-btn" title="Switch camera">
+                <span class="material-symbols-outlined">flip_camera_android</span>
+              </button>
+              <button id="cam-discard-btn" class="cam-btn" title="Clear all captures">
+                <span class="material-symbols-outlined">delete_sweep</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Captured Images Bar -->
+          <div class="cam-captured-bar" id="cam-captured-bar">
+            <span class="cam-captured-empty" id="cam-captured-empty">No captures yet — click SNAP or press SPACE</span>
+          </div>
+
+          <!-- Footer -->
+          <div class="cam-footer">
+            <span class="cam-captured-count" id="cam-captured-count">0 captured</span>
+            <button id="cam-add-btn" class="cam-btn" disabled title="Add captures to enrollment">
+              <span class="material-symbols-outlined">check_circle</span>
+              ADD TO ENROLLMENT
+            </button>
+          </div>
+        </div>
+      </div>
+
       <script src="../shared/trace_client.js"></script>
       <script src="../shared/trace_render.js"></script>
       <script src="../shared/sidenav.js"></script>
