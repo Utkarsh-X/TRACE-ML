@@ -122,6 +122,68 @@
 
     #view-overview { display: block; }
     #view-detail   { display: none; }
+
+    /* ── Entity portrait ──────────────────────────── */
+    .portrait-frame {
+      position: relative;
+      width: 100%;
+      height: 100%;
+    }
+    .portrait-frame__img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: center top;
+      display: none; /* revealed by JS once loaded */
+    }
+    .portrait-frame__img.loaded {
+      display: block;
+    }
+    .portrait-frame__placeholder {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+    }
+    .portrait-frame__placeholder.hidden {
+      display: none;
+    }
+    /* Scan-line animation overlay on portrait */
+    .portrait-frame__scanline {
+      position: absolute;
+      inset: 0;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(0,0,0,0.06) 2px,
+        rgba(0,0,0,0.06) 4px
+      );
+      pointer-events: none;
+    }
+    /* Corner reticule marks */
+    .portrait-frame::before,
+    .portrait-frame::after {
+      content: '';
+      position: absolute;
+      width: 16px;
+      height: 16px;
+      border-color: rgba(255,255,255,0.18);
+      border-style: solid;
+      z-index: 2;
+    }
+    .portrait-frame::before { top: 8px; left: 8px; border-width: 2px 0 0 2px; }
+    .portrait-frame::after  { bottom: 8px; right: 8px; border-width: 0 2px 2px 0; }
+
+    /* Card avatar portrait thumbnail */
+    .entity-card__avatar img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
   </style>
 </head>
 
@@ -300,11 +362,22 @@
       <!-- Row 1: Photo + Stats -->
       <div class="flex flex-col lg:flex-row gap-8 items-start mb-10">
         <div class="w-full lg:w-1/3 aspect-[4/5] bg-surface-low relative overflow-hidden max-h-[360px]">
-          <div class="w-full h-full flex items-center justify-center">
-            <div class="text-center">
-              <span class="material-symbols-outlined text-outline-variant text-[56px] mb-2 block">person_search</span>
-              <p class="font-mono text-[0.7rem] text-outline">Detection capture</p>
+          <div class="portrait-frame w-full h-full">
+            <!-- Portrait image — hidden until loaded; shown on load, hidden again on 404 -->
+            <img
+              id="entity-portrait"
+              class="portrait-frame__img"
+              alt="Entity portrait"
+              onerror="this.classList.remove('loaded'); document.getElementById('entity-portrait-placeholder').classList.remove('hidden');"
+              onload="this.classList.add('loaded'); document.getElementById('entity-portrait-placeholder').classList.add('hidden');"
+            />
+            <!-- Fallback placeholder (visible by default, hidden when portrait loads) -->
+            <div class="portrait-frame__placeholder" id="entity-portrait-placeholder">
+              <span class="material-symbols-outlined text-outline-variant text-[48px]">person_search</span>
+              <p class="font-mono text-[0.65rem] text-outline text-center px-4">Detection capture<br><span class="text-outline-variant text-[0.58rem]">awaiting recognition event</span></p>
             </div>
+            <!-- Tactical scan-line overlay (purely cosmetic, sits on top) -->
+            <div class="portrait-frame__scanline"></div>
           </div>
           <div class="absolute bottom-4 left-4 right-4">
             <div class="glass-panel p-3 space-y-2">

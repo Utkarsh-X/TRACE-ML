@@ -136,6 +136,7 @@ class StoreSettings(BaseModel):
     vectors_dir: str = "data/vectors"
     screenshots_dir: str = "data/screenshots"
     exports_dir: str = "data/exports"
+    portraits_dir: str = "data/portraits"
 
 
 class LoggingSettings(BaseModel):

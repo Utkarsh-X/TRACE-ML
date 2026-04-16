@@ -68,11 +68,25 @@
       var cat       = String(ent.category || (isKnown ? "known" : "unknown")).toLowerCase();
       var lastSeen  = ent.last_seen_at ? TraceClient.formatTime(ent.last_seen_at) : "—";
       var openInc   = parseInt(ent.open_incident_count, 10) || 0;
-      var detCount  = parseInt(ent.recent_alert_count, 10) || parseInt(ent.detection_count, 10) || 0;
 
       var typeKey   = cat === "criminal" ? "criminal" : cat === "vip" ? "vip" : isKnown ? "known" : "unknown";
       var badgeText = isKnown ? cat.toUpperCase() : "UNKNOWN";
       var cardType  = isKnown ? "known" : "unknown";
+
+      // Build portrait thumbnail for the avatar cell.
+      // If no portrait exists yet, the browser onerror falls back to the icon.
+      var portraitTs = Math.floor(Date.now() / 30000); // 30 s cache window
+      var avatarHtml = ent.entity_id
+        ? '<img src="' + TraceClient.entityPortraitUrl(ent.entity_id) + '?t=' + portraitTs + '"'
+          + ' alt="" loading="lazy"'
+          + ' onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\'"'
+          + ' style="display:block" />'
+          + '<span class="material-symbols-outlined" style="font-size:18px;color:#919191;display:none">'
+            + (isKnown ? 'person' : 'person_off')
+          + '</span>'
+        : '<span class="material-symbols-outlined" style="font-size:18px;color:#919191">'
+            + (isKnown ? 'person' : 'person_off')
+          + '</span>';
 
       return '<div class="entity-card entity-card--' + cardType + '" data-entity-id="' + TraceClient.escapeHtml(ent.entity_id) + '">'
         /* top row: badge + arrow */
@@ -82,7 +96,7 @@
         + '</div>'
         /* avatar + name block */
         + '<div class="flex items-center gap-3">'
-        +   '<div class="entity-card__avatar"><span class="material-symbols-outlined" style="font-size:18px;color:#919191">' + (isKnown ? 'person' : 'person_off') + '</span></div>'
+        +   '<div class="entity-card__avatar">' + avatarHtml + '</div>'
         +   '<div class="flex-1 min-w-0">'
         +     '<div style="font-family:Inter,sans-serif;font-weight:600;font-size:0.9rem;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.2">' + name + '</div>'
         +     '<div style="font-family:JetBrains Mono,monospace;font-size:0.58rem;color:#666;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + shortId + '</div>'
@@ -168,6 +182,25 @@
 
     var clockEl = $("entity-clock");
     if (clockEl) clockEl.textContent = TraceClient.formatDateTime(entity.last_seen_at) || "—";
+
+    // ── Best-match portrait ──────────────────────────────────────────
+    //
+    // Reset first so stale portrait from a previous entity doesn’t flash.
+    var portraitImg = $("entity-portrait");
+    var portraitPlaceholder = $("entity-portrait-placeholder");
+    if (portraitImg) {
+      portraitImg.classList.remove("loaded");
+      portraitImg.removeAttribute("src"); // stop any pending request
+    }
+    if (portraitPlaceholder) portraitPlaceholder.classList.remove("hidden");
+
+    if (entity.entity_id && portraitImg) {
+      // Add a cache-busting timestamp so the browser always fetches fresh after
+      // a recognition event (portraits improve over time).
+      var ts = Math.floor(Date.now() / 10000); // invalidates every 10 s
+      portraitImg.src = TraceClient.entityPortraitUrl(entity.entity_id) + "?t=" + ts;
+    }
+    // ─────────────────────────────────────────────────────────────────
   }
 
   function renderStats(profile) {

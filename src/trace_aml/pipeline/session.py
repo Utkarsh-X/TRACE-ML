@@ -29,6 +29,7 @@ from trace_aml.pipeline.live_overlay import update_live_overlay
 from trace_aml.pipeline.temporal import TemporalDecisionEngine
 from trace_aml.recognizers.arcface import ArcFaceRecognizer
 from trace_aml.store.vector_store import VectorStore
+from trace_aml.store.portrait_store import PortraitStore
 
 
 def draw_text(frame, text: str, xy: tuple[int, int], color: tuple[int, int, int], scale: float = 0.55) -> None:
@@ -79,6 +80,7 @@ class RecognitionSession:
         self.last_logged_at: dict[str, float] = {}
         self.screenshot_dir = Path(settings.store.screenshots_dir)
         self.screenshot_dir.mkdir(parents=True, exist_ok=True)
+        self.portrait_store = PortraitStore(settings)
         self.event_feed: deque[str] = deque(maxlen=8)
         self.recent_confidences: deque[float] = deque(maxlen=8)
         self.decision_counters = {"accept": 0, "review": 0, "reject": 0}
@@ -309,6 +311,19 @@ class RecognitionSession:
                 return
         # ─────────────────────────────────────────────────────────────────────
         resolution = self.entity_resolver.resolve(match, embedding)
+
+        # ── Best-portrait update ────────────────────────────────────────────
+        # Only update for ACCEPT decisions — we never want a blurry "review"
+        # or ghost "reject" face to become someone's profile picture.
+        if match.decision_state == DecisionState.accept and match.bbox and match.person_id:
+            self.portrait_store.try_update_portrait(
+                entity_id=resolution.entity_id,
+                frame_bgr=frame,
+                bbox=match.bbox,
+                score=float(match.similarity),
+            )
+        # ────────────────────────────────────────────────────────────────────
+
         persist_detection = True
         if decision == DecisionState.reject and not self.settings.recognition.persist_unknown:
             persist_detection = False

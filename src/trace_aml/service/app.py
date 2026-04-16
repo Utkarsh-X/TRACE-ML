@@ -93,6 +93,50 @@ def create_service_app(
         quality_router = create_quality_router(settings, store, session.recognizer)
         app.include_router(quality_router)
 
+    # ── Portrait endpoint ────────────────────────────────────────────────────
+    from trace_aml.store.portrait_store import PortraitStore
+    from fastapi.responses import FileResponse as _FileResponse
+
+    _portrait_store = (
+        session.portrait_store
+        if session is not None and hasattr(session, "portrait_store")
+        else PortraitStore(settings)
+    )
+
+    @app.get(
+        "/api/v1/entities/{entity_id}/portrait",
+        response_class=_FileResponse,
+        tags=["entities"],
+        summary="Best-match face portrait for an entity",
+    )
+    def entity_portrait(entity_id: str) -> Any:
+        """Return the highest-quality face crop captured for this entity.
+
+        The portrait is extracted from the live camera frame at the moment of
+        a confirmed *accept* match, cropped to the face bounding-box, padded,
+        and stored as a 256×256 JPEG.  This endpoint is a pure filesystem
+        read — no database queries.
+
+        Returns 404 if no portrait has been captured for this entity yet.
+        """
+        path = _portrait_store.get_portrait_path(entity_id)
+        if path is None:
+            from fastapi import HTTPException as _HTTPException
+            raise _HTTPException(
+                status_code=404,
+                detail=f"No portrait available for entity '{entity_id}' yet.",
+            )
+        return _FileResponse(
+            str(path),
+            media_type="image/jpeg",
+            headers={
+                "Cache-Control": "no-cache, no-store, must-revalidate",
+                "X-Entity-Id": entity_id,
+            },
+        )
+    # ────────────────────────────────────────────────────────────────────────
+
+
     @app.get("/")
     def root() -> dict[str, Any]:
         return {

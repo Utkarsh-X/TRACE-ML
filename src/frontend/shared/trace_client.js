@@ -347,6 +347,17 @@
   }
 
   /**
+   * Return the URL for the best-match portrait JPEG of an entity.
+   * Set this directly as <img src="..."> — the browser will show a 404 if
+   * no portrait exists yet (handle via img.onerror).
+   * @param {string} entityId
+   * @returns {string}
+   */
+  function entityPortraitUrl(entityId) {
+    return BASE_URL + "/api/v1/entities/" + encodeURIComponent(entityId) + "/portrait";
+  }
+
+  /**
    * GET /api/v1/entities/{id}/timeline
    * @param {string} entityId
    * @param {{start?:string, end?:string, limit?:number}} [opts]
@@ -700,6 +711,7 @@
     entities: entities,
     entity: entity,
     entityProfile: entityProfile,
+    entityPortraitUrl: entityPortraitUrl,
     entityTimeline: entityTimeline,
     entityIncidents: entityIncidents,
     entitySuggestions: entitySuggestions,
