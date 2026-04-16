@@ -17,6 +17,49 @@
   :root {
     --enroll-left-width: 320px;
     --enroll-right-width: 300px;
+    --index-list-h: 1fr;  /* controlled by JS drag */
+  }
+
+  /* Index list area — height controlled by JS */
+  #person-list-root {
+    overflow-y: auto;
+    transition: height 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  #person-list-root.animating {
+    transition: height 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* Horizontal index splitter — same visual as forensic splitter */
+  .index-hsplitter {
+    height: 4px;
+    flex-shrink: 0;
+    cursor: ns-resize;
+    background: transparent;
+    position: relative;
+    z-index: 10;
+    transition: background 0.15s;
+    border-top: 1px solid rgba(255,255,255,0.04);
+  }
+  .index-hsplitter:hover,
+  .index-hsplitter.is-dragging {
+    background: rgba(255,255,255,0.10);
+  }
+  /* Mini grip dots in centre of splitter */
+  .index-hsplitter::after {
+    content: '···';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 8px;
+    letter-spacing: 3px;
+    color: rgba(255,255,255,0.15);
+    pointer-events: none;
+    line-height: 1;
+  }
+  .index-hsplitter:hover::after,
+  .index-hsplitter.is-dragging::after {
+    color: rgba(255,255,255,0.35);
   }
 
   .enroll-grid {
@@ -57,6 +100,42 @@
     flex-direction: column;
     background: #0a0a0a;
     border-left: 1px solid rgba(255, 255, 255, 0.05);
+    border-right: 1px solid rgba(255, 255, 255, 0.05);
+    max-width: var(--enroll-right-width);
+    overflow: hidden;
+    transition: max-width 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+                border-color 0.3s;
+    position: relative;
+  }
+
+  .enroll-right.collapsed {
+    max-width: 0;
+    border-left-color: transparent;
+    border-right-color: transparent;
+  }
+
+  /* Show the reopen button when right panel is collapsed (JS adds class to center) */
+  .enroll-center.intel-hidden .intel-reopen-btn {
+    display: flex;
+  }
+
+  /* Intel reopen btn: sits on LEFT edge of center header since panel is to our left */
+  .intel-reopen-btn {
+    position: absolute;
+    top: 50%;
+    left: 24px;
+    transform: translateY(-50%);
+    width: 36px;
+    height: 36px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: var(--md-outline-variant);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 20;
   }
 
   /* Resizable Splitter */
@@ -879,7 +958,7 @@
 
           <!-- LEFT: Person Index -->
           <section class="enroll-left bg-surface-low flex flex-col border-r border-outline-variant/10" id="enroll-left">
-            <header class="p-4 border-b border-outline-variant/10">
+            <header class="p-4 border-b border-outline-variant/10" style="flex-shrink:0">
               <div class="flex items-center justify-between mb-3 gap-2">
                 <h2 class="section-header flex-1">Enrollment Index</h2>
                 <button class="index-toggle-btn" id="index-toggle" title="Toggle Index (Ctrl+I)" aria-label="Toggle enrollment index panel">
@@ -892,18 +971,47 @@
                 <input type="text" placeholder="Search index..." class="w-full bg-surface-high font-mono text-[0.7rem] text-white border-0 px-3 py-2 pl-9 placeholder-outline-variant focus:ring-1 focus:ring-primary rounded-sm" id="person-search" />
               </div>
             </header>
-            <div class="flex-1 overflow-y-auto" id="person-list-root">
+            <!-- List area — height controlled by the horizontal splitter below -->
+            <div class="overflow-y-auto" id="person-list-root" style="flex:1;min-height:0">
               <div class="text-center py-12 text-outline text-[0.7rem] font-mono animate-pulse">SYNCHRONIZING INDEX...</div>
             </div>
+            <!-- Horizontal drag splitter at bottom of index list -->
+            <div class="index-hsplitter" id="index-hsplitter" title="Drag to resize list / Double-click to collapse"></div>
           </section>
 
           <div class="enroll-splitter" id="enroll-splitter"></div>
 
-          <!-- CENTER: Enrollment Workspace -->
-          <section class="enroll-center bg-surface flex flex-col overflow-hidden">
-            <header class="p-6 border-b border-outline-variant/10 flex-shrink-0 relative">
-              <button class="index-reopen-btn" id="index-reopen" title="Show Enrollment Index (Ctrl+I)" aria-label="Show enrollment index panel">
+          <!-- INTELLIGENCE PANEL: sits between index and form -->
+          <section class="enroll-right bg-surface-low flex flex-col overflow-hidden collapsed" id="enroll-right">
+            <!-- Panel header with close button -->
+            <div class="flex items-center justify-between px-4 py-3 border-b border-outline-variant/10 flex-shrink-0" style="min-width:var(--enroll-right-width)">
+              <span class="font-mono text-[0.6rem] text-outline uppercase tracking-widest">Entity Intelligence</span>
+              <!-- chevron_right closes the panel (pushes it back toward the index) -->
+              <button class="index-toggle-btn" id="intel-toggle" title="Close intelligence panel" aria-label="Close intelligence panel">
                 <span class="material-symbols-outlined">chevron_left</span>
+              </button>
+            </div>
+            <!-- Entity detail content -->
+            <div class="flex-1 flex flex-col overflow-hidden" style="min-width:var(--enroll-right-width)">
+              <div class="flex-1 overflow-y-auto p-4" id="person-detail-panel">
+                <div class="flex flex-col items-center justify-center h-full text-center opacity-30" id="intel-empty-state">
+                  <span class="material-symbols-outlined text-[48px] mb-2">person_search</span>
+                  <p class="font-mono text-[0.65rem] uppercase tracking-widest">Select entity for detailed intel</p>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- CENTER: Enrollment Workspace -->
+          <section class="enroll-center bg-surface flex flex-col overflow-hidden" id="enroll-center">
+            <header class="p-6 border-b border-outline-variant/10 flex-shrink-0 relative">
+              <!-- Left reopen button (index panel) -->
+              <button class="index-reopen-btn" id="index-reopen" title="Show Enrollment Index (Ctrl+I)" aria-label="Show enrollment index panel">
+                <span class="material-symbols-outlined">chevron_right</span>
+              </button>
+              <!-- Left-side reopen button for intel panel (chevron_right = expand panel to the left of form) -->
+              <button class="intel-reopen-btn" id="intel-reopen" title="Show Intelligence Panel" aria-label="Show entity intelligence panel">
+                <span class="material-symbols-outlined">chevron_right</span>
               </button>
               <div class="mb-2">
                 <span class="flex items-center gap-2 mb-1">
@@ -1030,23 +1138,6 @@
               <div id="enroll-status" class="font-mono text-[0.65rem] text-primary animate-pulse"></div>
             </footer>
           </section>
-
-          <!-- RIGHT: System Status & Entity Intel -->
-          <section class="enroll-right bg-surface-low flex flex-col border-l border-outline-variant/10 overflow-hidden">
-            <!-- Entity Focus -->
-            <div class="flex-1 flex flex-col overflow-hidden">
-              <div class="p-4 border-b border-outline-variant/10">
-                <h2 class="section-header">Entity Intelligence</h2>
-              </div>
-              <div class="flex-1 overflow-y-auto p-4" id="person-detail-panel">
-                <div class="flex flex-col items-center justify-center h-full text-center opacity-30">
-                  <span class="material-symbols-outlined text-[48px] mb-2">person_search</span>
-                  <p class="font-mono text-[0.65rem] uppercase tracking-widest">Select entity for detailed intel</p>
-                </div>
-              </div>
-            </div>
-          </section>
-
         </div>
       </main>
 

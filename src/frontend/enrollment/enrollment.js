@@ -89,11 +89,21 @@
   }
 
   function loadPersonDetail(personId) {
+    // Auto-open the right intelligence panel whenever a record is selected.
+    var rightPanel = $("enroll-right");
+    var center = $("enroll-center");
+    if (rightPanel) rightPanel.classList.remove("collapsed");
+    if (center) center.classList.remove("intel-hidden");
+
     TraceClient.getPerson(personId).then(function (p) {
       if (!p) return;
       var panel = $("person-detail-panel");
       if (!panel) return;
-      
+
+      // Hide the empty-state placeholder now that we have real content.
+      var emptyState = $("intel-empty-state");
+      if (emptyState) emptyState.style.display = "none";
+
       var score = (p.enrollment_score || 0);
       var scoreColor = score > 0.8 ? "text-primary" : (score > 0.5 ? "text-warning" : "text-error");
       var stateClass = "lc-" + (p.lifecycle_state || "draft");
@@ -595,19 +605,44 @@
     var reopen = $("index-reopen");
     if (!left || !splitter || !toggle) return;
 
-    // Toggle logic (icon rotation handled by CSS)
+    // Toggle logic for LEFT panel (index)
     toggle.addEventListener("click", function() {
       left.classList.toggle("collapsed");
     });
 
-    // Reopen button logic (shows when panel is collapsed)
+    // Reopen button logic for LEFT panel
     if (reopen) {
       reopen.addEventListener("click", function() {
         left.classList.remove("collapsed");
       });
     }
 
-    // Keyboard shortcut (Ctrl+I)
+    // ── RIGHT panel (Intelligence) toggle ────────────────────────────────
+    var intelPanel  = $("enroll-right");
+    var center      = $("enroll-center");
+    var intelToggle = $("intel-toggle");
+    var intelReopen = $("intel-reopen");
+
+    function _setIntelCollapsed(isCollapsed) {
+      if (!intelPanel) return;
+      intelPanel.classList.toggle("collapsed", isCollapsed);
+      // Show reopen arrow on center header when panel is hidden
+      if (center) center.classList.toggle("intel-hidden", isCollapsed);
+    }
+
+    if (intelToggle) {
+      intelToggle.addEventListener("click", function() {
+        _setIntelCollapsed(true);
+      });
+    }
+
+    if (intelReopen) {
+      intelReopen.addEventListener("click", function() {
+        _setIntelCollapsed(false);
+      });
+    }
+
+    // Keyboard shortcut (Ctrl+I) toggles left index panel
     document.addEventListener("keydown", function(e) {
       if (e.ctrlKey && e.key.toLowerCase() === "i") {
         e.preventDefault();
@@ -644,6 +679,94 @@
     });
   }
 
+  /* ─── Horizontal index splitter (forensic-style) ─── */
+  function initIndexHSplitter() {
+    var listEl    = $("person-list-root");
+    var hSplitter = $("index-hsplitter");
+    if (!listEl || !hSplitter) return;
+
+    var COLLAPSED_H  = 0;          // fully collapsed
+    var SNAP_THRESH  = 48;         // snap to collapsed if ≤ this when releasing
+    var DEFAULT_H    = 320;        // initial list height in px
+
+    function maxH() {
+      // Maximum = viewport height minus the header at top of enroll-left and footer/splitter
+      var leftEl = $("enroll-left");
+      if (!leftEl) return 500;
+      var headerEl = leftEl.querySelector("header");
+      var headerH  = headerEl ? headerEl.getBoundingClientRect().height : 90;
+      return Math.floor(leftEl.getBoundingClientRect().height - headerH - 6);
+    }
+
+    function applyH(h, animate) {
+      if (animate) {
+        listEl.classList.add("animating");
+        var onEnd = function() {
+          listEl.classList.remove("animating");
+          listEl.removeEventListener("transitionend", onEnd);
+        };
+        listEl.addEventListener("transitionend", onEnd);
+      } else {
+        listEl.classList.remove("animating");
+      }
+      listEl.style.height  = h + "px";
+      listEl.style.flex    = "none"; // override flex:1 once we set explicit height
+      hSplitter.title = h <= COLLAPSED_H
+        ? "Double-click to expand / Drag to resize"
+        : "Drag to resize / Double-click to collapse";
+    }
+
+    // Start at the default height
+    applyH(DEFAULT_H, false);
+
+    /* ── Double-click: toggle ─────── */
+    hSplitter.addEventListener("dblclick", function(e) {
+      e.preventDefault();
+      var cur = parseFloat(listEl.style.height) || DEFAULT_H;
+      applyH(cur <= COLLAPSED_H ? DEFAULT_H : COLLAPSED_H, true);
+    });
+
+    /* ── Drag to resize ─────────────── */
+    var _dragging   = false;
+    var _dragStartY = 0;
+    var _dragStartH = 0;
+
+    hSplitter.addEventListener("mousedown", function(e) {
+      if (e.button !== 0) return;
+      _dragging   = true;
+      _dragStartY = e.clientY;
+      _dragStartH = parseFloat(listEl.style.height) || DEFAULT_H;
+      hSplitter.classList.add("is-dragging");
+      document.body.style.cursor     = "ns-resize";
+      document.body.style.userSelect = "none";
+      e.preventDefault();
+      e.stopPropagation();
+    });
+
+    document.addEventListener("mousemove", function(e) {
+      if (!_dragging) return;
+      // drag down = positive clientY delta = grow the list
+      var delta = e.clientY - _dragStartY;       // drag down = grow
+      var newH  = Math.max(COLLAPSED_H, Math.min(maxH(), _dragStartH + delta));
+      listEl.style.height = newH + "px";
+      listEl.style.flex   = "none";
+    });
+
+    document.addEventListener("mouseup", function() {
+      if (!_dragging) return;
+      _dragging = false;
+      hSplitter.classList.remove("is-dragging");
+      document.body.style.cursor     = "";
+      document.body.style.userSelect = "";
+
+      // Snap: if barely opened, fully collapse
+      var finalH = parseFloat(listEl.style.height) || DEFAULT_H;
+      if (finalH > COLLAPSED_H && finalH <= SNAP_THRESH) {
+        applyH(COLLAPSED_H, true);
+      }
+    });
+  }
+
   function init() {
     var mainContent = document.querySelector("main");
     if (typeof TraceRender !== "undefined" && TraceRender.initOfflineUI) {
@@ -651,6 +774,7 @@
     }
 
     initResizableIndex();
+    initIndexHSplitter();
     initDropZone();
     initCameraModal();
     wireSearch();
