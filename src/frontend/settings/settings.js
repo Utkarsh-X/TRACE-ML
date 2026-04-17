@@ -414,6 +414,27 @@
       btnRebuild.addEventListener("click", handleTrainRebuild);
     }
 
+    // Deduplicate database button
+    var btnDeduplicate = $("btn-deduplicate-db");
+    if (btnDeduplicate) {
+      btnDeduplicate.addEventListener("click", function () {
+        if (!confirm("Scan and remove duplicate incident entries from the database?\n\nThis may take several seconds.")) return;
+        btnDeduplicate.disabled = true;
+        btnDeduplicate.textContent = "...";
+        TraceClient.deduplicateIncidents().then(function (result) {
+          btnDeduplicate.disabled = false;
+          btnDeduplicate.innerHTML = '<span class="material-symbols-outlined" style="font-size:16px;">delete_sweep</span><span>Deduplicate Database</span>';
+          if (result) {
+            var count = result.removed_duplicates || 0;
+            var msg = count > 0 ? ("Removed " + count + " duplicate(s) from database.") : "No duplicates found.";
+            alert("✓ Deduplication complete\n\n" + msg);
+          } else {
+            alert("✗ Deduplication failed. Check backend logs.");
+          }
+        });
+      });
+    }
+
     TraceClient.probe().then(function (info) {
       if (info) {
         loadSystemInfo();

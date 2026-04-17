@@ -182,13 +182,18 @@
   function loadIncident(id) {
     if (!id) return;
     _currentId = id;
-
+    // Show left panel with incident details
+    var leftPanel = $("inc-left-panel");
+    if (leftPanel) leftPanel.style.display = "flex";
     // Show skeleton in timeline while loading
     var tlEl = $("tl-events");
-    if (tlEl) tlEl.innerHTML =
-      '<div class="skeleton mb-2" style="height:72px;opacity:.35"></div>'
-    + '<div class="skeleton mb-2" style="height:72px;opacity:.2"></div>'
-    + '<div class="skeleton" style="height:72px;opacity:.1"></div>';
+    if (tlEl) {
+      tlEl.classList.remove("hidden");
+      tlEl.innerHTML =
+        '<div class="skeleton mb-2" style="height:72px;opacity:.35"></div>'
+      + '<div class="skeleton mb-2" style="height:72px;opacity:.2"></div>'
+      + '<div class="skeleton" style="height:72px;opacity:.1"></div>';
+    }
 
     var ph = $("tl-placeholder"); if (ph) ph.style.display = "none";
     var sm = $("tl-show-more");   if (sm) sm.classList.add("hidden");
@@ -626,20 +631,7 @@
       });
     });
 
-    var deduplicateBtn = $("btn-deduplicate");
-    if (deduplicateBtn) deduplicateBtn.addEventListener("click", function () {
-      setText("ctrl-status", "Deduplicating…");
-      TraceClient.deduplicateIncidents().then(function (result) {
-        if (result) {
-          var count = result.removed_duplicates || 0;
-          setText("ctrl-status", count > 0 ? ("Removed " + count + " duplicate(s)") : "No duplicates found");
-          resetStrip();
-          loadCards(true);
-        } else {
-          setText("ctrl-status", "Failed — offline");
-        }
-      });
-    });
+    // Deduplicate button moved to settings page
 
     var moreBtn = $("btn-show-more-tl");
     if (moreBtn) moreBtn.addEventListener("click", function () {

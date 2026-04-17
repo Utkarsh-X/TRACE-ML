@@ -254,12 +254,16 @@
             <span class="material-symbols-outlined text-[16px]">warning</span>
             Critical Actions
           </h3>
-          <div class="flex gap-4">
+          <div class="flex gap-4 flex-wrap">
             <button class="px-4 py-2 bg-error/10 hover:bg-error/20 text-error border border-error/30 font-mono text-[0.7rem] uppercase transition-colors" onclick="alert('System restart requires physical console access.')">
               Restart Inference Engine
             </button>
             <button class="px-4 py-2 bg-surface-high hover:bg-surface-container-high text-on-surface border border-outline-variant/20 font-mono text-[0.7rem] uppercase transition-colors" onclick="confirm('Wipe all local vector caches?')">
               Purge Vector Cache
+            </button>
+            <button type="button" id="btn-deduplicate-db" class="px-4 py-2 bg-amber-900/10 hover:bg-amber-900/20 border border-amber-700/20 hover:border-amber-600/40 text-amber-200/60 hover:text-amber-200 font-mono text-[0.7rem] uppercase transition-all cursor-pointer flex items-center gap-2" title="Remove duplicate entries from database">
+              <span class="material-symbols-outlined" style="font-size:16px;">delete_sweep</span>
+              <span>Deduplicate Database</span>
             </button>
           </div>
         </div>
