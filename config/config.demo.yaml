@@ -1,6 +1,24 @@
 app:
   environment: demo
 
+# ── GPU / Execution-Provider Configuration ────────────────────────────────────
+# TRACE-AML will automatically probe for GPU providers at startup and select
+# the best available one (CUDA > DirectML > ROCm > OpenVINO > CPU fallback).
+#
+# To enable CUDA acceleration:
+#   1. pip uninstall onnxruntime
+#   2. pip install onnxruntime-gpu
+#   Then restart the service — CUDA will be detected automatically.
+#
+# To force CPU-only mode, set:  gpu.enabled: false
+# To force a specific backend:  gpu.preferred_provider: "DmlExecutionProvider"
+gpu:
+  enabled: true
+  preferred_provider: ""      # leave empty for auto-detection
+  cuda_device_id: 0           # GPU index (only relevant when multiple GPUs present)
+  log_provider_selection: true
+
+
 camera:
   device_index: 0
 
@@ -15,7 +33,7 @@ recognition:
   enable_preprocess_fallback: true
   low_quality_threshold: 0.40
   threshold_relaxation: 0.12
-  unknown_reuse_threshold: 0.38
+  unknown_reuse_threshold: 0.25
   min_unknown_surface_threshold: 12.0
   min_unknown_detector_score: 0.62
 

@@ -32,8 +32,37 @@ class CameraSettings(BaseModel):
         return value
 
 
+class GpuSettings(BaseModel):
+    """Controls GPU / execution-provider selection for ONNX Runtime.
+
+    When ``enabled=True`` the system calls ``trace_aml.core.gpu.detect_providers``
+    at startup and selects the best available accelerator automatically,
+    falling back to CPU if no GPU provider is functional.
+    """
+
+    enabled: bool = True
+    """Master switch.  Set to False to always use CPU (no GPU probing at all)."""
+
+    preferred_provider: str = ""
+    """Override the auto-detected order.
+
+    Leave empty for auto-detection.  Set to a specific provider string to force
+    it to the top of the priority list, e.g. ``"CUDAExecutionProvider"`` or
+    ``"DmlExecutionProvider"``.
+    """
+
+    cuda_device_id: int = 0
+    """CUDA device ordinal when multiple GPUs are present."""
+
+    log_provider_selection: bool = True
+    """Emit a startup log line describing the selected provider."""
+
+
 class RecognitionSettings(BaseModel):
     model_name: str = "buffalo_sc"
+    # ``provider`` is superseded by GpuSettings when gpu.enabled=True.
+    # Kept for backwards-compatibility; a deprecation warning is logged
+    # if it is set to a non-default value while gpu.enabled=True.
     provider: str = "CPUExecutionProvider"
     det_size: tuple[int, int] = (640, 640)
     similarity_threshold: float = 0.45
@@ -182,6 +211,7 @@ class Settings(BaseSettings):
     store: StoreSettings = Field(default_factory=StoreSettings)
     logging: LoggingSettings = Field(default_factory=LoggingSettings)
     liveness: LivenessSettings = Field(default_factory=LivenessSettings)
+    gpu: GpuSettings = Field(default_factory=GpuSettings)
     runtime_config_path: str = ""
 
 

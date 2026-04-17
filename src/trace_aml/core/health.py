@@ -53,6 +53,38 @@ def check_paths(settings: Settings) -> list[HealthCheck]:
     return checks
 
 
+def check_gpu(settings: Settings) -> HealthCheck:
+    """Probe GPU / ONNX execution-provider availability."""
+    try:
+        from trace_aml.core.gpu import detect_providers, get_gpu_info
+
+        detect_providers(
+            preferred=settings.gpu.preferred_provider,
+            allow_gpu=settings.gpu.enabled,
+            cuda_device_id=settings.gpu.cuda_device_id,
+        )
+        info = get_gpu_info()
+        active = info["active_provider"]
+        gpu_on = info["gpu_acceleration"]
+
+        if not settings.gpu.enabled:
+            detail = f"GPU disabled in config — using {active}"
+            return HealthCheck("gpu", "WARN", detail)
+
+        if gpu_on:
+            devices = info.get("cuda_device_names") or ["(non-CUDA GPU)"]
+            detail = f"{active} — devices: {', '.join(devices)}"
+            return HealthCheck("gpu", "OK", detail)
+        else:
+            detail = (
+                f"No GPU provider available — falling back to {active}. "
+                "Install onnxruntime-gpu for CUDA support."
+            )
+            return HealthCheck("gpu", "WARN", detail)
+    except Exception as exc:
+        return HealthCheck("gpu", "FAIL", f"GPU probe error: {exc}")
+
+
 def run_health_checks(settings: Settings) -> list[HealthCheck]:
     deps = [
         "numpy",
@@ -66,4 +98,5 @@ def run_health_checks(settings: Settings) -> list[HealthCheck]:
     checks = [check_dependency(dep) for dep in deps]
     checks.extend(check_paths(settings))
     checks.append(check_camera(settings.camera.device_index))
+    checks.append(check_gpu(settings))
     return checks

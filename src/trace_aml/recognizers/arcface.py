@@ -10,6 +10,7 @@ import numpy as np
 
 from trace_aml.core.config import Settings
 from trace_aml.core.errors import DependencyError, RecognitionError
+from trace_aml.core.gpu import detect_providers
 from trace_aml.core.models import DecisionState, FaceCandidate, RecognitionMatch
 from trace_aml.liveness.base import BaseLivenessChecker, LivenessResult, PassThroughLiveness
 from trace_aml.store.vector_store import VectorStore
@@ -36,14 +37,36 @@ class ArcFaceRecognizer:
                 "InsightFace not available. Install dependencies from requirements.txt"
             ) from exc
 
-        providers = [self.settings.recognition.provider]
+        # ── GPU / Provider selection ───────────────────────────────────────────
+        # detect_providers() probes ONNX Runtime + nvidia-smi once and caches
+        # the result.  It always returns CPUExecutionProvider as the last entry
+        # so ONNX Runtime has a guaranteed fallback even if every GPU probe fails.
+        gpu_cfg = self.settings.gpu
+        providers = detect_providers(
+            preferred=gpu_cfg.preferred_provider,
+            allow_gpu=gpu_cfg.enabled,
+            cuda_device_id=gpu_cfg.cuda_device_id,
+        )
+
+        # Backwards-compat: warn if the legacy `recognition.provider` field was
+        # explicitly overridden to a non-default value while GPU auto-detect is on.
+        legacy_provider = self.settings.recognition.provider
+        if gpu_cfg.enabled and legacy_provider not in ("", "CPUExecutionProvider"):
+            from loguru import logger
+            logger.warning(
+                "[GPU] recognition.provider='{}' is ignored when gpu.enabled=True. "
+                "Use gpu.preferred_provider instead.",
+                legacy_provider,
+            )
+        # ─────────────────────────────────────────────────────────────────────
+
         try:
             self._app = insightface.app.FaceAnalysis(
                 name=self.settings.recognition.model_name,
                 providers=providers,
             )
             self._app.prepare(
-                ctx_id=0,
+                ctx_id=self.settings.gpu.cuda_device_id,
                 det_size=tuple(self.settings.recognition.det_size),
             )
         except Exception as exc:

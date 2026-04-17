@@ -990,11 +990,23 @@ class VectorStore:
         return (vector / norm).astype(np.float32)
 
     def resolve_or_create_unknown_entity(self, embedding: list[float], similarity_threshold: float) -> str:
+        """Match a new face embedding to an existing unknown entity, or create a new one.
+
+        Strategy: store up to MAX_UNK_EMBEDDINGS actual face embeddings per unknown entity
+        (not a running average).  The search loop already compares the query against ALL
+        stored rows and returns the best match — so as long as ONE stored embedding was
+        captured under similar conditions to the new frame, the match succeeds even when
+        other stored embeddings (from different lighting) would not match by themselves.
+        This is far more robust than a single blurred average embedding.
+        """
+        MAX_UNK_EMBEDDINGS = 8   # max stored embeddings per unknown entity
+
         query = self._normalize_vector(np.asarray(embedding, dtype=np.float32).reshape(-1))
         profiles = self._query_rows(self.unknown_profiles, limit=100_000)
+
+        # Find the best matching entity across ALL stored embeddings
         best_entity = ""
         best_similarity = -1.0
-        best_profile: dict[str, Any] | None = None
 
         for row in profiles:
             vector = np.asarray(row.get("embedding", []), dtype=np.float32).reshape(-1)
@@ -1005,24 +1017,41 @@ class VectorStore:
             if similarity > best_similarity:
                 best_similarity = similarity
                 best_entity = str(row.get("entity_id", ""))
-                best_profile = row
 
         now = utc_now_iso()
-        if best_entity and best_similarity >= similarity_threshold and best_profile is not None:
-            count = int(best_profile.get("sample_count", 1))
-            prev = self._normalize_vector(np.asarray(best_profile.get("embedding", []), dtype=np.float32).reshape(-1))
-            merged = self._normalize_vector(((prev * count) + query) / max(1, count + 1))
+
+        if best_entity and best_similarity >= similarity_threshold:
+            # ── Reuse existing entity: add this embedding as an additional row ──
+            # Count how many rows already exist for this entity
             escaped = self._escape(best_entity)
-            self.unknown_profiles.delete(f"entity_id = '{escaped}'")
+            entity_rows = [r for r in profiles if str(r.get("entity_id", "")) == best_entity]
+            current_count = len(entity_rows)
+
+            if current_count >= MAX_UNK_EMBEDDINGS:
+                # Evict oldest row to stay within cap
+                oldest = min(entity_rows, key=lambda r: str(r.get("last_seen_at", "")))
+                oldest_ts = self._escape(str(oldest.get("last_seen_at", "")))
+                # Delete by entity_id + last_seen_at combo to target one row
+                try:
+                    self.unknown_profiles.delete(
+                        f"entity_id = '{escaped}' AND last_seen_at = '{oldest_ts}'"
+                    )
+                except Exception:
+                    # Fallback: delete all and re-add the N-1 newest rows
+                    self.unknown_profiles.delete(f"entity_id = '{escaped}'")
+                    keep = sorted(entity_rows, key=lambda r: str(r.get("last_seen_at", "")), reverse=True)[: MAX_UNK_EMBEDDINGS - 1]
+                    self.unknown_profiles.add([self._filtered_row(self.unknown_profiles, r) for r in keep])
+
+            # Add the new embedding as a fresh row
             self.unknown_profiles.add(
                 [
                     self._filtered_row(
                         self.unknown_profiles,
                         {
                             "entity_id": best_entity,
-                            "embedding": [float(v) for v in merged.tolist()],
-                            "sample_count": count + 1,
-                            "created_at": best_profile.get("created_at", now),
+                            "embedding": [float(v) for v in query.tolist()],
+                            "sample_count": current_count + 1,
+                            "created_at": entity_rows[0].get("created_at", now) if entity_rows else now,
                             "last_seen_at": now,
                         },
                     )
@@ -1037,6 +1066,7 @@ class VectorStore:
             )
             return best_entity
 
+        # ── No matching entity found: create new unknown entity ────────────────
         existing_unknowns = [row.get("entity_id", "") for row in self.list_entities(type_filter=EntityType.unknown.value)]
         new_entity_id = next_unknown_entity_id(existing_unknowns)
         self.unknown_profiles.add(
