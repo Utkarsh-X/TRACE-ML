@@ -295,14 +295,19 @@
     var catLabel = cat.toUpperCase();
     var catBadge = cat === "criminal" ? badge("filled", catLabel) : (cat === "unknown" ? badge("neutral", catLabel) : badge("ghost", catLabel));
     var statusClass = entity.status === "active" ? "text-primary" : "text-on-surface-variant";
+    var typeLabel = String(entity.type || "unknown").toUpperCase();
+    var typeBadge = entity.type === "known" ? badge("filled", typeLabel) : badge("neutral", typeLabel);
+    var created = entity.created_at ? fmtDateTime(entity.created_at) : "—";
     var alerts = entity.recent_alert_count != null ? String(entity.recent_alert_count) : "0";
     var incidents = entity.open_incident_count != null ? String(entity.open_incident_count) : "0";
     var updated = entity.last_seen_at ? fmtDateTime(entity.last_seen_at) : "—";
     return '<tr class="' + bgClass + ' cursor-pointer">'
       + '<td class="font-mono ' + idClass + '">' + esc(entity.entity_id) + "</td>"
+      + "<td>" + typeBadge + "</td>"
       + '<td class="text-on-surface">' + esc(entity.name || "—") + "</td>"
       + "<td>" + catBadge + "</td>"
       + '<td class="' + statusClass + '">' + esc(entity.status) + "</td>"
+      + '<td class="font-mono text-outline text-[0.65rem]">' + created + "</td>"
       + '<td class="font-mono text-on-surface-variant">' + alerts + "</td>"
       + '<td class="font-mono text-on-surface-variant">' + incidents + "</td>"
       + '<td class="font-mono text-outline text-[0.65rem]">' + updated + "</td>"

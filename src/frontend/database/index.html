@@ -133,14 +133,28 @@
         </div>
         
         <!-- Top Control Bar -->
-        <div class="flex justify-between items-center gap-4">
-          <div class="flex items-center gap-3 flex-1">
+        <div class="flex justify-between items-center gap-4 flex-wrap">
+          <div class="flex items-center gap-3 flex-1 min-w-0">
             <div class="flex-1 relative">
               <span class="material-symbols-outlined absolute left-3 top-2 text-outline-variant text-[18px]">search</span>
               <input type="text" placeholder="Search entities by name, ID or category..." class="w-full bg-surface-high font-mono text-[0.7rem] text-white border-0 px-3 py-2 pl-9 placeholder-outline-variant focus:ring-1 focus:ring-primary rounded-sm" id="db-search" />
             </div>
-            <button class="px-4 py-2 bg-white text-background font-mono text-[0.65rem] font-semibold uppercase hover:bg-gray-100 cursor-pointer border-0 transition-colors rounded-sm" id="db-execute">REFRESH INDEX</button>
-            <button class="px-3 py-2 bg-surface-high text-on-surface-variant font-mono text-[0.65rem] uppercase hover:bg-surface-bright cursor-pointer border-0 transition-colors" id="db-refresh">⟳ Filters</button>
+            <button class="px-4 py-2 bg-white text-background font-mono text-[0.65rem] font-semibold uppercase hover:bg-gray-100 cursor-pointer border-0 transition-colors rounded-sm whitespace-nowrap" id="db-execute">🔄 REFRESH</button>
+          </div>
+          
+          <!-- Inline Filters -->
+          <div class="flex items-center gap-2">
+            <select class="bg-surface-high text-on-surface-variant font-mono text-[0.65rem] border-0 px-2 py-2 rounded-sm cursor-pointer hover:bg-surface-bright transition-colors" id="filter-type">
+              <option value="">All Types</option>
+              <option value="known">Known</option>
+              <option value="unknown">Unknown</option>
+            </select>
+            <select class="bg-surface-high text-on-surface-variant font-mono text-[0.65rem] border-0 px-2 py-2 rounded-sm cursor-pointer hover:bg-surface-bright transition-colors" id="filter-status">
+              <option value="">All Status</option>
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+            </select>
+            <button class="px-3 py-2 bg-surface-high text-on-surface-variant font-mono text-[0.65rem] uppercase hover:bg-surface-bright cursor-pointer border-0 transition-colors whitespace-nowrap" id="filter-clear">Clear</button>
           </div>
           
           <!-- Health Indicators (compact inline) -->
@@ -163,9 +177,11 @@
           <thead>
             <tr class="bg-surface-low sticky top-0 z-10">
               <th class="font-mono text-[0.6rem] text-outline uppercase tracking-widest font-medium">Entity ID</th>
+              <th class="font-mono text-[0.6rem] text-outline uppercase tracking-widest font-medium">Type</th>
               <th class="font-mono text-[0.6rem] text-outline uppercase tracking-widest font-medium">Name</th>
               <th class="font-mono text-[0.6rem] text-outline uppercase tracking-widest font-medium">Category</th>
               <th class="font-mono text-[0.6rem] text-outline uppercase tracking-widest font-medium">Status</th>
+              <th class="font-mono text-[0.6rem] text-outline uppercase tracking-widest font-medium">Created</th>
               <th class="font-mono text-[0.6rem] text-outline uppercase tracking-widest font-medium">Alerts</th>
               <th class="font-mono text-[0.6rem] text-outline uppercase tracking-widest font-medium">Incidents</th>
               <th class="font-mono text-[0.6rem] text-outline uppercase tracking-widest font-medium">Last Activity</th>
@@ -173,7 +189,7 @@
           </thead>
           <tbody class="text-[0.75rem]">
             <tr>
-              <td colspan="7" class="text-center py-20">
+              <td colspan="9" class="text-center py-20">
                 <div class="flex flex-col items-center gap-4">
                   <div class="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
                   <span class="font-mono text-[0.7rem] text-outline animate-pulse">SYNCHRONIZING GLOBAL INDEX...</span>
@@ -198,9 +214,6 @@
         </div>
       </div>
 
-    </div>
-
-
 
   </div>
 </main>
@@ -208,10 +221,10 @@
 </div><!-- /app-shell -->
 
 <!-- Service Layer -->
-<script src="../shared/trace_client.js?v=20260413002"></script>
-<script src="../shared/trace_render.js?v=20260413002"></script>
-<script src="../shared/sidenav.js?v=20260413002"></script>
-<script src="./database.js?v=20260413002"></script>
+<script src="../shared/trace_client.js?v=20260417003"></script>
+<script src="../shared/trace_render.js?v=20260417003"></script>
+<script src="../shared/sidenav.js?v=20260417003"></script>
+<script src="./database.js?v=20260417003"></script>
 
 </body>
 </html>

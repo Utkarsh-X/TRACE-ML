@@ -26,11 +26,15 @@
     TraceClient.entities({ limit: limit }).then(function (list) {
       if (!list) return;
       _allEntities = list;
-      renderTable(list);
+      applyCurrentFilters();
       updateFooter(list.length, list.length);
-      // Update entity count stat immediately — avoids race with loadHealth()
+      // Update entity count stat immediately
       var el = document.getElementById('db-stat-entities');
       if (el) el.textContent = String(list.length);
+    }).catch(function (err) {
+      console.error("Error loading entities:", err);
+    }).finally(function () {
+      setRefreshButtonLoading(false);
     });
   }
 
@@ -89,78 +93,120 @@
         updateFooter(_allEntities.length, _allEntities.length);
         return;
       }
+      
+      // Support filter syntax: type:known, type:unknown
+      var typeFilter = "";
+      var searchQuery = query;
+      var typeMatch = query.match(/type:(\w+)/);
+      if (typeMatch) {
+        typeFilter = typeMatch[1];
+        searchQuery = query.replace(/type:\w+\s*/g, "").trim();
+      }
+      
       var filtered = _allEntities.filter(function (ent) {
-        return (ent.entity_id || "").toLowerCase().indexOf(query) >= 0
-          || (ent.name || "").toLowerCase().indexOf(query) >= 0
-          || (ent.category || "").toLowerCase().indexOf(query) >= 0
-          || (ent.status || "").toLowerCase().indexOf(query) >= 0;
+        // Apply type filter if specified
+        if (typeFilter && (ent.type || "").toLowerCase() !== typeFilter) {
+          return false;
+        }
+        // If no search query remains, just return the type filter match
+        if (!searchQuery) {
+          return true;
+        }
+        // Search all text fields
+        return (ent.entity_id || "").toLowerCase().indexOf(searchQuery) >= 0
+          || (ent.name || "").toLowerCase().indexOf(searchQuery) >= 0
+          || (ent.category || "").toLowerCase().indexOf(searchQuery) >= 0
+          || (ent.status || "").toLowerCase().indexOf(searchQuery) >= 0
+          || (ent.type || "").toLowerCase().indexOf(searchQuery) >= 0;
       });
       renderTable(filtered);
       updateFooter(filtered.length, _allEntities.length);
     });
   }
 
-  function wireRefresh() {
-    var btn = $("db-refresh");
-    if (btn) {
-      btn.addEventListener("click", function () {
-        loadEntities();
-        loadHealth();
-      });
+  function setRefreshButtonLoading(isLoading) {
+    var btn = $("db-execute");
+    if (!btn) return;
+    if (isLoading) {
+      btn.disabled = true;
+      btn.style.opacity = "0.6";
+      btn.style.cursor = "not-allowed";
+      btn.textContent = "⏳ LOADING...";
+    } else {
+      btn.disabled = false;
+      btn.style.opacity = "1";
+      btn.style.cursor = "pointer";
+      btn.textContent = "🔄 REFRESH";
     }
+  }
+
+  function applyCurrentFilters() {
+    var typeSelect = $("filter-type");
+    var statusSelect = $("filter-status");
     
+    var typeFilter = typeSelect ? typeSelect.value : "";
+    var statusFilter = statusSelect ? statusSelect.value : "";
+    
+    applyFilters(typeFilter, statusFilter);
+  }
+
+  function wireRefresh() {
     var executeBtn = $("db-execute");
     if (executeBtn) {
       executeBtn.addEventListener("click", function () {
+        setRefreshButtonLoading(true);
         loadEntities();
         loadHealth();
-        appendLog("SYSTEM", "Manual index synchronization triggered.");
       });
     }
 
     var limitEl = $("db-limit");
     if (limitEl) {
       limitEl.addEventListener("change", function () {
+        setRefreshButtonLoading(true);
         loadEntities();
-        appendLog("SYSTEM", "Query limit updated to " + limitEl.value + " records.");
       });
     }
   }
 
-  function appendLog(type, message) {
-    var consoleEl = $("query-console");
-    if (!consoleEl) return;
-    
-    var lineHtml = TraceRender.terminalLine(type, { message: message });
-    consoleEl.insertAdjacentHTML('afterbegin', lineHtml);
-    
-    // Cap at 100 lines
-    var lines = consoleEl.querySelectorAll('.log-line');
-    if (lines.length > 100) lines[lines.length - 1].remove();
-  }
+  function wireInlineFilters() {
+    var typeSelect = $("filter-type");
+    var statusSelect = $("filter-status");
+    var clearBtn = $("filter-clear");
 
-  function initConsole() {
-    var consoleEl = $("query-console");
-    // Clear mock logs on load
-    if (consoleEl) consoleEl.innerHTML = "";
-
-    var clearBtn = document.querySelector("[class*='cursor-pointer'][class*='hover:text-white']");
-    if (clearBtn && clearBtn.textContent.indexOf("CLEAR") >= 0) {
-      clearBtn.addEventListener("click", function() {
-        if (consoleEl) consoleEl.innerHTML = "";
+    if (typeSelect) {
+      typeSelect.addEventListener("change", function () {
+        applyCurrentFilters();
       });
     }
 
-    TraceClient.connectSSE(function (event) {
-      if (!TraceClient.isMeaningfulEvent(event)) return;
-      var lineHtml = TraceRender.terminalLine(event.topic, event.payload, event.timestamp_utc);
-      if (consoleEl) {
-        consoleEl.insertAdjacentHTML('afterbegin', lineHtml);
-        // Cap at 100 lines
-        var lines = consoleEl.querySelectorAll('.log-line');
-        if (lines.length > 100) lines[lines.length - 1].remove();
+    if (statusSelect) {
+      statusSelect.addEventListener("change", function () {
+        applyCurrentFilters();
+      });
+    }
+
+    if (clearBtn) {
+      clearBtn.addEventListener("click", function () {
+        if (typeSelect) typeSelect.value = "";
+        if (statusSelect) statusSelect.value = "";
+        applyCurrentFilters();
+      });
+    }
+  }
+
+  function applyFilters(typeFilter, statusFilter) {
+    var filtered = _allEntities.filter(function (ent) {
+      if (typeFilter && (ent.type || "").toLowerCase() !== typeFilter) {
+        return false;
       }
+      if (statusFilter && (ent.status || "").toLowerCase() !== statusFilter) {
+        return false;
+      }
+      return true;
     });
+    renderTable(filtered);
+    updateFooter(filtered.length, _allEntities.length);
   }
 
   function init() {
@@ -168,13 +214,12 @@
     TraceRender.initOfflineUI(mainContent);
     wireSearch();
     wireRefresh();
-    initConsole();
+    wireInlineFilters();
 
     TraceClient.probe().then(function (info) {
       if (info) {
         loadEntities();
         loadHealth();
-        appendLog("SYSTEM", "Connection established to " + info.name + " v" + info.version);
       }
     });
 
