@@ -26,15 +26,7 @@
       overflow: hidden;
       min-h-0;
     }
-    .db-console-section {
-      height: 280px;
-      flex-shrink: 0;
-      border-top: 1px solid rgba(255,255,255,0.06);
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-      background: #0d0d0d;
-    }
+
     .db-table th, .db-table td {
       padding: 0.5rem 0.75rem;
       text-align: left;
@@ -208,27 +200,7 @@
 
     </div>
 
-    <!-- QUERY CONSOLE SECTION (bottom - HORIZONTAL) -->
-    <section class="db-console-section">
-      <div class="px-4 py-3 flex-shrink-0 flex items-center justify-between border-b border-outline-variant/10">
-        <div class="flex items-center gap-3">
-          <span class="status-dot status-dot--active"></span>
-          <h2 class="section-header">CONSOLE: QUERY LOG</h2>
-          <span class="font-mono text-[0.55rem] text-outline ml-2">● LIVE FEED</span>
-        </div>
-        <div class="flex items-center gap-4 text-[0.6rem] font-mono text-outline-variant">
-          <span>BUF_SIZE: 1024KB</span>
-          <span class="cursor-pointer hover:text-white transition-colors">[CLEAR]</span>
-        </div>
-      </div>
-      <div class="terminal-block flex-1 min-h-0 text-[0.65rem] p-4 font-mono overflow-y-auto" id="query-console">
-<span class="log-time">[14:02:11]</span> <span class="log-type">DB_QUERY:</span> SELECT * FROM detections WHERE confidence > 0.85;
-<span class="log-time">[14:02:11]</span> <span class="log-type">SYSTEM:</span> Execution successful. Returned 1,402 entries in 12ms.
-<span class="log-time">[14:02:08]</span> <span class="log-type">DB_WRITE:</span> VECTOR_INDEX: COMMIT #TX-9921-X; SUCCESS.
-<span class="log-time">[14:01:55]</span> <span class="log-type">WARNING:</span> Network latency detected on SURVEILLANCE-NODE-01. Shifting load ...
-<span class="log-time">[14:01:42]</span> <span class="log-type">NODE_HEARTBEAT:</span> 14/14 nodes responding nominal.
-      </div>
-    </section>
+
 
   </div>
 </main>
