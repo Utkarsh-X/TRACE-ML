@@ -77,13 +77,20 @@
 
     /* ── 2-column content area ────────────────── */
     .inc-body {
-      display: grid;
-      grid-template-columns: 320px 1fr;
+      display: flex;
       min-height: 0;
       flex: 1;
       overflow: hidden;
       gap: 1rem;
       padding: 1rem 1.25rem 1.25rem;
+    }
+    #inc-left-panel {
+      width: 320px;
+      flex-shrink: 0;
+    }
+    .inc-body > div:last-child {
+      flex: 1;
+      min-width: 0;
     }
 
     /* ── Content Panels ─────────────────────────── */
