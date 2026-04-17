@@ -22,7 +22,8 @@
   var _currentId  = null;
   var _offset     = 0;
   var _done       = false;
-  var _tlAll      = [];
+  var _tlRaw      = []; // raw data from server
+  var _tlSuppressed = []; // processed data after suppression
   var _tlShown    = 0;
 
   /* ════════════════════════════════════════════════
@@ -189,6 +190,7 @@
     var tlEl = $("tl-events");
     if (tlEl) {
       tlEl.classList.remove("hidden");
+      // Clear all items including the "Show more" button during skeleton phase
       tlEl.innerHTML =
         '<div class="skeleton mb-2" style="height:72px;opacity:.35"></div>'
       + '<div class="skeleton mb-2" style="height:72px;opacity:.2"></div>'
@@ -207,7 +209,11 @@
       renderHeader(detail.incident);
       renderEntity(detail.entity);
       renderAlerts(detail.alerts);
-      renderTimeline(detail.timeline);
+      
+      // Store raw timeline and render with current suppression
+      _tlRaw = detail.timeline ? detail.timeline.slice().reverse() : [];
+      renderTimeline();
+
       renderActions(detail.actions);
       syncControls(detail.incident);
       handleResolution(detail.entity);
@@ -338,15 +344,80 @@
     }).join("");
   }
 
-  function renderTimeline(timeline) {
-    _tlAll   = timeline ? timeline.slice().reverse() : [];
+  /* ── Event Grouping (Suppression) ──────────────── */
+
+  function getSuppressedTimeline(rawEvents, windowMinutes) {
+    if (windowMinutes === 0) return rawEvents;
+    
+    var windowMs = windowMinutes * 60000;
+    var result = [];
+    if (rawEvents.length === 0) return result;
+
+    var currentGroup = null;
+
+    rawEvents.forEach(function(ev) {
+      var evTime = new Date(ev.timestamp_utc).getTime();
+      
+      if (!currentGroup) {
+        currentGroup = {
+          ev: ev,
+          count: 1,
+          startTime: evTime,
+          endTime: evTime
+        };
+      } else {
+        var diff = Math.abs(evTime - currentGroup.startTime);
+        var sameKind = (ev.kind === currentGroup.ev.kind);
+        var sameTitle = (ev.title === currentGroup.ev.title);
+
+        if (diff <= windowMs && sameKind && sameTitle) {
+          currentGroup.count++;
+          currentGroup.endTime = evTime;
+        } else {
+          result.push(currentGroup);
+          currentGroup = {
+            ev: ev,
+            count: 1,
+            startTime: evTime,
+            endTime: evTime
+          };
+        }
+      }
+    });
+
+    if (currentGroup) result.push(currentGroup);
+    return result;
+  }
+
+  function renderTimeline() {
+    var win = parseInt(($("tl-suppress-select") || {}).value || "1");
+    _tlSuppressed = getSuppressedTimeline(_tlRaw, win);
     _tlShown = 0;
+    
     var root = $("tl-events");
     if (!root) return;
-    root.innerHTML = "";
+    
+    // Clear previous entries but keep the "Show more" button wrapper if it exists
+    root.innerHTML = 
+      '<div id="tl-show-more" class="hidden pt-2 pb-4">'
+    +   '<button type="button" id="btn-show-more-tl" class="w-full font-mono text-[0.62rem] text-outline uppercase tracking-widest hover:text-white transition-colors bg-transparent border border-outline-variant/20 cursor-pointer py-2.5 flex items-center justify-center gap-2">'
+    +     '<span class="material-symbols-outlined text-[14px]">expand_more</span>'
+    +     'Show older events'
+    +   '</button>'
+    + '</div>';
+    
+    // Re-wire the new button
+    var moreBtn = $("btn-show-more-tl");
+    if (moreBtn) moreBtn.addEventListener("click", function () {
+      appendTlBatch(TL_PAGE);
+      updateTlMore();
+    });
 
-    if (_tlAll.length === 0) {
-      root.innerHTML = '<div class="text-outline font-mono text-[0.7rem] py-12 text-center">No timeline events</div>';
+    if (_tlSuppressed.length === 0) {
+      var div = document.createElement("div");
+      div.className = "tl-entry text-outline font-mono text-[0.7rem] py-12 text-center";
+      div.textContent = "No timeline events";
+      root.insertBefore(div, $("tl-show-more"));
       updateTlMore();
       return;
     }
@@ -357,20 +428,25 @@
   function appendTlBatch(count) {
     var root  = $("tl-events");
     if (!root) return;
-    var batch = _tlAll.slice(_tlShown, _tlShown + count);
+    var moreBtn = $("tl-show-more");
+    var batch = _tlSuppressed.slice(_tlShown, _tlShown + count);
     batch.forEach(function (item) {
       var div = document.createElement("div");
       div.className = "tl-entry";
       div.innerHTML = buildTlCard(item);
-      root.appendChild(div);
+      root.insertBefore(div, moreBtn);
     });
     _tlShown += batch.length;
     var label = $("tl-count-label");
-    if (label) label.textContent = _tlShown + " / " + _tlAll.length + " events";
+    if (label) label.textContent = _tlShown + " / " + _tlSuppressed.length + " entries";
   }
 
   function buildTlCard(item) {
-    var kind      = String(item.kind || "event");
+    // Handle both raw events and grouped objects
+    var ev = item.ev || item;
+    var kind = String(ev.kind || "event");
+    var count = item.count || 1;
+    
     /* Badge + dot use design-system classes only */
     var badgeHtml = "";
     if      (kind === "incident") badgeHtml = '<span class="badge badge--filled">INCIDENT</span>';
@@ -378,18 +454,37 @@
     else if (kind === "action")   badgeHtml = '<span class="badge badge--ghost">ACTION</span>';
     else                          badgeHtml = '<span class="badge badge--ghost">EVENT</span>';
 
-    var title   = TraceClient.escapeHtml(item.title   || "");
-    var summary = TraceClient.escapeHtml(item.summary || "");
-    var time    = TraceClient.escapeHtml(TraceClient.formatTime(item.timestamp_utc));
-    var date    = TraceClient.escapeHtml(TraceClient.formatDateTime(item.timestamp_utc).slice(0, 10));
+    var title   = TraceClient.escapeHtml(ev.title || "");
+    if (count > 1) {
+      title = '<span class="text-primary mr-1">[' + count + 'x]</span>' + title;
+    }
 
-    /* Build meta pills */
+    var summary = TraceClient.escapeHtml(ev.summary || "");
+    
+    var timeStr;
+    var dateStr;
+    
+    if (count > 1) {
+      var earliest = Math.min(item.startTime, item.endTime);
+      var latest   = Math.max(item.startTime, item.endTime);
+      var start = TraceClient.formatTime(new Date(earliest).toISOString());
+      var end   = TraceClient.formatTime(new Date(latest).toISOString());
+      timeStr = start + " — " + end;
+      dateStr = TraceClient.formatDateTime(new Date(earliest).toISOString()).slice(0, 10);
+    } else {
+      timeStr = TraceClient.escapeHtml(TraceClient.formatTime(ev.timestamp_utc));
+      dateStr = TraceClient.escapeHtml(TraceClient.formatDateTime(ev.timestamp_utc).slice(0, 10));
+    }
+
+    /* Build meta pills - only for non-grouped to avoid confusion if they differ */
     var meta = [];
-    if (item.entity_id) meta.push("Entity: " + TraceClient.escapeHtml(item.entity_id));
-    if (item.source)    meta.push("Source: " + TraceClient.escapeHtml(item.source));
-    if (item.metadata) {
-      if (item.metadata.track_id)   meta.push("Track: "  + TraceClient.escapeHtml(item.metadata.track_id));
-      if (item.metadata.event_count) meta.push("Events: " + item.metadata.event_count);
+    if (count === 1) {
+      if (ev.entity_id) meta.push("Entity: " + TraceClient.escapeHtml(ev.entity_id));
+      if (ev.source)    meta.push("Source: " + TraceClient.escapeHtml(ev.source));
+      if (ev.metadata) {
+        if (ev.metadata.track_id)   meta.push("Track: "  + TraceClient.escapeHtml(ev.metadata.track_id));
+        if (ev.metadata.event_count) meta.push("Events: " + ev.metadata.event_count);
+      }
     }
 
     return '<div class="tl-dot tl-dot--' + kind + '"></div>'
@@ -401,8 +496,8 @@
       +     '<span class="font-mono text-[0.7rem] font-medium text-on-surface truncate">' + title + '</span>'
       +   '</div>'
       +   '<div class="flex-shrink-0 text-right">'
-      +     '<span class="font-mono text-[0.65rem] text-white block">' + time + '</span>'
-      +     '<span class="font-mono text-[0.52rem] text-outline block">' + date + '</span>'
+      +     '<span class="font-mono text-[0.65rem] text-white block">' + timeStr + '</span>'
+      +     '<span class="font-mono text-[0.52rem] text-outline block">' + dateStr + '</span>'
       +   '</div>'
       + '</div>'
       /* Row 2: summary */
@@ -421,7 +516,7 @@
   function updateTlMore() {
     var btn = $("tl-show-more");
     if (!btn) return;
-    if (_tlShown < _tlAll.length) btn.classList.remove("hidden");
+    if (_tlShown < _tlSuppressed.length) btn.classList.remove("hidden");
     else btn.classList.add("hidden");
   }
 
@@ -631,7 +726,15 @@
       });
     });
 
-    // Deduplicate button moved to settings page
+    // Suppression selector wiring
+    var suppressSelect = $("tl-suppress-select");
+    if (suppressSelect) {
+      suppressSelect.addEventListener("change", function() {
+        if (_tlRaw && _tlRaw.length > 0) {
+          renderTimeline();
+        }
+      });
+    }
 
     var moreBtn = $("btn-show-more-tl");
     if (moreBtn) moreBtn.addEventListener("click", function () {

@@ -87,10 +87,17 @@
     #inc-left-panel {
       width: 320px;
       flex-shrink: 0;
+      min-height: 0;
     }
     .inc-body > div:last-child {
-      flex: 1;
+      flex: 1 1 0%;
       min-width: 0;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+    }
+    #tl-scroll, #tl-events {
+      min-height: 0;
     }
 
     /* ── Content Panels ─────────────────────────── */
@@ -406,26 +413,39 @@
     <div class="bg-surface flex flex-col overflow-hidden">
 
       <!-- Timeline toolbar -->
-      <div class="flex items-center justify-between px-5 py-3 flex-shrink-0" style="border-bottom:1px solid rgba(255,255,255,0.05)">
-        <span class="stat-label">Event Timeline</span>
-        <span class="font-mono text-[0.58rem] text-outline" id="tl-count-label"></span>
+      <div class="flex items-center justify-between px-5 py-2.5 flex-shrink-0" style="border-bottom:1px solid rgba(255,255,255,0.05); background: rgba(255,255,255,0.01);">
+        <div class="flex items-center gap-5">
+          <span class="stat-label">Event Timeline</span>
+          <div class="flex items-center gap-2 ml-1 border-l border-outline-variant/20 pl-5">
+            <span class="font-mono text-[0.6rem] text-outline uppercase tracking-[0.15em] font-medium">Suppression</span>
+            <select id="tl-suppress-select" class="bg-surface-lowest text-on-surface font-mono text-[0.62rem] border border-white/10 px-2 py-0.5 cursor-pointer focus:border-primary/50 rounded-sm transition-all hover:bg-surface-high outline-none appearance-none pr-1">
+              <option value="0">OFF</option>
+              <option value="1" selected>1 MIN</option>
+              <option value="5">5 MIN</option>
+              <option value="15">15 MIN</option>
+            </select>
+          </div>
+        </div>
+        <span class="font-mono text-[0.58rem] text-outline tracking-wider" id="tl-count-label"></span>
       </div>
 
       <!-- Timeline scroll area -->
-      <div class="flex-1 flex flex-col" id="tl-scroll">
+      <div class="flex-1 flex flex-col min-h-0" id="tl-scroll">
         <!-- Placeholder before selection - takes all space when no events -->
         <div id="tl-placeholder" class="flex-1 flex flex-col items-center justify-center text-outline font-mono text-[0.72rem] gap-3">
           <span class="material-symbols-outlined text-[32px]">timeline</span>
           Select an incident above
         </div>
         <!-- Timeline entries - scrollable when events exist -->
-        <div id="tl-events" class="hidden overflow-y-auto px-4 py-3"></div>
-        <!-- Show older button -->
-        <div id="tl-show-more" class="hidden pt-2 pb-4">
-          <button type="button" id="btn-show-more-tl" class="w-full font-mono text-[0.62rem] text-outline uppercase tracking-widest hover:text-white transition-colors bg-transparent border border-outline-variant/20 cursor-pointer py-2.5 flex items-center justify-center gap-2">
-            <span class="material-symbols-outlined text-[14px]">expand_more</span>
-            Show older events
-          </button>
+        <div id="tl-events" class="hidden flex-1 min-h-0 overflow-y-auto px-4 py-3">
+          <!-- Timeline entries will be appended here -->
+          <!-- Show older button - moved inside scrollable area -->
+          <div id="tl-show-more" class="hidden pt-2 pb-4">
+            <button type="button" id="btn-show-more-tl" class="w-full font-mono text-[0.62rem] text-outline uppercase tracking-widest hover:text-white transition-colors bg-transparent border border-outline-variant/20 cursor-pointer py-2.5 flex items-center justify-center gap-2">
+              <span class="material-symbols-outlined text-[14px]">expand_more</span>
+              Show older events
+            </button>
+          </div>
         </div>
       </div>
     </div>
