@@ -31,7 +31,12 @@ class EntityResolver:
         # Guarantees at most ONE entity is ever created per track across its lifetime.
         self._track_entity_map: dict[str, str] = {}
 
-    def resolve(self, match: RecognitionMatch, embedding: list[float]) -> EntityResolution:
+    def resolve(
+        self,
+        match: RecognitionMatch,
+        embedding: list[float],
+        face_quality: float = 0.0,
+    ) -> EntityResolution:
         # ── Layer 3: Track ownership cache ────────────────────────────────────
         # If this track already owns an entity from a previous frame, reuse it.
         # Never allow a second entity creation for the same track_id.
@@ -68,6 +73,7 @@ class EntityResolver:
             unknown_entity_id = self.store.resolve_or_create_unknown_entity(
                 embedding=embedding,
                 similarity_threshold=self.settings.recognition.unknown_reuse_threshold,
+                face_quality=face_quality,
             )
             resolution = EntityResolution(
                 entity_id=unknown_entity_id,

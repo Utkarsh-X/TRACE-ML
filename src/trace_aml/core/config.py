@@ -89,6 +89,33 @@ class RecognitionSettings(BaseModel):
     # gallery similarity is only 5%.  Set to 0.0 to disable (accept all faces).
     min_unknown_detector_score: float = 0.65
 
+class UnknownClusteringSettings(BaseModel):
+    """Controls the background daemon that retroactively merges duplicate unknown entities.
+
+    The clusterer runs every ``interval_minutes`` and performs a global pairwise
+    max-similarity check across all unknown entity embeddings.  Any two entities
+    whose best-matching embedding pair exceeds ``merge_threshold`` are considered
+    the same person and are merged into the older entity ID.  Events, alerts,
+    incidents and portrait files are all re-pointed to the surviving entity.
+    """
+
+    enabled: bool = True
+    """Master switch — set to False to disable background clustering entirely."""
+
+    interval_minutes: float = 3.0
+    """How often the clusterer runs (minutes).  Lower = faster duplicate resolution
+    but more CPU usage.  Values below 1.0 are allowed for testing."""
+
+    merge_threshold: float = 0.28
+    """Pairwise max-similarity threshold for merging.  Two entities are merged if
+    ANY embedding from entity A scores >= this value against ANY embedding from B.
+    Slightly lower than the per-frame reuse threshold (0.25) so the clusterer can
+    catch cases the real-time gate missed."""
+
+    min_embeddings_to_cluster: int = 1
+    """Entities with fewer stored embeddings than this are skipped as not yet
+    stable enough for reliable cross-entity comparison."""
+
 
 class PipelineSettings(BaseModel):
     frame_queue_size: int = 2
@@ -100,6 +127,7 @@ class PipelineSettings(BaseModel):
     # ghost entities from warmup frames never exceed 1 event.
     purge_ghost_entities_on_start: bool = True
     ghost_entity_min_events: int = 3
+
 
 
 class QualitySettings(BaseModel):
@@ -212,6 +240,7 @@ class Settings(BaseSettings):
     logging: LoggingSettings = Field(default_factory=LoggingSettings)
     liveness: LivenessSettings = Field(default_factory=LivenessSettings)
     gpu: GpuSettings = Field(default_factory=GpuSettings)
+    unknown_clustering: UnknownClusteringSettings = Field(default_factory=UnknownClusteringSettings)
     runtime_config_path: str = ""
 
 

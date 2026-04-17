@@ -20,6 +20,7 @@ from trace_aml.core.streaming import EventStreamPublisher, NullEventStreamPublis
 from trace_aml.liveness.base import LivenessResult
 from trace_aml.pipeline.action_engine import ActionEngine
 from trace_aml.pipeline.capture import CameraCapture
+from trace_aml.pipeline.clusterer import UnknownEntityClusterer
 from trace_aml.pipeline.entity_resolver import EntityResolver
 from trace_aml.pipeline.incident_manager import IncidentManager
 from trace_aml.pipeline.inference import InferencePacket, InferenceWorker
@@ -105,6 +106,15 @@ class RecognitionSession:
         # DB write. Prevents warmup-phase ghost entities.
         self._committed_tracks: set[str] = set()
         # ─────────────────────────────────────────────────────────────────────
+        # ── Unknown-entity background clusterer ───────────────────────────────
+        # Runs every N minutes to retroactively merge duplicate UNK entities
+        # created across session restarts or extreme lighting changes.
+        self._clusterer = UnknownEntityClusterer(
+            settings=settings,
+            store=store,
+            publisher=self.stream_publisher,
+        )
+        # ─────────────────────────────────────────────────────────────────────
 
     # ── Camera Control API (Frontend-driven) ──────────────────────────────────
     def is_camera_enabled(self) -> bool:
@@ -135,7 +145,10 @@ class RecognitionSession:
                 self._capture.start()
                 self._inference.start()
                 self._camera_enabled = True
-                
+
+                # Start background clusterer alongside the camera
+                self._clusterer.start()
+
                 return {
                     "status": "enabled",
                     "message": "Camera started successfully",
@@ -166,7 +179,10 @@ class RecognitionSession:
                 if self._capture is not None:
                     self._capture.stop()
                     self._capture = None
-                
+
+                # Stop background clusterer with the camera
+                self._clusterer.stop()
+
                 self._frame_queue = None
                 self._result_queue = None
                 self._camera_enabled = False
@@ -315,7 +331,8 @@ class RecognitionSession:
             if det_score < min_det:
                 return  # not a confident face detection — skip
         # ─────────────────────────────────────────────────────────────────────
-        resolution = self.entity_resolver.resolve(match, embedding)
+        face_quality = float(match.metadata.get("face_quality", 0.0))
+        resolution = self.entity_resolver.resolve(match, embedding, face_quality=face_quality)
 
         # ── Best-portrait update ────────────────────────────────────────────
         # For KNOWN entities: only update on ACCEPT with a confirmed person_id

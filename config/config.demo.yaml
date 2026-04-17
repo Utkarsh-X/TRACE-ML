@@ -69,3 +69,18 @@ actions:
     medium: [log]
     high: [log]
   cooldown_sec: 20
+
+# ── Unknown Entity Deduplication ──────────────────────────────────────────────
+# Background clusterer that retroactively merges duplicate UNK entities.
+# Runs every interval_minutes. Uses global best-of-N embedding comparison
+# (one BLAS matmul over all stored embeddings — < 2ms for 100 unknowns).
+#
+# merge_threshold: Two entities merge if ANY embedding pair scores >= this.
+#   Slightly LOWER than unknown_reuse_threshold (0.25) so the cluster pass
+#   catches duplicates the real-time gate may have missed.
+# interval_minutes: How often the pass runs. 3m is a good balance.
+unknown_clustering:
+  enabled: true
+  interval_minutes: 3.0
+  merge_threshold: 0.28
+  min_embeddings_to_cluster: 1

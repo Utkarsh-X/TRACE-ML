@@ -255,10 +255,12 @@ class VectorStore:
                     pa.field("entity_id", pa.string()),
                     pa.field("embedding", pa.list_(pa.float32(), list_size=EMBEDDING_DIM)),
                     pa.field("sample_count", pa.int32()),
+                    pa.field("quality_score", pa.float32()),
                     pa.field("created_at", pa.string()),
                     pa.field("last_seen_at", pa.string()),
                 ]
             ),
+            migration_defaults={"quality_score": 0.0},
         )
 
         self.incidents = self._open_or_create(
@@ -989,7 +991,12 @@ class VectorStore:
         norm = float(np.linalg.norm(vector) + 1e-9)
         return (vector / norm).astype(np.float32)
 
-    def resolve_or_create_unknown_entity(self, embedding: list[float], similarity_threshold: float) -> str:
+    def resolve_or_create_unknown_entity(
+        self,
+        embedding: list[float],
+        similarity_threshold: float,
+        face_quality: float = 0.0,
+    ) -> str:
         """Match a new face embedding to an existing unknown entity, or create a new one.
 
         Strategy: store up to MAX_UNK_EMBEDDINGS actual face embeddings per unknown entity
@@ -1022,27 +1029,37 @@ class VectorStore:
 
         if best_entity and best_similarity >= similarity_threshold:
             # ── Reuse existing entity: add this embedding as an additional row ──
-            # Count how many rows already exist for this entity
             escaped = self._escape(best_entity)
             entity_rows = [r for r in profiles if str(r.get("entity_id", "")) == best_entity]
             current_count = len(entity_rows)
 
             if current_count >= MAX_UNK_EMBEDDINGS:
-                # Evict oldest row to stay within cap
-                oldest = min(entity_rows, key=lambda r: str(r.get("last_seen_at", "")))
-                oldest_ts = self._escape(str(oldest.get("last_seen_at", "")))
-                # Delete by entity_id + last_seen_at combo to target one row
+                # ── Quality-weighted eviction (Level 2) ─────────────────────
+                # Evict the LOWEST quality embedding, not the oldest.
+                # This keeps the reference set sharp: high-quality captures
+                # survive while blurry/dark frames are replaced.
+                worst = min(
+                    entity_rows,
+                    key=lambda r: (float(r.get("quality_score", 0.0)), str(r.get("last_seen_at", "")))
+                )
+                worst_ts = self._escape(str(worst.get("last_seen_at", "")))
                 try:
                     self.unknown_profiles.delete(
-                        f"entity_id = '{escaped}' AND last_seen_at = '{oldest_ts}'"
+                        f"entity_id = '{escaped}' AND last_seen_at = '{worst_ts}'"
                     )
                 except Exception:
-                    # Fallback: delete all and re-add the N-1 newest rows
+                    # Fallback: rebuild keeping best N-1 by quality
                     self.unknown_profiles.delete(f"entity_id = '{escaped}'")
-                    keep = sorted(entity_rows, key=lambda r: str(r.get("last_seen_at", "")), reverse=True)[: MAX_UNK_EMBEDDINGS - 1]
-                    self.unknown_profiles.add([self._filtered_row(self.unknown_profiles, r) for r in keep])
+                    keep = sorted(
+                        entity_rows,
+                        key=lambda r: float(r.get("quality_score", 0.0)),
+                        reverse=True,
+                    )[: MAX_UNK_EMBEDDINGS - 1]
+                    self.unknown_profiles.add(
+                        [self._filtered_row(self.unknown_profiles, r) for r in keep]
+                    )
 
-            # Add the new embedding as a fresh row
+            # Add the new embedding as a fresh row with its quality score
             self.unknown_profiles.add(
                 [
                     self._filtered_row(
@@ -1051,6 +1068,7 @@ class VectorStore:
                             "entity_id": best_entity,
                             "embedding": [float(v) for v in query.tolist()],
                             "sample_count": current_count + 1,
+                            "quality_score": float(face_quality),
                             "created_at": entity_rows[0].get("created_at", now) if entity_rows else now,
                             "last_seen_at": now,
                         },
@@ -1077,6 +1095,7 @@ class VectorStore:
                         "entity_id": new_entity_id,
                         "embedding": [float(v) for v in query.tolist()],
                         "sample_count": 1,
+                        "quality_score": float(face_quality),
                         "created_at": now,
                         "last_seen_at": now,
                     },
@@ -1091,6 +1110,105 @@ class VectorStore:
             last_seen_at=now,
         )
         return new_entity_id
+
+
+    def merge_entities(
+        self,
+        primary_id: str,
+        duplicate_ids: list[str],
+    ) -> int:
+        """Merge *duplicate_ids* into *primary_id*, re-pointing all linked data.
+
+        For each duplicate entity:
+        - Events        → entity_id updated to primary
+        - Alerts        → entity_id updated to primary
+        - Incidents     → entity_id updated to primary
+        - unknown_profiles rows → moved to primary (up to MAX_UNK_EMBEDDINGS total)
+        - entities row  → deleted
+
+        Returns the number of entities successfully merged.
+        """
+        MAX_UNK_EMBEDDINGS = 8
+        merged_count = 0
+        now = utc_now_iso()
+
+        for dup_id in duplicate_ids:
+            if not dup_id or dup_id == primary_id:
+                continue
+            try:
+                ep = self._escape(primary_id)
+                ed = self._escape(dup_id)
+
+                # ── Re-point events ────────────────────────────────────
+                dup_events = self._query_rows(self.events, where=f"entity_id = '{ed}'")
+                if dup_events:
+                    self.events.delete(f"entity_id = '{ed}'")
+                    updated = [{**r, "entity_id": primary_id} for r in dup_events]
+                    self.events.add([self._filtered_row(self.events, r) for r in updated])
+
+                # ── Re-point alerts ───────────────────────────────────
+                dup_alerts = self._query_rows(self.alerts, where=f"entity_id = '{ed}'")
+                if dup_alerts:
+                    self.alerts.delete(f"entity_id = '{ed}'")
+                    updated = [{**r, "entity_id": primary_id} for r in dup_alerts]
+                    self.alerts.add([self._filtered_row(self.alerts, r) for r in updated])
+
+                # ── Re-point incidents ────────────────────────────────
+                dup_incidents = self._query_rows(self.incidents, where=f"entity_id = '{ed}'")
+                if dup_incidents:
+                    self.incidents.delete(f"entity_id = '{ed}'")
+                    updated = [{**r, "entity_id": primary_id} for r in dup_incidents]
+                    self.incidents.add([self._filtered_row(self.incidents, r) for r in updated])
+
+                # ── Migrate unknown_profiles embeddings ────────────────────
+                dup_profiles = self._query_rows(self.unknown_profiles, where=f"entity_id = '{ed}'")
+                if dup_profiles:
+                    self.unknown_profiles.delete(f"entity_id = '{ed}'")
+                    # Combine with existing primary embeddings, keeping best quality
+                    primary_profiles = self._query_rows(
+                        self.unknown_profiles, where=f"entity_id = '{ep}'"
+                    )
+                    all_profiles = primary_profiles + dup_profiles
+                    # Sort by quality_score descending, keep top MAX_UNK_EMBEDDINGS
+                    all_profiles.sort(
+                        key=lambda r: float(r.get("quality_score", 0.0)), reverse=True
+                    )
+                    keep = all_profiles[:MAX_UNK_EMBEDDINGS]
+                    # Re-index sample_count
+                    if keep:
+                        # Remove old primary rows, add merged set
+                        self.unknown_profiles.delete(f"entity_id = '{ep}'")
+                        for idx, prof in enumerate(keep):
+                            new_row = {
+                                **prof,
+                                "entity_id": primary_id,
+                                "sample_count": idx + 1,
+                                "last_seen_at": max(
+                                    str(prof.get("last_seen_at", "")),
+                                    now,
+                                ),
+                            }
+                            self.unknown_profiles.add(
+                                [self._filtered_row(self.unknown_profiles, new_row)]
+                            )
+
+                # ── Delete duplicate entity record ────────────────────────
+                self.entities.delete(f"entity_id = '{ed}'")
+
+                # Update primary entity last_seen_at to now
+                self.ensure_entity(
+                    entity_id=primary_id,
+                    entity_type=EntityType.unknown,
+                    status=EntityStatus.active,
+                    source_person_id=None,
+                    last_seen_at=now,
+                )
+                merged_count += 1
+                logger.info(f"CLUSTER: merged {dup_id} → {primary_id}")
+            except Exception as exc:  # pragma: no cover
+                logger.warning(f"CLUSTER: failed to merge {dup_id} → {primary_id}: {exc}")
+
+        return merged_count
 
     def add_detection_decision(
         self,
