@@ -55,11 +55,9 @@
         strip.insertBefore(buildCard(inc), sentinel);
       });
 
-      // Auto-select first card
-      if (initial) {
-        var first = strip.querySelector(".inc-card");
-        if (first) first.click();
-      }
+      // Do NOT auto-select first card on initial load
+      // Page should start clean/empty until user explicitly clicks a card
+      // This allows the timeline placeholder "Select an incident above" to remain visible
 
       updateArrows();
     });

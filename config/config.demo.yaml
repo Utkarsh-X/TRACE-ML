@@ -15,7 +15,7 @@ recognition:
   enable_preprocess_fallback: true
   low_quality_threshold: 0.40
   threshold_relaxation: 0.12
-  unknown_reuse_threshold: 0.55
+  unknown_reuse_threshold: 0.38
   min_unknown_surface_threshold: 12.0
   min_unknown_detector_score: 0.62
 
