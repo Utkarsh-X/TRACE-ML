@@ -128,6 +128,27 @@ class PipelineSettings(BaseModel):
     purge_ghost_entities_on_start: bool = True
     ghost_entity_min_events: int = 3
 
+    # ── CPU offload controls ──────────────────────────────────────────────
+    # inference_skip_frames: run ML inference on 1-in-(N+1) frames.
+    #   0 = every frame (30 FPS inference — high CPU)
+    #   1 = every other frame (15 FPS inference — ~50% CPU reduction)
+    #   2 = every 3rd frame (10 FPS inference — ~66% CPU reduction)
+    # Camera capture and display still run at full camera FPS; only the
+    # ONNX inference + gallery search is throttled.
+    inference_skip_frames: int = 2
+
+    # inference_resolution_scale: resize the frame fed into InsightFace.
+    #   1.0 = full resolution (1280×720 default)
+    #   0.5 = half (640×360) — 4× fewer pixels → faster GPU + CPU decode
+    # The original full-res frame is kept in the result packet for display.
+    inference_resolution_scale: float = 0.75
+
+    # live_state_publish_hz: max rate (Hz) at which session.state SSE events
+    # are emitted.  At 30 FPS every frame triggered a JSON serialise + push;
+    # 5 Hz is plenty for the dashboard latency widgets.
+    live_state_publish_hz: float = 5.0
+
+
 
 
 class QualitySettings(BaseModel):

@@ -16,6 +16,10 @@ class _StoreStub:
     def active_person_ids(self):
         return {"PRC004"}
 
+    def search_active_gallery(self, embedding, top_k=5):
+        """Called first by arcface.match() via the in-memory gallery cache path."""
+        return [{"person_id": "PRC004", "similarity": 0.89}]
+
     def search_embeddings_for_person_ids(self, embedding, person_ids, top_k=5):
         if "PRC004" in set(person_ids):
             return [{"person_id": "PRC004", "similarity": 0.89}]

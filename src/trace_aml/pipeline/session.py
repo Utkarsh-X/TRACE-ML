@@ -106,6 +106,8 @@ class RecognitionSession:
         # DB write. Prevents warmup-phase ghost entities.
         self._committed_tracks: set[str] = set()
         # ─────────────────────────────────────────────────────────────────────
+        # SSE throttle: timestamp of last session.state publish
+        self._last_state_publish: float = 0.0
         # ── Unknown-entity background clusterer ───────────────────────────────
         # Runs every N minutes to retroactively merge duplicate UNK entities
         # created across session restarts or extreme lighting changes.
@@ -140,6 +142,7 @@ class RecognitionSession:
                     self.store,
                     self._frame_queue,
                     self._result_queue,
+                    settings=self.settings,
                 )
                 
                 self._capture.start()
@@ -230,6 +233,7 @@ class RecognitionSession:
                         self.store,
                         self._frame_queue,
                         self._result_queue,
+                        settings=self.settings,
                     )
                 
                 self._inference.start()
@@ -293,6 +297,18 @@ class RecognitionSession:
         self.stream_publisher.publish(topic, payload)
 
     def _publish_live_state(self, fps: float) -> None:
+        # ── SSE rate-limiter ──────────────────────────────────────────────
+        # _publish_live_state was previously called on every result packet
+        # (~30×/s). Each call JSON-serialises the entire state dict and
+        # queues it for all connected SSE clients — pure CPU overhead.
+        # We cap it to live_state_publish_hz (default 5 Hz); the dashboard
+        # widgets don't need sub-200ms refresh to look live.
+        now = time.time()
+        min_interval = 1.0 / max(0.5, self.settings.pipeline.live_state_publish_hz)
+        if now - self._last_state_publish < min_interval:
+            return
+        self._last_state_publish = now
+        # ─────────────────────────────────────────────────────────────────
         self._publish(
             "session.state",
             {
@@ -630,7 +646,7 @@ class RecognitionSession:
         frame_q: queue.Queue = queue.Queue(maxsize=self.settings.pipeline.frame_queue_size)
         result_q: queue.Queue = queue.Queue(maxsize=self.settings.pipeline.result_queue_size)
         capture = CameraCapture(self.settings, frame_q)
-        inference = InferenceWorker(self.recognizer, self.store, frame_q, result_q)
+        inference = InferenceWorker(self.recognizer, self.store, frame_q, result_q, settings=self.settings)
 
         capture.start()
         inference.start()
