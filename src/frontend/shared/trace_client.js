@@ -453,6 +453,16 @@
     );
   }
 
+  /**
+   * POST /api/v1/system/factory-reset
+   * Wipe ALL data (tables, portraits, screenshots, person images) for a clean start.
+   * Camera must be disabled before calling — returns 409 if active.
+   * @returns {Promise<{status:string, detail:Object}|null>}
+   */
+  function factoryReset() {
+    return _fetchJsonMethod(_url("/api/v1/system/factory-reset"), "POST");
+  }
+
   /* ── Timeline ── */
 
   /**
@@ -723,6 +733,7 @@
     setSeverity: setSeverity,
     closeIncident: closeIncident,
     deduplicateIncidents: deduplicateIncidents,
+    factoryReset: factoryReset,
 
     // Timeline
     globalTimeline: globalTimeline,

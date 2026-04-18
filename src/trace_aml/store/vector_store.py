@@ -776,10 +776,108 @@ class VectorStore:
             created_at=existing.get("created_at", now) if existing else now,
             last_seen_at=last_seen_at or now,
         ).model_dump()
+        # Optimisation: if the entity already exists with the correct type, skip
+        # the delete+add round-trip and only update last_seen_at.
+        # This avoids 2 heavy LanceDB writes per frame per visible face.
+        existing_type = str(existing.get("type", "")) if existing else ""
+        type_ok = existing_type == str(entity_type.value)
+        if existing and type_ok:
+            try:
+                escaped = self._escape(entity_id)
+                self.entities.update(
+                    where=f"entity_id = '{escaped}'",
+                    values={"last_seen_at": now, "status": str(status.value)},
+                )
+                return payload
+            except Exception:
+                pass  # fall through to full replace below
         escaped = self._escape(entity_id)
         self.entities.delete(f"entity_id = '{escaped}'")
         self.entities.add([self._filtered_row(self.entities, payload)])
         return payload
+
+    def factory_reset(self) -> dict[str, Any]:
+        """Wipe ALL data and reset to a pristine first-run state.
+
+        Drops every LanceDB table, clears all file-system directories
+        (portraits, screenshots, person images, exports), and rebuilds an
+        empty gallery cache.
+
+        IMPORTANT: Only call when camera/recognition is disabled.
+        Concurrent writes from two processes corrupt LanceDB — the API
+        endpoint enforces this safety gate.
+        """
+        import shutil
+
+        results: dict[str, Any] = {}
+
+        # 1. Drop and recreate all LanceDB tables (single-process — safe)
+        all_table_names = [
+            PERSONS_TABLE, PERSON_STATES_TABLE, EMBEDDINGS_TABLE,
+            IMAGE_QUALITY_TABLE, DETECTIONS_TABLE, DETECTION_DECISIONS_TABLE,
+            ENTITIES_TABLE, EVENTS_TABLE, UNKNOWN_PROFILES_TABLE,
+            ALERTS_TABLE, INCIDENTS_TABLE, ACTIONS_TABLE,
+        ]
+        existing = list(self.db.table_names())
+        for name in all_table_names:
+            if name in existing:
+                self.db.drop_table(name)
+        self._ensure_tables()   # recreates all tables empty + refreshes self.* refs
+        results["tables_reset"] = len(all_table_names)
+
+        # 2. Reset in-memory gallery cache
+        self.gallery_cache = EmbeddingGalleryCache()
+        results["gallery_cache_cleared"] = True
+
+        # 3. Wipe portraits directory
+        portraits_dir = Path(self.settings.store.portraits_dir)
+        portraits_dir.mkdir(parents=True, exist_ok=True)
+        portrait_count = 0
+        for f in list(portraits_dir.glob("*")):
+            if f.is_file():
+                try:
+                    f.unlink()
+                    portrait_count += 1
+                except Exception:
+                    pass
+        results["portraits_deleted"] = portrait_count
+
+        # 4. Wipe screenshots directory
+        screenshots_dir = Path(self.settings.store.screenshots_dir)
+        screenshots_dir.mkdir(parents=True, exist_ok=True)
+        ss_count = 0
+        for f in list(screenshots_dir.iterdir()):
+            if f.is_file():
+                try:
+                    f.unlink()
+                    ss_count += 1
+                except Exception:
+                    pass
+        results["screenshots_deleted"] = ss_count
+
+        # 5. Wipe person_images (enrollment upload photos)
+        store_root = Path(self.settings.store.root)
+        person_images_dir = store_root / "person_images"
+        if person_images_dir.exists():
+            try:
+                shutil.rmtree(person_images_dir)
+                person_images_dir.mkdir()
+                results["person_images_cleared"] = True
+            except Exception as exc:
+                results["person_images_error"] = str(exc)
+
+        # 6. Wipe exports directory
+        exports_dir = Path(self.settings.store.exports_dir)
+        if exports_dir.exists():
+            try:
+                shutil.rmtree(exports_dir)
+                exports_dir.mkdir()
+                results["exports_cleared"] = True
+            except Exception as exc:
+                results["exports_error"] = str(exc)
+
+        logger.info("VectorStore.factory_reset() complete: {}", results)
+        return results
 
     def add_event(self, event: EventRecord) -> None:
         payload = event.model_dump()
@@ -1027,23 +1125,13 @@ class VectorStore:
 
         now = utc_now_iso()
 
-        # ── Adaptive threshold: relax for well-established entities ───────────
-        # An entity with 8 diverse embeddings already provides strong coverage
-        # across lighting/pose variants.  Relaxing the threshold slightly lets
-        # the same real person still match under difficult conditions.
-        # Scale: 1 embedding → base, 8+ embeddings → base × 0.80.
-        # Formula: adaptive = base × max(0.80, 1.0 - 0.025 × (count - 1))
-        # where count = num embeddings of the best-matching candidate entity.
-        if best_entity:
-            candidate_count = sum(
-                1 for r in profiles if str(r.get("entity_id", "")) == best_entity
-            )
-            adaptive_scale = max(0.80, 1.0 - 0.025 * (candidate_count - 1))
-            adaptive_threshold = similarity_threshold * adaptive_scale
-        else:
-            adaptive_threshold = similarity_threshold
-
-        if best_entity and best_similarity >= adaptive_threshold:
+        # Use a constant threshold — no adaptive relaxation here.
+        # Rationale: best-of-N comparison already gives MORE matching opportunities
+        # as an entity accumulates embeddings.  Relaxing the threshold ON TOP of
+        # that causes false-merges where different people are incorrectly grouped.
+        # The threshold itself (config: unknown_reuse_threshold) must therefore be
+        # calibrated for the worst-case best-of-8 scenario (see config notes).
+        if best_entity and best_similarity >= similarity_threshold:
             # ── Reuse existing entity: add this embedding as an additional row ──
             escaped = self._escape(best_entity)
             entity_rows = [r for r in profiles if str(r.get("entity_id", "")) == best_entity]
@@ -1100,8 +1188,16 @@ class VectorStore:
             )
             return best_entity
 
-        # ── No matching entity found: create new unknown entity ────────────────
-        existing_unknowns = [row.get("entity_id", "") for row in self.list_entities(type_filter=EntityType.unknown.value)]
+        # ── No matching entity found: create new unknown entity ────────────────────
+        # Use unknown_profiles as the source of existing entity IDs.
+        # Querying list_entities(type_filter='unknown') is unreliable when entity_type
+        # is NULL for rows created by older code (before the StrEnum serialisation fix).
+        # unknown_profiles is always the canonical record of which UNK entities exist.
+        existing_unknowns = list({
+            str(row.get("entity_id", ""))
+            for row in profiles
+            if row.get("entity_id")
+        })
         new_entity_id = next_unknown_entity_id(existing_unknowns)
         self.unknown_profiles.add(
             [

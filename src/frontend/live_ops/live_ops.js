@@ -375,8 +375,9 @@
     if (enabled) {
       // Camera is enabled on backend
       if (feedImg) {
-        feedImg.src = TraceClient.baseUrl + "/api/v1/live/mjpeg";
+        feedImg.src = TraceClient.baseUrl + "/api/v1/live/mjpeg?quality=90&fps=15";
         feedImg.style.display = "block";
+        feedImg.style.imageRendering = "auto";  // let browser use best upscale algo
       }
       if (placeholder) placeholder.style.display = "none";
       if (btn) btn.textContent = "Disable Camera";

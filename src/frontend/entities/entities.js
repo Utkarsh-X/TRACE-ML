@@ -133,7 +133,9 @@
       var matchText = (e.name || "").toLowerCase().includes(q)
         || (e.entity_id || "").toLowerCase().includes(q)
         || (e.category || "").toLowerCase().includes(q);
-      var matchType = !type || e.entity_type === type;
+      // API may return 'type' or 'entity_type' depending on serialiser version
+      var entityType = String(e.type || e.entity_type || "");
+      var matchType = !type || entityType === type;
       return matchText && matchType;
     });
 
@@ -274,6 +276,15 @@
     // probe() is still used for connection-status badge but doesn't block data.
     loadEntityList();
     TraceClient.probe(); // fire-and-forget for connection badge only
+
+    // Auto-refresh every 10 seconds so new entities appear without manual navigation.
+    // Only refreshes if the overview (grid) is visible to avoid stomping detail view.
+    setInterval(function () {
+      var overview = $("view-overview");
+      if (overview && overview.style.display !== "none") {
+        loadEntityList();
+      }
+    }, 10000);
 
     // Re-render timestamps when timezone changes
     window.addEventListener("trace:tz-change", function () {

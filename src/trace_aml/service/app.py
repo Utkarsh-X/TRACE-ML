@@ -476,6 +476,40 @@ def create_service_app(
             "message": f"Removed {removed_count} duplicate record(s). Database now has {unique_incident_ids} unique incidents."
         }
 
+    @app.post("/api/v1/system/factory-reset")
+    def system_factory_reset() -> dict[str, Any]:
+        """Wipe ALL data and reset to a pristine first-run state.
+
+        Clears every LanceDB table, portrait files, screenshots, enrollment
+        images, and exports. Rebuilds the empty gallery cache in-process so
+        no restart is needed.
+
+        SAFETY: The camera must be disabled before calling this endpoint.
+        Running this while recognition is active would cause concurrent LanceDB
+        writes from two threads, which corrupts the database.
+        """
+        if session.is_camera_enabled():
+            raise HTTPException(
+                status_code=409,
+                detail=(
+                    "Cannot reset while camera is active. "
+                    "Disable camera from the Live Ops page first."
+                ),
+            )
+        result = store.factory_reset()
+        # Reset all per-session runtime state so the fresh DB is reflected
+        # immediately without needing a service restart.
+        session.last_logged_at.clear()
+        session.last_event_at.clear()
+        session._committed_tracks.clear()
+        session._seen_entity_ids.clear()
+        session.event_feed.clear()
+        session.recent_confidences.clear()
+        session.decision_counters = {"accept": 0, "review": 0, "reject": 0}
+        session.current_focus = "none"
+        logger.info("Factory reset complete via API: {}", result)
+        return {"status": "success", "detail": result}
+
     @app.get("/api/v1/timeline")
     def global_timeline(
         start: str = Query(default=""),

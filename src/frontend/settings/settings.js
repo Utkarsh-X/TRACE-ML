@@ -435,6 +435,75 @@
       });
     }
 
+    // ── Force Full System Reset ────────────────────────────────────────
+    var btnFactoryReset   = $("btn-factory-reset");
+    var modal             = $("factory-reset-modal");
+    var confirmInput      = $("factory-reset-confirm-input");
+    var confirmBtn        = $("factory-reset-confirm");
+    var cancelBtn         = $("factory-reset-cancel");
+    var progressEl        = $("factory-reset-progress");
+    var statusEl          = $("factory-reset-status");
+
+    function showModal() {
+      if (!modal) return;
+      if (confirmInput) { confirmInput.value = ""; }
+      if (confirmBtn)   { confirmBtn.disabled = true; confirmBtn.style.opacity = "0.4"; }
+      modal.style.display = "flex";
+      modal.classList.remove("hidden");
+      setTimeout(function () { if (confirmInput) confirmInput.focus(); }, 50);
+    }
+    function hideModal() {
+      if (!modal) return;
+      modal.style.display = "none";
+      modal.classList.add("hidden");
+    }
+
+    if (btnFactoryReset) {
+      btnFactoryReset.addEventListener("click", showModal);
+    }
+    if (cancelBtn) {
+      cancelBtn.addEventListener("click", hideModal);
+    }
+    if (modal) {
+      modal.addEventListener("click", function (e) {
+        if (e.target === modal) hideModal();
+      });
+    }
+    if (confirmInput) {
+      confirmInput.addEventListener("input", function () {
+        var ready = confirmInput.value.trim().toUpperCase() === "RESET";
+        if (confirmBtn) {
+          confirmBtn.disabled = !ready;
+          confirmBtn.style.opacity = ready ? "1" : "0.4";
+        }
+      });
+    }
+    if (confirmBtn) {
+      confirmBtn.addEventListener("click", function () {
+        hideModal();
+        // Show progress
+        if (btnFactoryReset) { btnFactoryReset.disabled = true; }
+        if (progressEl) { progressEl.style.display = "block"; }
+        if (statusEl)   { statusEl.textContent = "Wiping all data — please wait..."; }
+
+        TraceClient.factoryReset().then(function (result) {
+          if (result && result.status === "success") {
+            if (statusEl) { statusEl.textContent = "✓ Reset complete — redirecting to enrollment..."; }
+            setTimeout(function () {
+              window.location.href = "../enrollment/index.html";
+            }, 1800);
+          } else {
+            if (statusEl) {
+              var detail = (result && result.detail) ? JSON.stringify(result.detail) : "Unknown error. Check backend logs.";
+              statusEl.textContent = "✗ Reset failed: " + detail;
+            }
+            if (btnFactoryReset) { btnFactoryReset.disabled = false; }
+          }
+        });
+      });
+    }
+    // ──────────────────────────────────────────────────────────────────
+
     TraceClient.probe().then(function (info) {
       if (info) {
         loadSystemInfo();

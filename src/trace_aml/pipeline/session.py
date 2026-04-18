@@ -12,6 +12,7 @@ from collections import deque
 from pathlib import Path
 
 import cv2
+from loguru import logger
 
 from trace_aml.core.config import Settings
 from trace_aml.core.ids import new_detection_id
@@ -79,6 +80,7 @@ class RecognitionSession:
         self.action_engine = ActionEngine(store, settings)
         self.temporal = TemporalDecisionEngine(settings)
         self.last_logged_at: dict[str, float] = {}
+        self.last_event_at: dict[str, float] = {}  # 1-second event/rules throttle
         self.screenshot_dir = Path(settings.store.screenshots_dir)
         self.screenshot_dir.mkdir(parents=True, exist_ok=True)
         self.portrait_store = PortraitStore(settings)
@@ -105,6 +107,10 @@ class RecognitionSession:
         # Track IDs that have passed the commitment gate and had their first
         # DB write. Prevents warmup-phase ghost entities.
         self._committed_tracks: set[str] = set()
+        # Entity IDs seen in THIS session. Used to clear stale on-disk portraits
+        # the first time an entity appears (prevents old high-score portraits from
+        # blocking the fresh face captured in the current session).
+        self._seen_entity_ids: set[str] = set()
         # ─────────────────────────────────────────────────────────────────────
         # SSE throttle: timestamp of last session.state publish
         self._last_state_publish: float = 0.0
@@ -299,6 +305,19 @@ class RecognitionSession:
             return True
         return False
 
+    def _should_log_event(self, key: str, cooldown: float = 1.0) -> bool:
+        """Throttle entity-event + rules-engine calls to once per `cooldown` seconds.
+
+        Separate from _should_log (which gates heavy detection writes at 2 s).
+        A 1-second cooldown still delivers >= 10 events/window so rules fire correctly.
+        """
+        now = time.time()
+        last = self.last_event_at.get(key, 0.0)
+        if now - last >= cooldown:
+            self.last_event_at[key] = now
+            return True
+        return False
+
     # ── Async DB writer ──────────────────────────────────────────────────────
 
     def _start_writer(self) -> None:
@@ -313,7 +332,7 @@ class RecognitionSession:
         """Drain the write queue then stop the writer thread."""
         self._write_queue.put_nowait(None)  # sentinel
         if self._writer_thread and self._writer_thread.is_alive():
-            self._writer_thread.join(timeout=5.0)
+            self._writer_thread.join(timeout=30.0)  # wait up to 30 s to drain
 
     def _writer_loop(self) -> None:
         """Background thread: drains _write_queue and calls _save_detection."""
@@ -327,8 +346,12 @@ class RecognitionSession:
             frame_bgr, match, emb, live = item
             try:
                 self._save_detection(frame_bgr, match=match, embedding=emb, liveness=live)
-            except Exception:  # never crash the writer
-                pass
+            except Exception:  # never crash the writer, but always log failures
+                logger.exception(
+                    "DB writer error (track={} decision={})",
+                    getattr(match, "track_id", "?"),
+                    getattr(match, "decision_state", "?"),
+                )
 
     def _enqueue_write(
         self,
@@ -432,6 +455,11 @@ class RecognitionSession:
                 score=float(match.similarity),
             )
         elif resolution.is_unknown and match.bbox:
+            # First sighting in this session → wipe any stale portrait from a
+            # previous session so the new face always wins the score gate.
+            if resolution.entity_id not in self._seen_entity_ids:
+                self.portrait_store.delete_portrait(resolution.entity_id)
+                self._seen_entity_ids.add(resolution.entity_id)
             self.portrait_store.try_update_portrait(
                 entity_id=resolution.entity_id,
                 frame_bgr=frame,
@@ -493,36 +521,43 @@ class RecognitionSession:
                     f"{decision.value.upper()} {event.name} {event.smoothed_confidence:.1f}% [{match.track_id}]"
                 )
 
-        core_event = self.entity_resolver.create_event_record(
-            resolution=resolution,
-            match=match,
-            detection_id=detection_id,
-            source=source,
-        )
-        self.store.add_event(core_event)
-        self._publish("event", core_event.model_dump(mode="json"))
-        alerts = self.rules_engine.process_event(core_event)
-        for alert in alerts:
-            self.store.add_alert(alert)
-            self._publish("alert", alert.model_dump(mode="json"))
-            incident, trigger_label = self.incident_manager.handle_alert(alert)
-            self._publish("incident", incident.model_dump(mode="json"))
-            trigger = ActionTrigger(trigger_label)
-            planned_actions = self.policy_engine.evaluate(incident, trigger)
-            executed = self.action_engine.execute(incident, planned_actions, trigger)
-            self._track_event(
-                f"ALERT {alert.severity.value.upper()} {alert.type.value} {alert.entity_id} -> {incident.incident_id}"
+        # ── Entity event + rules engine ─────────────────────────────────────
+        # Throttled to once per second per entity to prevent the write queue
+        # from being flooded at the inference frame-rate (3+ fps × DB ops).
+        # Rules engine window is 10 s with min_events = 3, so a 1-second
+        # cooldown still delivers ≥ 10 events per window — well above threshold.
+        event_key = f"evt:{resolution.entity_id}"
+        if self._should_log_event(event_key):
+            core_event = self.entity_resolver.create_event_record(
+                resolution=resolution,
+                match=match,
+                detection_id=detection_id,
+                source=source,
             )
-            if planned_actions:
-                action_names = ",".join([a.value for a in planned_actions])
+            self.store.add_event(core_event)
+            self._publish("event", core_event.model_dump(mode="json"))
+            alerts = self.rules_engine.process_event(core_event)
+            for alert in alerts:
+                self.store.add_alert(alert)
+                self._publish("alert", alert.model_dump(mode="json"))
+                incident, trigger_label = self.incident_manager.handle_alert(alert)
+                self._publish("incident", incident.model_dump(mode="json"))
+                trigger = ActionTrigger(trigger_label)
+                planned_actions = self.policy_engine.evaluate(incident, trigger)
+                executed = self.action_engine.execute(incident, planned_actions, trigger)
                 self._track_event(
-                    f"POLICY {incident.incident_id} {trigger.value} sev={incident.severity.value} -> [{action_names}]"
+                    f"ALERT {alert.severity.value.upper()} {alert.type.value} {alert.entity_id} -> {incident.incident_id}"
                 )
-            for action in executed:
-                self._publish("action", action.model_dump(mode="json"))
-                self._track_event(
-                    f"ACTION {action.action_type.value.upper()} {incident.incident_id} ({action.status.value})"
-                )
+                if planned_actions:
+                    action_names = ",".join([a.value for a in planned_actions])
+                    self._track_event(
+                        f"POLICY {incident.incident_id} {trigger.value} sev={incident.severity.value} -> [{action_names}]"
+                    )
+                for action in executed:
+                    self._publish("action", action.model_dump(mode="json"))
+                    self._track_event(
+                        f"ACTION {action.action_type.value.upper()} {incident.incident_id} ({action.status.value})"
+                    )
 
     def _apply_temporal_decision(self, match: RecognitionMatch, now: float) -> RecognitionMatch:
         temporal = self.temporal.evaluate(match, now_ts=now)

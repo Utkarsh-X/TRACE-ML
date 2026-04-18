@@ -123,6 +123,23 @@ class PortraitStore:
         p = self._portrait_path(entity_id)
         return p if p.exists() else None
 
+    def delete_portrait(self, entity_id: str) -> None:
+        """Delete the portrait image and metadata for *entity_id*.
+
+        Called when an entity is reset or replaced so that a stale high-score
+        portrait from a previous session cannot block future updates.
+        """
+        lock = self._entity_lock(entity_id)
+        with lock:
+            for path in (self._portrait_path(entity_id), self._meta_path(entity_id)):
+                try:
+                    if path.exists():
+                        path.unlink()
+                        logger.debug("PortraitStore: deleted {} for {}", path.name, entity_id)
+                except Exception as exc:
+                    logger.warning("PortraitStore: could not delete {} — {}", path, exc)
+
+
     def get_best_score(self, entity_id: str) -> Optional[float]:
         """Return the stored similarity score for this entity, or ``None``."""
         return self._read_score(entity_id)
