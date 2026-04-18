@@ -124,6 +124,11 @@ class FaceCandidate(BaseModel):
     bbox: tuple[int, int, int, int]
     embedding: list[float]
     detector_score: float = 0.0
+    # Optional: 5 facial keypoints [[x,y], ...] from InsightFace detector.
+    # Used by the composite quality gate for pose-yaw estimation.
+    kps: list[list[float]] | None = None
+    # Geometric yaw estimate computed from kps (degrees, 0=frontal, 90=profile).
+    pose_yaw: float = 0.0
 
 
 class QualityAssessment(BaseModel):

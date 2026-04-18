@@ -108,6 +108,15 @@ class RecognitionSession:
         # ─────────────────────────────────────────────────────────────────────
         # SSE throttle: timestamp of last session.state publish
         self._last_state_publish: float = 0.0
+        # ── Async DB writer ────────────────────────────────────────────────────────────
+        # _save_detection() is moved off the hot result-consumption loop onto a
+        # dedicated single-threaded writer.  This means DB/disk latency (20-80ms
+        # per LanceDB write) no longer blocks the FPS counter loop.
+        # Bounded at 256 items: if the writer falls behind by more than ~25 s of
+        # detections at 10fps, newer items silently overwrite the oldest.
+        self._write_queue: queue.Queue[tuple | None] = queue.Queue(maxsize=256)
+        self._writer_stop = threading.Event()
+        self._writer_thread: threading.Thread | None = None
         # ── Unknown-entity background clusterer ───────────────────────────────
         # Runs every N minutes to retroactively merge duplicate UNK entities
         # created across session restarts or extreme lighting changes.
@@ -289,6 +298,64 @@ class RecognitionSession:
             self.last_logged_at[key] = now
             return True
         return False
+
+    # ── Async DB writer ──────────────────────────────────────────────────────
+
+    def _start_writer(self) -> None:
+        """Start the background persistence thread."""
+        self._writer_stop.clear()
+        self._writer_thread = threading.Thread(
+            target=self._writer_loop, daemon=True, name="trace-db-writer"
+        )
+        self._writer_thread.start()
+
+    def _stop_writer(self) -> None:
+        """Drain the write queue then stop the writer thread."""
+        self._write_queue.put_nowait(None)  # sentinel
+        if self._writer_thread and self._writer_thread.is_alive():
+            self._writer_thread.join(timeout=5.0)
+
+    def _writer_loop(self) -> None:
+        """Background thread: drains _write_queue and calls _save_detection."""
+        while not self._writer_stop.is_set():
+            try:
+                item = self._write_queue.get(timeout=0.5)
+            except queue.Empty:
+                continue
+            if item is None:  # sentinel — normal shutdown
+                break
+            frame_bgr, match, emb, live = item
+            try:
+                self._save_detection(frame_bgr, match=match, embedding=emb, liveness=live)
+            except Exception:  # never crash the writer
+                pass
+
+    def _enqueue_write(
+        self,
+        frame_bgr,
+        match: RecognitionMatch,
+        embedding: list[float],
+        liveness: LivenessResult,
+    ) -> None:
+        """Fire-and-forget: hand off a detection write to the background thread.
+
+        If the queue is full (writer is behind), the oldest item is silently
+        evicted to make room for the newest — newest data is always preferred.
+        """
+        item = (frame_bgr, match, embedding, liveness)
+        try:
+            self._write_queue.put_nowait(item)
+        except queue.Full:
+            try:
+                self._write_queue.get_nowait()  # evict oldest
+            except queue.Empty:
+                pass
+            try:
+                self._write_queue.put_nowait(item)
+            except queue.Full:
+                pass  # give up gracefully
+
+    # ─────────────────────────────────────────────────────────────────────
 
     def _track_event(self, text: str) -> None:
         self.event_feed.appendleft(text)
@@ -676,7 +743,7 @@ class RecognitionSession:
                     # Only persist if track has passed the commitment gate.
                     if match.track_id and match.track_id not in self._committed_tracks:
                         continue
-                    self._save_detection(packet.frame, match=match, embedding=emb, liveness=live)
+                    self._enqueue_write(packet.frame, match=match, embedding=emb, liveness=live)
 
                 cv2.imshow(title, display)
                 if cv2.waitKey(1) & 0xFF == ord("q"):
@@ -688,12 +755,17 @@ class RecognitionSession:
 
     def run_headless(self) -> None:
         """Run recognition session loop (camera/recognition control is frontend-driven via API).
-        
+
         This method runs indefinitely:
         - If camera disabled: waits (no frame capture)
         - If camera enabled but recognition disabled: captures frames but doesn't process
         - If both enabled: processes frames normally
+
+        The DB-write path (_save_detection) runs on a separate background
+        thread via _enqueue_write() so LanceDB write latency (20-80ms) never
+        blocks the FPS counter or the overlay refresh.
         """
+        self._start_writer()
         prev = time.time()
         fps = 0.0
         self._headless_mode = True
@@ -735,8 +807,11 @@ class RecognitionSession:
                     # Only persist if track has passed the commitment gate.
                     if match.track_id and match.track_id not in self._committed_tracks:
                         continue
-                    self._save_detection(packet.frame, match=match, embedding=emb, liveness=live)
+                    # Fire-and-forget to background writer thread.
+                    # The main loop never blocks on LanceDB / disk again.
+                    self._enqueue_write(packet.frame, match=match, embedding=emb, liveness=live)
         finally:
+            self._stop_writer()
             self._headless_mode = False
             # Cleanup any active state on shutdown
             with self._camera_lock:

@@ -59,7 +59,7 @@ class GpuSettings(BaseModel):
 
 
 class RecognitionSettings(BaseModel):
-    model_name: str = "buffalo_sc"
+    model_name: str = "buffalo_l"
     # ``provider`` is superseded by GpuSettings when gpu.enabled=True.
     # Kept for backwards-compatibility; a deprecation warning is logged
     # if it is set to a non-default value while gpu.enabled=True.
@@ -158,12 +158,21 @@ class QualitySettings(BaseModel):
     max_brightness: float = 220.0
     min_pose_score: float = 0.28
     min_quality_score: float = 0.38
-    min_valid_images: int = 6
-    min_embeddings_active: int = 6
-    min_embeddings_ready: int = 2
+    min_valid_images: int = 3
+    min_embeddings_active: int = 3
+    min_embeddings_ready: int = 1
     # Runtime face quality gate — faces with detector_score below this are discarded
     # before ArcFace embedding runs (prevents low-quality faces from becoming entities).
     min_detector_score: float = 0.55
+    # ── Composite quality gate ────────────────────────────────────────────────
+    # Pre-embedding gate combining detector confidence, sharpness, and pose.
+    # composite = 0.50*det + 0.30*blur + 0.20*pose  (all factors in [0,1])
+    # blur_factor  = min(1, laplacian_variance / blur_lap_saturation)
+    # pose_factor  = max(0, 1 - yaw_degrees / 60)
+    # When composite < min_composite_score the frame is dropped before ArcFace runs.
+    composite_gate_enabled: bool = True
+    min_composite_score: float = 0.42
+    blur_lap_saturation: float = 500.0
 
 
 class TemporalSettings(BaseModel):

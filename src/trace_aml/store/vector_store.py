@@ -1027,7 +1027,23 @@ class VectorStore:
 
         now = utc_now_iso()
 
-        if best_entity and best_similarity >= similarity_threshold:
+        # ── Adaptive threshold: relax for well-established entities ───────────
+        # An entity with 8 diverse embeddings already provides strong coverage
+        # across lighting/pose variants.  Relaxing the threshold slightly lets
+        # the same real person still match under difficult conditions.
+        # Scale: 1 embedding → base, 8+ embeddings → base × 0.80.
+        # Formula: adaptive = base × max(0.80, 1.0 - 0.025 × (count - 1))
+        # where count = num embeddings of the best-matching candidate entity.
+        if best_entity:
+            candidate_count = sum(
+                1 for r in profiles if str(r.get("entity_id", "")) == best_entity
+            )
+            adaptive_scale = max(0.80, 1.0 - 0.025 * (candidate_count - 1))
+            adaptive_threshold = similarity_threshold * adaptive_scale
+        else:
+            adaptive_threshold = similarity_threshold
+
+        if best_entity and best_similarity >= adaptive_threshold:
             # ── Reuse existing entity: add this embedding as an additional row ──
             escaped = self._escape(best_entity)
             entity_rows = [r for r in profiles if str(r.get("entity_id", "")) == best_entity]

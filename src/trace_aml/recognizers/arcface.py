@@ -17,7 +17,7 @@ from trace_aml.store.vector_store import VectorStore
 
 
 class ArcFaceRecognizer:
-    """Loads `buffalo_sc` and exposes embedding extraction APIs."""
+    """Loads the configured InsightFace model pack (default: buffalo_l) and exposes embedding extraction APIs."""
 
     def __init__(self, settings: Settings) -> None:
         self.settings = settings
@@ -103,17 +103,92 @@ class ArcFaceRecognizer:
         return enhanced
 
     @staticmethod
-    def _face_quality(frame_bgr: np.ndarray, bbox: tuple[int, int, int, int], detector_score: float) -> float:
-        h, w = frame_bgr.shape[:2]
-        _, _, bw, bh = bbox
-        face_ratio = float((bw * bh) / max(1.0, float(w * h)))
-        gray = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2GRAY)
-        brightness = float(gray.mean())
+    def _yaw_from_kps(kps: list[list[float]]) -> float:
+        """Estimate geometric yaw angle from 5 InsightFace keypoints.
 
+        Keypoint order (InsightFace standard):
+            0=left_eye, 1=right_eye, 2=nose, 3=mouth_left, 4=mouth_right
+
+        Returns degrees in [0, 90] where 0=frontal, 90=full profile.
+        The estimate is symmetric (left/right yaw treated identically).
+        """
+        if not kps or len(kps) < 3:
+            return 0.0
+        left_eye = kps[0]
+        right_eye = kps[1]
+        nose = kps[2]
+        eye_cx = (left_eye[0] + right_eye[0]) / 2.0
+        eye_width = abs(right_eye[0] - left_eye[0])
+        if eye_width < 1.0:
+            return 0.0
+        # Normalised horizontal offset of nose from eye-centre.
+        # Ranges ~0 (frontal) to ~1 (profile).
+        offset = abs(nose[0] - eye_cx) / eye_width
+        return float(min(90.0, offset * 90.0))
+
+    @staticmethod
+    def _composite_quality(
+        frame_bgr: np.ndarray,
+        bbox: tuple[int, int, int, int],
+        detector_score: float,
+        pose_yaw: float = 0.0,
+        blur_lap_saturation: float = 500.0,
+    ) -> tuple[float, float, float, float]:
+        """Compute a composite face quality score and its three components.
+
+        Returns
+        -------
+        (composite, blur_factor, pose_factor, legacy_quality)
+
+        composite     = 0.50 * det + 0.30 * blur + 0.20 * pose
+        blur_factor   = min(1, laplacian_var / saturation)  -- 1 = sharp
+        pose_factor   = max(0, 1 - yaw / 60)               -- 1 = frontal
+        legacy_quality= original face_quality scalar (kept for downstream compat)
+        """
+        h_fr, w_fr = frame_bgr.shape[:2]
+        x, y, bw, bh = bbox
+
+        # ── Blur: Laplacian variance on the face crop ─────────────────────────
+        x0, y0 = max(0, x), max(0, y)
+        x1, y1 = min(w_fr, x + bw), min(h_fr, y + bh)
+        crop = frame_bgr[y0:y1, x0:x1]
+        if crop.size > 0:
+            gray = cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY)
+            lap_var = float(cv2.Laplacian(gray, cv2.CV_64F).var())
+            blur_factor = float(np.clip(lap_var / max(1.0, blur_lap_saturation), 0.0, 1.0))
+        else:
+            blur_factor = 0.0
+
+        # ── Pose: penalise extreme yaw ─────────────────────────────────────────
+        pose_factor = float(max(0.0, 1.0 - pose_yaw / 60.0))
+
+        det_factor = float(np.clip(detector_score, 0.0, 1.0))
+
+        composite = float(np.clip(
+            0.50 * det_factor + 0.30 * blur_factor + 0.20 * pose_factor,
+            0.0, 1.0,
+        ))
+
+        # Legacy quality (brightness + ratio + det) kept for downstream metadata
+        face_ratio = float((bw * bh) / max(1.0, float(w_fr * h_fr)))
+        gray_full = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2GRAY)
+        brightness = float(gray_full.mean())
         ratio_score = float(np.clip(face_ratio / 0.10, 0.0, 1.0))
         brightness_score = float(np.clip(1.0 - abs(brightness - 120.0) / 120.0, 0.0, 1.0))
-        det_score = float(np.clip(detector_score, 0.0, 1.0))
-        return float(np.clip(0.45 * det_score + 0.30 * ratio_score + 0.25 * brightness_score, 0.0, 1.0))
+        legacy = float(np.clip(0.45 * det_factor + 0.30 * ratio_score + 0.25 * brightness_score, 0.0, 1.0))
+
+        return composite, blur_factor, pose_factor, legacy
+
+    # Keep old name as an alias for any callers not yet updated.
+    @classmethod
+    def _face_quality(
+        cls,
+        frame_bgr: np.ndarray,
+        bbox: tuple[int, int, int, int],
+        detector_score: float,
+    ) -> float:
+        _, _, _, legacy = cls._composite_quality(frame_bgr, bbox, detector_score)
+        return legacy
 
     def _effective_thresholds(self, face_quality: float) -> tuple[float, float]:
         if not self.settings.recognition.robust_matching:
@@ -173,11 +248,19 @@ class ArcFaceRecognizer:
         candidates: list[FaceCandidate] = []
         for face in faces:
             try:
+                # Extract keypoints if available (InsightFace 0.6+)
+                raw_kps: list[list[float]] | None = None
+                pose_yaw: float = 0.0
+                if hasattr(face, "kps") and face.kps is not None:
+                    raw_kps = face.kps.tolist()
+                    pose_yaw = self._yaw_from_kps(raw_kps)
                 candidates.append(
                     FaceCandidate(
                         bbox=self._bbox_tuple(face),
                         embedding=self._normalize_embedding(face.embedding),
                         detector_score=float(getattr(face, "det_score", 0.0)),
+                        kps=raw_kps,
+                        pose_yaw=round(pose_yaw, 1),
                     )
                 )
             except Exception:
@@ -197,12 +280,25 @@ class ArcFaceRecognizer:
         vector_store: VectorStore,
     ) -> list[tuple[RecognitionMatch, list[float], LivenessResult]]:
         candidates = self.detect_faces(frame_bgr)
-        # ── Layer 1: Runtime face quality gate ────────────────────────────────
-        # Discard faces whose detector_score is below the minimum threshold.
-        # These are too uncertain to produce reliable embeddings; skipping them
-        # prevents warmup-phase ghost entities from being created downstream.
+        # ── Layer 1: Composite face quality gate ──────────────────────────────
+        # Discard faces below the minimum detector_score first (fast pre-filter)
+        # then apply the full composite gate (det × blur × pose) to skip
+        # embeddings that would produce unreliable results.
         min_det = self.settings.quality.min_detector_score
         candidates = [c for c in candidates if c.detector_score >= min_det]
+
+        if self.settings.quality.composite_gate_enabled:
+            min_comp = self.settings.quality.min_composite_score
+            sat = self.settings.quality.blur_lap_saturation
+            filtered: list[FaceCandidate] = []
+            for c in candidates:
+                comp, _blur, _pose, _legacy = self._composite_quality(
+                    frame_bgr, c.bbox, c.detector_score,
+                    pose_yaw=c.pose_yaw, blur_lap_saturation=sat,
+                )
+                if comp >= min_comp:
+                    filtered.append(c)
+            candidates = filtered
         # ─────────────────────────────────────────────────────────────────────
         active_ids = vector_store.active_person_ids()  # served from cache — no DB query
         outputs: list[tuple[RecognitionMatch, list[float], LivenessResult]] = []
@@ -236,7 +332,11 @@ class ArcFaceRecognizer:
             person_id = str(best.get("person_id", "")) if best else ""
             person = vector_store.get_person(person_id) if person_id else None
 
-            face_quality = self._face_quality(frame_bgr, candidate.bbox, candidate.detector_score)
+            face_quality_composite, blur_f, pose_f, face_quality = self._composite_quality(
+                frame_bgr, candidate.bbox, candidate.detector_score,
+                pose_yaw=candidate.pose_yaw,
+                blur_lap_saturation=self.settings.quality.blur_lap_saturation,
+            )
             dyn_accept_thr, dyn_review_thr = self._effective_thresholds(face_quality)
             quality_flags: list[str] = []
             if not liveness.is_real or (
@@ -277,6 +377,10 @@ class ArcFaceRecognizer:
                         metadata={
                             "detector_score": candidate.detector_score,
                             "face_quality": round(face_quality, 3),
+                            "composite_quality": round(face_quality_composite, 3),
+                            "blur_factor": round(blur_f, 3),
+                            "pose_yaw": candidate.pose_yaw,
+                            "pose_factor": round(pose_f, 3),
                             "dynamic_accept_threshold": round(dyn_accept_thr, 3),
                             "dynamic_review_threshold": round(dyn_review_thr, 3),
                             "liveness_score": liveness.score,

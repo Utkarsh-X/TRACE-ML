@@ -22,7 +22,34 @@ gpu:
 camera:
   device_index: 0
 
+# ── Pipeline CPU-offload Controls ─────────────────────────────────────────────
+# These three knobs are the primary levers for balancing CPU load vs accuracy.
+#
+# inference_skip_frames
+#   0 = run ML on every camera frame (30 FPS inference, high CPU ~85%)
+#   1 = every other frame            (15 FPS inference, ~50% CPU reduction)
+#   2 = every 3rd frame              (10 FPS inference, ~66% CPU reduction)  ← recommended
+#   Camera capture, display & SSE overlay always run at full camera FPS;
+#   only the ONNX detector + ArcFace embedder + gallery search are throttled.
+#
+# inference_resolution_scale
+#   Scale factor applied to the frame BEFORE it is sent to InsightFace.
+#   Lower = fewer GPU texture uploads + faster SCRFD decode.
+#   0.75 → 960×540 inference on a 1280×720 source (44% fewer pixels)
+#   The full-res frame is kept in the packet for display and screenshots.
+#
+# live_state_publish_hz
+#   SSE push rate for session.state (FPS counter, queue depths, etc.).
+#   Previously fired on every inference result (~30/s), which meant
+#   30× JSON-serialise-and-push per second even with no entities visible.
+#   5 Hz is more than enough for the dashboard latency widgets.
+pipeline:
+  inference_skip_frames: 2
+  inference_resolution_scale: 0.75
+  live_state_publish_hz: 5.0
+
 recognition:
+  model_name: buffalo_l
   accept_threshold: 0.60
   review_threshold: 0.45
   active_gallery_search_k: 96
@@ -37,6 +64,15 @@ recognition:
   min_unknown_surface_threshold: 12.0
   min_unknown_detector_score: 0.62
 
+# ── Composite Quality Gate ────────────────────────────────────────────────────
+# Pre-embedding gate: composite = 0.50*det + 0.30*blur + 0.20*pose
+# Faces below min_composite_score are dropped BEFORE ArcFace runs.
+# Prevents blurry / side-on faces from polluting unknown entity embeddings.
+quality:
+  min_detector_score: 0.55
+  composite_gate_enabled: true
+  min_composite_score: 0.42
+  blur_lap_saturation: 500.0
 temporal:
   decision_window: 6
   smoothing_alpha: 0.6
@@ -84,3 +120,18 @@ unknown_clustering:
   interval_minutes: 3.0
   merge_threshold: 0.28
   min_embeddings_to_cluster: 1
+
+# ── Liveness / Anti-Spoofing ──────────────────────────────────────────────────
+# MiniFASNetV2 model gates unknown entities against photo/screen replay attacks.
+# If the model file is absent the system logs a warning and passes all faces
+# through — no crash, no behaviour change until the model is present.
+#
+# Model download (run once from project root):
+#   Invoke-WebRequest -Uri "https://github.com/otroshi/face-anti-spoofing-onnx/releases/download/v1.0/2.7_80x80_MiniFASNetV2.onnx" -OutFile "models\2.7_80x80_MiniFASNetV2.onnx"
+#   OR manually place it at:  models/2.7_80x80_MiniFASNetV2.onnx
+liveness:
+  enabled: false
+  provider: minifas
+  threshold: 0.60
+  model_path: models/2.7_80x80_MiniFASNetV2.onnx
+  strict_reject: false
