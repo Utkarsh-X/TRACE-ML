@@ -799,38 +799,51 @@ class VectorStore:
     def factory_reset(self) -> dict[str, Any]:
         """Wipe ALL data and reset to a pristine first-run state.
 
-        Drops every LanceDB table, clears all file-system directories
-        (portraits, screenshots, person images, exports), and rebuilds an
-        empty gallery cache.
+        Strategy (Windows-safe):
+          1. Use shutil.rmtree on the *entire* LanceDB vectors directory — this
+             is the only 100 % reliable way to flush LanceDB on Windows where
+             drop_table() can silently leave MVCC versions behind.
+          2. Reconnect self.db and recreate all empty tables.
+          3. Reset the in-memory gallery cache.
+          4. Wipe all file-system asset directories (portraits, screenshots,
+             person_images, exports) using absolute paths.
 
         IMPORTANT: Only call when camera/recognition is disabled.
-        Concurrent writes from two processes corrupt LanceDB — the API
-        endpoint enforces this safety gate.
         """
         import shutil
 
         results: dict[str, Any] = {}
 
-        # 1. Drop and recreate all LanceDB tables (single-process — safe)
-        all_table_names = [
-            PERSONS_TABLE, PERSON_STATES_TABLE, EMBEDDINGS_TABLE,
-            IMAGE_QUALITY_TABLE, DETECTIONS_TABLE, DETECTION_DECISIONS_TABLE,
-            ENTITIES_TABLE, EVENTS_TABLE, UNKNOWN_PROFILES_TABLE,
-            ALERTS_TABLE, INCIDENTS_TABLE, ACTIONS_TABLE,
-        ]
-        existing = list(self.db.table_names())
-        for name in all_table_names:
-            if name in existing:
-                self.db.drop_table(name)
-        self._ensure_tables()   # recreates all tables empty + refreshes self.* refs
-        results["tables_reset"] = len(all_table_names)
+        # ── 1. Nuke the entire vectors directory & reconnect ──────────────────
+        # This is guaranteed-clean on Windows; drop_table() has MVCC tombstone
+        # issues that leave data rows visible after a reconnect.
+        vectors_dir_abs = self.vectors_dir.resolve()
+        try:
+            if vectors_dir_abs.exists():
+                shutil.rmtree(str(vectors_dir_abs))
+            vectors_dir_abs.mkdir(parents=True, exist_ok=True)
+            results["vectors_dir_wiped"] = True
+        except Exception as exc:
+            results["vectors_dir_error"] = str(exc)
+            logger.error("factory_reset: failed to wipe vectors dir: {}", exc)
+            # best-effort fall-through
 
-        # 2. Reset in-memory gallery cache
+        # Reconnect LanceDB to the clean directory and recreate all tables
+        try:
+            self.db = lancedb.connect(str(vectors_dir_abs))
+        except Exception as exc:
+            results["db_reconnect_error"] = str(exc)
+            logger.error("factory_reset: DB reconnect failed: {}", exc)
+
+        self._ensure_tables()   # creates all tables empty + refreshes self.* refs
+        results["tables_recreated"] = True
+
+        # ── 2. Reset in-memory gallery cache ─────────────────────────────────
         self.gallery_cache = EmbeddingGalleryCache()
         results["gallery_cache_cleared"] = True
 
-        # 3. Wipe portraits directory
-        portraits_dir = Path(self.settings.store.portraits_dir)
+        # ── 3. Wipe portraits directory ───────────────────────────────────────
+        portraits_dir = Path(self.settings.store.portraits_dir).resolve()
         portraits_dir.mkdir(parents=True, exist_ok=True)
         portrait_count = 0
         for f in list(portraits_dir.glob("*")):
@@ -842,8 +855,8 @@ class VectorStore:
                     pass
         results["portraits_deleted"] = portrait_count
 
-        # 4. Wipe screenshots directory
-        screenshots_dir = Path(self.settings.store.screenshots_dir)
+        # ── 4. Wipe screenshots directory ─────────────────────────────────────
+        screenshots_dir = Path(self.settings.store.screenshots_dir).resolve()
         screenshots_dir.mkdir(parents=True, exist_ok=True)
         ss_count = 0
         for f in list(screenshots_dir.iterdir()):
@@ -855,23 +868,25 @@ class VectorStore:
                     pass
         results["screenshots_deleted"] = ss_count
 
-        # 5. Wipe person_images (enrollment upload photos)
-        store_root = Path(self.settings.store.root)
+        # ── 5. Wipe person_images (enrollment upload photos) ──────────────────
+        # Use absolute path resolution so cwd never matters.
+        store_root = Path(self.settings.store.root).resolve()
         person_images_dir = store_root / "person_images"
         if person_images_dir.exists():
             try:
-                shutil.rmtree(person_images_dir)
-                person_images_dir.mkdir()
+                shutil.rmtree(str(person_images_dir))
+                person_images_dir.mkdir(parents=True, exist_ok=True)
                 results["person_images_cleared"] = True
             except Exception as exc:
                 results["person_images_error"] = str(exc)
+                logger.error("factory_reset: failed to wipe person_images: {}", exc)
 
-        # 6. Wipe exports directory
-        exports_dir = Path(self.settings.store.exports_dir)
+        # ── 6. Wipe exports directory ──────────────────────────────────────────
+        exports_dir = Path(self.settings.store.exports_dir).resolve()
         if exports_dir.exists():
             try:
-                shutil.rmtree(exports_dir)
-                exports_dir.mkdir()
+                shutil.rmtree(str(exports_dir))
+                exports_dir.mkdir(parents=True, exist_ok=True)
                 results["exports_cleared"] = True
             except Exception as exc:
                 results["exports_error"] = str(exc)

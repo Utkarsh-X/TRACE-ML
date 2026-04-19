@@ -111,6 +111,9 @@ class RecognitionSession:
         # the first time an entity appears (prevents old high-score portraits from
         # blocking the fresh face captured in the current session).
         self._seen_entity_ids: set[str] = set()
+        # Entity IDs that existed in the DB BEFORE this recognition session.
+        # Used by the overlay box builder to classify REAPPEARING vs NEW UNKNOWN.
+        self._entities_before_session: set[str] = set()
         # ─────────────────────────────────────────────────────────────────────
         # SSE throttle: timestamp of last session.state publish
         self._last_state_publish: float = 0.0
@@ -253,7 +256,19 @@ class RecognitionSession:
                 
                 self._inference.start()
                 self._recognition_enabled = True
-                
+
+                # Snapshot all entity_ids already in DB so we can differentiate
+                # REAPPEARING unknowns (existed before) from NEW unknowns (created now).
+                try:
+                    _rows = self.store.list_entities(limit=10_000)
+                    self._entities_before_session = {
+                        str(r.get("entity_id", ""))
+                        for r in _rows
+                        if r.get("entity_id")
+                    }
+                except Exception:
+                    self._entities_before_session = set()
+
                 return {
                     "status": "enabled",
                     "message": "Face recognition started",
@@ -726,6 +741,9 @@ class RecognitionSession:
                 if conf_ok and votes_ok:
                     self._committed_tracks.add(tid)
             # ─────────────────────────────────────────────────────────────────
+            # Resolve entity_id from the track→entity map (set by entity_resolver after commitment).
+            # May be empty string for warmup-phase tracks not yet committed to DB.
+            _eid = str(self.entity_resolver._track_entity_map.get(str(match.track_id or ""), ""))
             boxes.append(
                 {
                     "x": float(x) / max(w, 1),
@@ -739,6 +757,14 @@ class RecognitionSession:
                     "detector_score": float(match.metadata.get("detector_score", 0.0)),
                     "face_quality": float(match.metadata.get("face_quality", 0.0)),
                     "is_unknown": not bool(match.person_id),
+                    # ── Overlay type enrichment ──────────────────────────────────
+                    "entity_id": _eid,
+                    "person_category": str(
+                        getattr(match, "category", None) or "unknown"
+                    ).lower(),
+                    # True only if this entity existed in the DB before recognition
+                    # was enabled — distinguishes REAPPEARING from brand-new UNK.
+                    "is_repeated": bool(_eid and _eid in self._entities_before_session),
                 }
             )
         update_live_overlay(frame_width=w, frame_height=h, fps=fps, boxes=boxes)

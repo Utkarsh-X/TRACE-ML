@@ -103,6 +103,8 @@ def enroll_person(
     for img_path in image_files:
         image = cv2.imread(str(img_path))
         if image is None:
+            logger.warning("  [{}] {} — cv2.imread returned None (corrupt or wrong format)",
+                           person_id, img_path.name)
             skipped_images += 1
             continue
 
@@ -116,7 +118,27 @@ def enroll_person(
         )
         store.add_image_quality(assessment)
 
-        if not assessment.passed or candidate is None:
+        if candidate is None:
+            h, w = image.shape[:2]
+            logger.debug("  [{}] {} ({}x{}) — no face detected by SCRFD",
+                         person_id, img_path.name, w, h)
+            skipped_images += 1
+            continue
+
+        if not assessment.passed:
+            h, w = image.shape[:2]
+            logger.debug(
+                "  [{}] {} ({}x{}) — face found (det={:.2f}), "
+                "but quality failed: {} | ratio={:.3f} sharp={:.1f} bright={:.1f} pose={:.2f} score={:.3f}",
+                person_id, img_path.name, w, h,
+                candidate.detector_score,
+                assessment.reasons,
+                assessment.face_ratio,
+                assessment.sharpness,
+                assessment.brightness,
+                assessment.pose_score,
+                assessment.quality_score,
+            )
             skipped_images += 1
             continue
 

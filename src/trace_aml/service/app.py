@@ -496,6 +496,8 @@ def create_service_app(
                     "Disable camera from the Live Ops page first."
                 ),
             )
+        from loguru import logger
+        from trace_aml.service.person_api import clear_enrollment_state
         result = store.factory_reset()
         # Reset all per-session runtime state so the fresh DB is reflected
         # immediately without needing a service restart.
@@ -503,10 +505,13 @@ def create_service_app(
         session.last_event_at.clear()
         session._committed_tracks.clear()
         session._seen_entity_ids.clear()
+        session._entities_before_session.clear()
         session.event_feed.clear()
         session.recent_confidences.clear()
         session.decision_counters = {"accept": 0, "review": 0, "reject": 0}
         session.current_focus = "none"
+        # Clear in-memory enrollment status dict so old person IDs don't linger
+        clear_enrollment_state()
         logger.info("Factory reset complete via API: {}", result)
         return {"status": "success", "detail": result}
 

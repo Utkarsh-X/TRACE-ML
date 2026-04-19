@@ -61,6 +61,63 @@
       padding: 2px 8px;
     }
     #fl-toggle-btn:hover { color: #fff; border-color: rgba(255,255,255,0.25); }
+
+    /* ── Entity Intelligence Cards ──────────────────────────── */
+    .intel-card {
+      border: 1px solid rgba(255,255,255,0.06);
+      border-left-width: 3px;
+      background: rgba(255,255,255,0.025);
+      padding: 7px 9px 6px 9px;
+      transition: opacity 0.4s ease;
+      position: relative;
+    }
+    .intel-card.leaving { opacity: 0; pointer-events: none; }
+    .intel-card.new-flash {
+      animation: intel-flash 0.8s ease-out;
+    }
+    @keyframes intel-flash {
+      0%   { background: rgba(255,255,255,0.08); }
+      100% { background: rgba(255,255,255,0.025); }
+    }
+    .intel-card__row1 {
+      display: flex; align-items: center; gap: 5px; margin-bottom: 3px;
+    }
+    .intel-type-badge {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.5rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.08em;
+      padding: 1px 5px; flex-shrink: 0;
+      background: rgba(255,255,255,0.06);
+    }
+    .intel-entity-id {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.58rem; color: rgba(255,255,255,0.28);
+      flex-shrink: 0; letter-spacing: 0.04em;
+    }
+    .intel-name {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.65rem; color: #ffffff;
+      text-transform: uppercase; flex: 1;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      letter-spacing: 0.03em;
+    }
+    .intel-conf {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.65rem; font-weight: 700; flex-shrink: 0;
+    }
+    .intel-card__row2 {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.55rem; color: rgba(255,255,255,0.28);
+      letter-spacing: 0.03em; white-space: nowrap;
+      overflow: hidden; text-overflow: ellipsis;
+    }
+    .intel-card__row2 .intel-status {
+      text-transform: uppercase; letter-spacing: 0.06em;
+    }
+    @keyframes intel-dot-pulse {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0.3; }
+    }
   </style>
 </head>
 
@@ -264,11 +321,22 @@
               </div>
             </div>
 
-            <!-- Incident Updates -->
-            <div class="p-4 flex flex-col min-h-0">
-              <h2 class="section-header mb-2 flex-shrink-0">Open Incidents</h2>
-              <div class="flex-1 overflow-y-auto space-y-2" id="incident-updates-root">
-                <div class="text-outline font-mono text-[0.65rem] py-3 text-center">Loading…</div>
+            <!-- Entity Intelligence (replaces Open Incidents) -->
+            <div class="p-4 flex flex-col min-h-0" id="entity-intel-panel">
+              <div class="flex items-center justify-between mb-3 flex-shrink-0">
+                <h2 class="section-header">Entity Intelligence</h2>
+                <span class="font-mono text-[0.6rem] tracking-widest" id="intel-live-count"
+                      style="color:rgba(255,255,255,0.25)">—</span>
+              </div>
+              <div class="flex-1 overflow-y-auto space-y-1.5" id="entity-intel-root">
+                <div id="intel-empty-state" style="text-align:center;padding:16px 0;">
+                  <span style="font-family:'JetBrains Mono',monospace;font-size:0.6rem;color:rgba(255,255,255,0.2);text-transform:uppercase;letter-spacing:0.1em;display:block;">
+                    — No entities in frame —
+                  </span>
+                  <span style="font-family:'JetBrains Mono',monospace;font-size:0.55rem;color:rgba(255,255,255,0.1);margin-top:4px;display:block;">
+                    Start recognition to monitor
+                  </span>
+                </div>
               </div>
             </div>
 

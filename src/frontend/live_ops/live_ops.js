@@ -354,11 +354,42 @@
 
   var _overlayTimer = null;
 
-  var OVERLAY_COLORS = {
-    accept:  "rgba(0, 255, 120, 0.85)",
-    review:  "rgba(255, 200, 0, 0.85)",
-    reject:  "rgba(255, 60, 60, 0.85)"
+  // ── 6-type entity style definitions ──────────────────────────────────────
+  // Each entry defines the bracket/label colour, short label prefix,
+  // whether to render confidence, and the intel-panel status line.
+  var ENTITY_TYPE_STYLES = {
+    criminal:    { color: "#ff3366", badge: "CRIM",  showConf: true,
+                   status: "IDENTIFIED \u00b7 CRIMINAL / POI" },
+    missing:     { color: "#ffaa33", badge: "MISS",  showConf: false,
+                   status: "IDENTIFIED \u00b7 MISSING PERSON" },
+    employee:    { color: "#33ff77", badge: "STAFF", showConf: true,
+                   status: "IDENTIFIED \u00b7 AUTH STAFF" },
+    vip:         { color: "#ffdd44", badge: "VIP",   showConf: true,
+                   status: "IDENTIFIED \u00b7 PROTECTED ENTITY" },
+    unknown:     { color: "#bb44ff", badge: "UNK",   showConf: false,
+                   status: "NEW UNKNOWN \u00b7 No DB match" },
+    reappearing: { color: "#ff44cc", badge: "RPT",   showConf: true,
+                   status: "REAPPEARING \u00b7 Seen before" },
   };
+
+  // Pulse map: track_id -> timestamp when committed (for 800ms on-appear glow).
+  var _pulseMap = {};
+
+  // ── Resolve which of the 6 types a box belongs to ────────────────────────
+  function _resolveEntityType(box) {
+    if (box.is_unknown) {
+      return box.is_repeated ? "reappearing" : "unknown";
+    }
+    var cat = (box.person_category || "unknown").toLowerCase();
+    return ENTITY_TYPE_STYLES[cat] ? cat : "employee"; // fallback: treat as staff
+  }
+
+  // ── Truncate name to first-name, max N chars ──────────────────────────────
+  function _shortName(label, maxLen) {
+    if (!label || label === "Unknown") return null;
+    var first = label.split(" ")[0].toLowerCase();
+    return first.length > maxLen ? first.slice(0, maxLen) : first;
+  }
 
   // ── Camera Control State Management ────────────────────────────────
   var _cameraUISync = false;  // Track if UI matches backend state
@@ -539,6 +570,9 @@
       clearInterval(_overlayTimer);
       _overlayTimer = null;
     }
+    // Clear the intel panel when recognition stops
+    _intelHistory = [];
+    updateEntityIntelPanel([]);
   }
 
   function pollOverlay() {
@@ -564,73 +598,252 @@
     if (!ctx) return;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+    // Update FPS display
+    var fpsEl = $("camera-fps");
+    if (fpsEl && data && data.fps) fpsEl.textContent = data.fps.toFixed(1) + " FPS";
+
     if (!data || !data.active || !data.boxes || data.boxes.length === 0) {
-      // Update FPS display from overlay when available
-      var fpsEl = $("camera-fps");
-      if (fpsEl && data && data.fps) {
-        fpsEl.textContent = data.fps.toFixed(1) + " FPS";
-      }
+      updateEntityIntelPanel([]);
       return;
     }
 
-    // Update FPS from pipeline
-    var fpsEl2 = $("camera-fps");
-    if (fpsEl2) fpsEl2.textContent = data.fps.toFixed(1) + " FPS";
-
-    var cw = canvas.width;
-    var ch = canvas.height;
+    var cw  = canvas.width;
+    var ch  = canvas.height;
+    var now = Date.now();
 
     for (var i = 0; i < data.boxes.length; i++) {
-      var box = data.boxes[i];
-      var x = box.x * cw;
-      var y = box.y * ch;
-      var w = box.w * cw;
-      var h = box.h * ch;
-      var decision = String(box.decision || "reject").toLowerCase();
-      var color = OVERLAY_COLORS[decision] || OVERLAY_COLORS.reject;
+      var box  = data.boxes[i];
+      var x    = box.x * cw;
+      var y    = box.y * ch;
+      var w    = box.w * cw;
+      var h    = box.h * ch;
+      var tid  = box.track_id || ("t" + i);
 
-      // Draw bounding box
-      ctx.strokeStyle = color;
-      ctx.lineWidth = 2;
-      ctx.strokeRect(x, y, w, h);
+      // Determine entity type + colour
+      var typeName = _resolveEntityType(box);
+      var style    = ENTITY_TYPE_STYLES[typeName];
+      var color    = style.color;
 
-      // Draw corner brackets (tactical look)
-      var bracketLen = Math.max(8, Math.min(w, h) * 0.15);
-      ctx.lineWidth = 3;
-      // Top-left
-      ctx.beginPath(); ctx.moveTo(x, y + bracketLen); ctx.lineTo(x, y); ctx.lineTo(x + bracketLen, y); ctx.stroke();
-      // Top-right
-      ctx.beginPath(); ctx.moveTo(x + w - bracketLen, y); ctx.lineTo(x + w, y); ctx.lineTo(x + w, y + bracketLen); ctx.stroke();
-      // Bottom-left
-      ctx.beginPath(); ctx.moveTo(x, y + h - bracketLen); ctx.lineTo(x, y + h); ctx.lineTo(x + bracketLen, y + h); ctx.stroke();
-      // Bottom-right
-      ctx.beginPath(); ctx.moveTo(x + w - bracketLen, y + h); ctx.lineTo(x + w, y + h); ctx.lineTo(x + w, y + h - bracketLen); ctx.stroke();
-
-      // ── Label: clean tactical minimal display ─────────────────────────
-      // For KNOWN persons: show name only (no misleading %).
-      // For UNKNOWN faces: show "UNKNOWN ●" with face detector quality.
-      // Gallery-match confidence is NOT shown — it's meaningless for new people.
-      var isUnknown = box.is_unknown === true || decision === "reject";
-      var label;
-      if (!isUnknown && box.label && box.label !== "Unknown") {
-        // Known identified person
-        label = "▶ " + box.label;
-      } else {
-        // Unknown face — show detector quality if available
-        var detPct = box.detector_score ? Math.round(box.detector_score * 100) : null;
-        label = detPct !== null ? ("UNKNOWN  det " + detPct + "%") : "UNKNOWN ●";
+      // Pulse animation: 800ms on first appearance
+      if (!(tid in _pulseMap)) _pulseMap[tid] = now;
+      var age       = now - _pulseMap[tid];
+      var glowAlpha = 1.0;
+      if (age < 800) {
+        glowAlpha = 1.0 + Math.sin((1 - age / 800) * Math.PI) * 0.8;
       }
 
-      ctx.font = "bold 11px 'JetBrains Mono', monospace";
-      var textW = ctx.measureText(label).width;
-      // Label background pill
-      ctx.fillStyle = "rgba(0, 0, 0, 0.72)";
-      ctx.fillRect(x, Math.max(0, y - 22), textW + 10, 19);
-      // Label text
-      ctx.fillStyle = color;
-      ctx.fillText(label, x + 5, Math.max(13, y - 7));
-      // ─────────────────────────────────────────────────────────────────
+      // Draw L-shaped corner brackets (no full rectangle)
+      _drawCornerBrackets(ctx, x, y, w, h, color, glowAlpha);
+
+      // Build label text
+      // smoothed_confidence is already 0-100, do NOT multiply by 100.
+      var conf = Math.round(box.confidence);
+      var name = _shortName(box.label, 9);
+      var labelText;
+      if (typeName === "unknown") {
+        labelText = style.badge + " " + (box.entity_id || "--");
+      } else if (typeName === "reappearing") {
+        labelText = style.badge + " " + (box.entity_id || "--") + " " + conf + "%";
+      } else if (style.showConf) {
+        labelText = style.badge + (name ? " " + name : "") + " " + conf + "%";
+      } else {
+        labelText = style.badge + (name ? " " + name : "");
+      }
+      _drawLabel(ctx, x, y, labelText, color);
     }
+
+    // Clean up pulse map entries older than 5s
+    var cutoff = now - 5000;
+    Object.keys(_pulseMap).forEach(function (k) {
+      if (_pulseMap[k] < cutoff) delete _pulseMap[k];
+    });
+
+    updateEntityIntelPanel(data.boxes);
+  }
+
+  // ── Entity Intelligence panel renderer ── HISTORY BUFFER mode ───────────────────
+  //
+  // Design: cards accumulate (up to MAX_HISTORY) so operators see every entity
+  // that appeared, not just the one currently on screen. Live entities are shown
+  // at the top with a pulsing dot; past ones fade to 50% with "Last seen Xs ago".
+  // History is keyed by entity_id so one person = one card even across tracks.
+  // History is cleared when recognition stops.
+
+  var MAX_HISTORY = 15;
+  // Array of {entity_id, box, typeName, firstSeen, lastSeen, isLive}
+  var _intelHistory = [];
+
+  function updateEntityIntelPanel(boxes) {
+    var root    = $("entity-intel-root");
+    var emptyEl = $("intel-empty-state");
+    var countEl = $("intel-live-count");
+    if (!root) return;
+
+    var now = Date.now();
+
+    // Build current live entity_id set
+    var liveMap = {};
+    for (var i = 0; i < boxes.length; i++) {
+      var box = boxes[i];
+      if (!box.entity_id) continue; // skip uncommitted warmup tracks
+      liveMap[box.entity_id] = box;
+    }
+
+    // Update existing history entries
+    _intelHistory.forEach(function (entry) {
+      if (liveMap[entry.entity_id]) {
+        entry.box      = liveMap[entry.entity_id]; // latest data
+        entry.lastSeen = now;
+        entry.isLive   = true;
+        entry.typeName = _resolveEntityType(entry.box);
+      } else {
+        entry.isLive = false;
+      }
+    });
+
+    // Add brand-new entities to the FRONT of history
+    Object.keys(liveMap).forEach(function (eid) {
+      var already = _intelHistory.some(function (e) { return e.entity_id === eid; });
+      if (!already) {
+        _intelHistory.unshift({
+          entity_id: eid,
+          box:       liveMap[eid],
+          typeName:  _resolveEntityType(liveMap[eid]),
+          firstSeen: now,
+          lastSeen:  now,
+          isLive:    true,
+        });
+      }
+    });
+
+    // Cap history size — drop oldest non-live entries first
+    if (_intelHistory.length > MAX_HISTORY) {
+      // Remove trailing non-live entries
+      _intelHistory = _intelHistory.filter(function (e, idx) {
+        return e.isLive || idx < MAX_HISTORY;
+      }).slice(0, MAX_HISTORY);
+    }
+
+    // ── Render all history entries ───────────────────────────────────────────────
+    // Clear existing cards (but keep the empty-state element)
+    var oldCards = root.querySelectorAll(".intel-card");
+    oldCards.forEach(function (c) { c.parentNode.removeChild(c); });
+
+    _intelHistory.forEach(function (entry) {
+      var box      = entry.box;
+      var style    = ENTITY_TYPE_STYLES[entry.typeName];
+      var color    = style.color;
+      // smoothed_confidence is already 0-100
+      var conf     = Math.round(box.confidence);
+      var isLive   = entry.isLive;
+
+      // Display name
+      var displayName = (box.is_unknown || !box.label || box.label === "Unknown")
+        ? "Unknown Entity"
+        : box.label;
+
+      // Time line
+      var elapsedSec  = Math.floor((now - entry.firstSeen) / 1000);
+      var lastSecAgo  = Math.floor((now - entry.lastSeen)  / 1000);
+      var timeStr = isLive
+        ? (elapsedSec + "s on screen")
+        : ("Last seen " + lastSecAgo + "s ago");
+
+      // Confidence string
+      var confStr = (entry.typeName === "reappearing" || style.showConf) ? (conf + "%") : "";
+
+      var card = document.createElement("div");
+      // Live = full opacity + left glow border, past = dimmed
+      card.className = "intel-card" + (isLive ? " intel-card--live" : " intel-card--past");
+      card.style.borderLeftColor = color;
+      if (!isLive) card.style.opacity = "0.45";
+
+      // Live status dot (small pulsing element)
+      var liveDot = isLive
+        ? "<span style='width:5px;height:5px;border-radius:50%;background:" + color +
+          ";display:inline-block;margin-right:4px;flex-shrink:0;animation:intel-dot-pulse 1.2s infinite;'></span>"
+        : "";
+
+      card.innerHTML =
+        "<div class='intel-card__row1'>" +
+          liveDot +
+          "<span class='intel-type-badge' style='color:" + color +
+            ";border-left:2px solid " + color + ";'>" +
+            TraceClient.escapeHtml(style.badge) +
+          "</span>" +
+          "<span class='intel-entity-id'>" + TraceClient.escapeHtml(box.entity_id || "") + "</span>" +
+          "<span class='intel-name'>" + TraceClient.escapeHtml(displayName) + "</span>" +
+          (confStr
+            ? "<span class='intel-conf' style='color:" + color + ";'>" + confStr + "</span>"
+            : "") +
+        "</div>" +
+        "<div class='intel-card__row2'>" +
+          "<span class='intel-status'>" + TraceClient.escapeHtml(style.status) + "</span>" +
+          " &nbsp;\u00b7&nbsp; " + TraceClient.escapeHtml(timeStr) +
+        "</div>";
+
+      // Insert before empty-state placeholder
+      root.insertBefore(card, emptyEl);
+    });
+
+    // Empty state + live count
+    var liveCount   = _intelHistory.filter(function (e) { return e.isLive; }).length;
+    var totalSeen   = _intelHistory.length;
+    if (emptyEl)  emptyEl.style.display = totalSeen > 0 ? "none" : "block";
+    if (countEl) {
+      if (liveCount > 0) {
+        countEl.textContent = liveCount + " LIVE";
+        countEl.style.color = "rgba(255,255,255,0.7)";
+      } else if (totalSeen > 0) {
+        countEl.textContent = totalSeen + " SEEN";
+        countEl.style.color = "rgba(255,255,255,0.25)";
+      } else {
+        countEl.textContent = "\u2014";
+        countEl.style.color = "rgba(255,255,255,0.2)";
+      }
+    }
+  }
+
+  /* ─── Helper: drawing functions (used by drawOverlay) ─── */
+
+  function _drawCornerBrackets(ctx, x, y, w, h, color, glowAlpha) {
+    var arm = Math.max(10, Math.min(w, h) * 0.18);
+    ctx.save();
+    ctx.strokeStyle = color;
+    ctx.lineWidth   = 2;
+    ctx.lineCap     = "square";
+    ctx.shadowColor = color;
+    ctx.shadowBlur  = 8 * glowAlpha;
+    ctx.beginPath();
+    ctx.moveTo(x, y + arm);         ctx.lineTo(x, y);         ctx.lineTo(x + arm, y);
+    ctx.moveTo(x + w - arm, y);     ctx.lineTo(x + w, y);     ctx.lineTo(x + w, y + arm);
+    ctx.moveTo(x, y + h - arm);     ctx.lineTo(x, y + h);     ctx.lineTo(x + arm, y + h);
+    ctx.moveTo(x + w - arm, y + h); ctx.lineTo(x + w, y + h); ctx.lineTo(x + w, y + h - arm);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function _drawLabel(ctx, x, y, text, color) {
+    ctx.save();
+    ctx.font = "bold 11px 'JetBrains Mono', monospace";
+    var tw   = ctx.measureText(text).width;
+    var ph   = 18;    // pill height
+    var ppad = 5;     // horizontal text padding
+    var strip = 2;    // left colour strip width
+    var lx   = x;
+    var ly   = Math.max(0, y - ph - 3);
+    // Dark pill
+    ctx.fillStyle = "rgba(0,0,0,0.84)";
+    ctx.fillRect(lx, ly, tw + ppad * 2 + strip, ph);
+    // Left colour strip
+    ctx.fillStyle = color;
+    ctx.fillRect(lx, ly, strip, ph);
+    // Text with very subtle glow
+    ctx.fillStyle   = color;
+    ctx.shadowColor = color;
+    ctx.shadowBlur  = 3;
+    ctx.fillText(text, lx + strip + ppad, ly + ph - 4);
+    ctx.restore();
   }
 
   /* ─── Timeline filter tabs ─── */

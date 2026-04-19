@@ -21,6 +21,9 @@ gpu:
 
 camera:
   device_index: 0
+  width: 1280
+  height: 720
+  fps: 30
 
 # ── Pipeline CPU-offload Controls ─────────────────────────────────────────────
 # These three knobs are the primary levers for balancing CPU load vs accuracy.
@@ -60,7 +63,8 @@ recognition:
   enable_preprocess_fallback: true
   low_quality_threshold: 0.40
   threshold_relaxation: 0.12
-  unknown_reuse_threshold: 0.25
+  # buffalo_l + best-of-8 calibration: same-person sim ~0.45-0.85, different-person ~0.25-0.44
+  unknown_reuse_threshold: 0.45
   min_unknown_surface_threshold: 12.0
   min_unknown_detector_score: 0.62
 
@@ -73,6 +77,21 @@ quality:
   composite_gate_enabled: true
   min_composite_score: 0.42
   blur_lap_saturation: 500.0
+  # ── Enrollment image quality thresholds ────────────────────────────────────
+  # min_sharpness is Laplacian variance on the face crop.
+  # Webcam captures (1280×720 @ 5 FPS) typically produce values of 10–25.
+  # Phone photos produce 80–400+. Default 55 was calibrated for phone photos
+  # and rejects all webcam captures. Lower to 8 to accept webcam-quality images
+  # while still rejecting blank / solid-colour frames (sharpness < 3).
+  min_sharpness: 8.0
+  # Allow slightly lower overall quality for webcam captures — face_ratio,
+  # detector_score, and pose_score are already good; sharpness was the blocker.
+  min_quality_score: 0.25
+  # Lifecycle: require fewer embeddings so small galleries (5–10 photos) still
+  # become ACTIVE instead of DRAFT/BLOCKED.
+  min_valid_images: 2
+  min_embeddings_ready: 1
+  min_embeddings_active: 2
 temporal:
   decision_window: 6
   smoothing_alpha: 0.6
@@ -112,13 +131,13 @@ actions:
 # (one BLAS matmul over all stored embeddings — < 2ms for 100 unknowns).
 #
 # merge_threshold: Two entities merge if ANY embedding pair scores >= this.
-#   Slightly LOWER than unknown_reuse_threshold (0.25) so the cluster pass
-#   catches duplicates the real-time gate may have missed.
+#   Slightly LOWER than unknown_reuse_threshold (0.55) so the cluster pass
+#   catches session-restart near-misses the real-time gate may have missed.
 # interval_minutes: How often the pass runs. 3m is a good balance.
 unknown_clustering:
   enabled: true
   interval_minutes: 3.0
-  merge_threshold: 0.28
+  merge_threshold: 0.42
   min_embeddings_to_cluster: 1
 
 # ── Liveness / Anti-Spoofing ──────────────────────────────────────────────────
