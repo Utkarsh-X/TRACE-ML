@@ -146,7 +146,11 @@
         self.startQualityMonitoring();
       })
       .catch(function(err) {
-        alert("Camera access denied:\n" + err.message);
+        if (window.TraceToast) {
+          window.TraceToast.error("Camera Access Denied", err.message);
+        } else {
+          alert("Camera access denied:\n" + err.message);
+        }
       });
     },
 
@@ -215,7 +219,11 @@
 
     captureImage: function() {
       if (!this._isActive) {
-        alert("Camera not active");
+        if (window.TraceToast) {
+          window.TraceToast.warning("Camera Inactive", "Enable camera before capturing.");
+        } else {
+          alert("Camera not active");
+        }
         return;
       }
 

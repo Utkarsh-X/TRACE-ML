@@ -270,7 +270,12 @@
       root.querySelectorAll(".btn-merge-entity").forEach(function(btn) {
         btn.addEventListener("click", function() {
           var targetId = btn.getAttribute("data-target");
-          if (confirm("Merge this unknown entity into " + targetId + "?\n\nAll detection history and incidents will be linked to this person.")) {
+          TraceDialog.confirm(
+            "Merge Intelligence",
+            "Merge this unknown entity into " + targetId + "?\n\nAll detection history and incidents will be linked to this person.",
+            { confirmText: "Merge" }
+          ).then(function(ok) {
+            if (!ok) return;
             btn.disabled = true;
             btn.textContent = "...";
             TraceClient.entityMerge(entity.entity_id, targetId).then(function(res) {
@@ -282,13 +287,16 @@
               } else {
                 btn.disabled = false;
                 btn.textContent = "Link";
-                alert("Merge failed. Check backend logs.");
+                if (window.TraceToast) {
+                  window.TraceToast.error("Merge Failed", "Could not link incidents. Check backend logs.");
+                } else {
+                  console.error("Merge failed. Check backend logs.");
+                }
               }
             });
-          }
+          });
         });
-      });
-    });
+      });    });
   }
 
   /* ════════════════════════════════════════════════

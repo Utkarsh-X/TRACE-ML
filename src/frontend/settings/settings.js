@@ -280,28 +280,6 @@
 
   /* ─── Neural Index (Gallery Rebuild) ─── */
 
-  function handleTrainRebuild() {
-    // This is an emergency full-rebuild — prompt the user first.
-    if (!confirm("Force a full gallery rebuild?\n\nThis is not normally needed — enrollment is automatic. Continue only if you believe the gallery is out of sync.")) return;
-
-    var btn = $("btn-train-rebuild");
-    var runningEl = $("train-running");
-    var dot = $("train-status-dot");
-    if (btn) btn.disabled = true;
-    if (runningEl) runningEl.textContent = "REBUILDING...";
-    if (dot) dot.className = "status-dot status-dot--active";
-
-    TraceClient.rebuildGallery({ scope: "all" }).then(function (result) {
-      if (result && (result.status === "started" || result.status === "already_running")) {
-        startTrainPoll();
-      } else {
-        if (runningEl) runningEl.textContent = "FAILED";
-        if (dot) dot.className = "status-dot status-dot--critical";
-        if (btn) btn.disabled = false;
-      }
-    });
-  }
-
   function startTrainPoll() {
     if (_trainPollTimer) return;
     pollTrainStatus();
@@ -312,29 +290,21 @@
     TraceClient.trainStatus().then(function (status) {
       if (!status) return;
       var runningEl = $("train-running");
-      var lastRunEl = $("train-last-run");
       var activeEl = $("train-active");
       var readyEl = $("train-ready");
       var blockedEl = $("train-blocked");
-      var btn = $("btn-train-rebuild");
       var dot = $("train-status-dot");
 
       if (status.running) {
         if (runningEl) runningEl.textContent = "REBUILDING...";
         if (dot) dot.className = "status-dot status-dot--active";
-        if (btn) btn.disabled = true;
       } else {
         if (runningEl) runningEl.textContent = "IDLE";
         if (dot) dot.className = "status-dot status-dot--idle";
-        if (btn) btn.disabled = false;
         if (_trainPollTimer) {
           clearInterval(_trainPollTimer);
           _trainPollTimer = null;
         }
-      }
-
-      if (status.last_completed_at) {
-        if (lastRunEl) lastRunEl.textContent = TraceClient.formatDateTime(status.last_completed_at);
       }
 
       var r = status.last_result;
@@ -408,97 +378,66 @@
       });
     }
 
-    // Train rebuild button
-    var btnRebuild = $("btn-train-rebuild");
-    if (btnRebuild) {
-      btnRebuild.addEventListener("click", handleTrainRebuild);
-    }
-
     // Deduplicate database button
     var btnDeduplicate = $("btn-deduplicate-db");
     if (btnDeduplicate) {
       btnDeduplicate.addEventListener("click", function () {
-        if (!confirm("Scan and remove duplicate incident entries from the database?\n\nThis may take several seconds.")) return;
-        btnDeduplicate.disabled = true;
-        btnDeduplicate.textContent = "...";
-        TraceClient.deduplicateIncidents().then(function (result) {
-          btnDeduplicate.disabled = false;
-          btnDeduplicate.innerHTML = '<span class="material-symbols-outlined" style="font-size:16px;">delete_sweep</span><span>Deduplicate Database</span>';
-          if (result) {
-            var count = result.removed_duplicates || 0;
-            var msg = count > 0 ? ("Removed " + count + " duplicate(s) from database.") : "No duplicates found.";
-            alert("✓ Deduplication complete\n\n" + msg);
-          } else {
-            alert("✗ Deduplication failed. Check backend logs.");
-          }
+        TraceDialog.confirm(
+          "Confirm Deduplication",
+          "Scan and remove duplicate incident entries from the database?\n\nThis may take several seconds.",
+          { confirmText: "Start Scan" }
+        ).then(function(ok) {
+          if (!ok) return;
+          btnDeduplicate.disabled = true;
+          btnDeduplicate.textContent = "...";
+          TraceClient.deduplicateIncidents().then(function (result) {
+            btnDeduplicate.disabled = false;
+            btnDeduplicate.innerHTML = '<span class="material-symbols-outlined" style="font-size:16px;">delete_sweep</span><span>Deduplicate Database</span>';
+            if (result) {
+              var count = result.removed_duplicates || 0;
+              var msg = count > 0 ? ("Removed " + count + " duplicate(s) from database.") : "No duplicates found.";
+              TraceToast.success("Deduplication Complete", msg);
+            } else {
+              TraceToast.error("Deduplication Failed", "Check backend logs for details.");
+            }
+          });
         });
       });
     }
 
     // ── Force Full System Reset ────────────────────────────────────────
     var btnFactoryReset   = $("btn-factory-reset");
-    var modal             = $("factory-reset-modal");
-    var confirmInput      = $("factory-reset-confirm-input");
-    var confirmBtn        = $("factory-reset-confirm");
-    var cancelBtn         = $("factory-reset-cancel");
     var progressEl        = $("factory-reset-progress");
     var statusEl          = $("factory-reset-status");
 
-    function showModal() {
-      if (!modal) return;
-      if (confirmInput) { confirmInput.value = ""; }
-      if (confirmBtn)   { confirmBtn.disabled = true; confirmBtn.style.opacity = "0.4"; }
-      modal.style.display = "flex";
-      modal.classList.remove("hidden");
-      setTimeout(function () { if (confirmInput) confirmInput.focus(); }, 50);
-    }
-    function hideModal() {
-      if (!modal) return;
-      modal.style.display = "none";
-      modal.classList.add("hidden");
-    }
-
     if (btnFactoryReset) {
-      btnFactoryReset.addEventListener("click", showModal);
-    }
-    if (cancelBtn) {
-      cancelBtn.addEventListener("click", hideModal);
-    }
-    if (modal) {
-      modal.addEventListener("click", function (e) {
-        if (e.target === modal) hideModal();
-      });
-    }
-    if (confirmInput) {
-      confirmInput.addEventListener("input", function () {
-        var ready = confirmInput.value.trim().toUpperCase() === "RESET";
-        if (confirmBtn) {
-          confirmBtn.disabled = !ready;
-          confirmBtn.style.opacity = ready ? "1" : "0.4";
-        }
-      });
-    }
-    if (confirmBtn) {
-      confirmBtn.addEventListener("click", function () {
-        hideModal();
-        // Show progress
-        if (btnFactoryReset) { btnFactoryReset.disabled = true; }
-        if (progressEl) { progressEl.style.display = "block"; }
-        if (statusEl)   { statusEl.textContent = "Wiping all data — please wait..."; }
+      btnFactoryReset.addEventListener("click", function() {
+        TraceDialog.confirm(
+          "Full System Reset",
+          "This will permanently delete all persons, embeddings, entities, detections, incidents, portraits, and screenshots.",
+          { type: "error", confirmText: "Wipe Everything", verifyText: "RESET" }
+        ).then(function(ok) {
+          if (!ok) return;
 
-        TraceClient.factoryReset().then(function (result) {
-          if (result && result.status === "success") {
-            if (statusEl) { statusEl.textContent = "✓ Reset complete — redirecting to enrollment..."; }
-            setTimeout(function () {
-              window.location.href = "../enrollment/index.html";
-            }, 1800);
-          } else {
-            if (statusEl) {
-              var detail = (result && result.detail) ? JSON.stringify(result.detail) : "Unknown error. Check backend logs.";
-              statusEl.textContent = "✗ Reset failed: " + detail;
+          // Show progress
+          if (btnFactoryReset) { btnFactoryReset.disabled = true; }
+          if (progressEl) { progressEl.style.display = "block"; }
+          if (statusEl)   { statusEl.textContent = "Wiping all data — please wait..."; }
+
+          TraceClient.factoryReset().then(function (result) {
+            if (result && result.status === "success") {
+              if (statusEl) { statusEl.textContent = "✓ Reset complete — redirecting to enrollment..."; }
+              setTimeout(function () {
+                window.location.href = "../enrollment/index.html";
+              }, 1800);
+            } else {
+              if (statusEl) {
+                var detail = (result && result.detail) ? JSON.stringify(result.detail) : "Unknown error. Check backend logs.";
+                statusEl.textContent = "✗ Reset failed: " + detail;
+              }
+              if (btnFactoryReset) { btnFactoryReset.disabled = false; }
             }
-            if (btnFactoryReset) { btnFactoryReset.disabled = false; }
-          }
+          });
         });
       });
     }

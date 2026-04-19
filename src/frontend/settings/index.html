@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="../shared/tailwind-compiled.css" />
   <link rel="stylesheet" href="../shared/sidenav.css" />
   <link rel="stylesheet" href="../shared/base.css" />
+  <link rel="stylesheet" href="../shared/trace_toast.css" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 
@@ -230,19 +231,6 @@
               </div>
             </div>
 
-            <div class="flex items-center justify-between pt-6 border-t border-outline-variant/10">
-              <div class="flex flex-col">
-                <span class="font-mono text-[0.55rem] text-outline uppercase">Last Index Rebuild</span>
-                <span class="font-mono text-[0.75rem] text-on-surface-variant" id="train-last-run">—</span>
-              </div>
-              <button id="btn-train-rebuild" class="px-6 py-2.5 bg-primary/10 hover:bg-primary/20 text-primary border border-primary/30 font-mono text-[0.7rem] uppercase font-bold tracking-wider transition-all flex items-center gap-2">
-                <span class="material-symbols-outlined text-sm">database_sync</span>
-                <span>Force Full Rebuild</span>
-              </button>
-            </div>
-            <p class="font-mono text-[0.6rem] text-outline mt-4 leading-relaxed max-w-2xl opacity-70 italic">
-              * The neural index is automatically maintained during enrollment. Force rebuild is only recommended if forensic integrity is compromised or after a bulk vector purge.
-            </p>
           </div>
         </div>
 
@@ -253,13 +241,13 @@
             Critical Actions
           </h3>
           <div class="flex gap-4 flex-wrap mb-6">
-            <button class="px-4 py-2 bg-error/10 hover:bg-error/20 text-error border border-error/30 font-mono text-[0.7rem] uppercase transition-colors" onclick="alert('System restart requires physical console access.')">
+            <button class="px-4 py-2 bg-white hover:bg-white/90 text-black border border-white/20 font-mono text-[0.7rem] uppercase transition-colors" onclick="TraceToast.warning('Access Denied', 'System restart requires physical console access.')">
               Restart Inference Engine
             </button>
-            <button class="px-4 py-2 bg-surface-high hover:bg-surface-container-high text-on-surface border border-outline-variant/20 font-mono text-[0.7rem] uppercase transition-colors" onclick="confirm('Wipe all local vector caches?')">
+            <button class="px-4 py-2 bg-white hover:bg-white/90 text-black border border-white/20 font-mono text-[0.7rem] uppercase transition-colors" onclick="TraceDialog.confirm('Purge Cache', 'Wipe all local vector caches?', { confirmText: 'Purge' }).then(ok => { if(ok) TraceToast.success('Cache Purged', 'Vector cache successfully cleared.') })">
               Purge Vector Cache
             </button>
-            <button type="button" id="btn-deduplicate-db" class="px-4 py-2 bg-amber-900/10 hover:bg-amber-900/20 border border-amber-700/20 hover:border-amber-600/40 text-amber-200/60 hover:text-amber-200 font-mono text-[0.7rem] uppercase transition-all cursor-pointer flex items-center gap-2" title="Remove duplicate entries from database">
+            <button type="button" id="btn-deduplicate-db" class="px-4 py-2 bg-white hover:bg-white/90 text-black border border-white/20 font-mono text-[0.7rem] uppercase transition-all cursor-pointer flex items-center gap-2" title="Remove duplicate entries from database">
               <span class="material-symbols-outlined" style="font-size:16px;">delete_sweep</span>
               <span>Deduplicate Database</span>
             </button>
@@ -270,7 +258,7 @@
             <div class="flex items-start justify-between gap-6">
               <div class="flex-1">
                 <div class="flex items-center gap-2 mb-2">
-                  <span class="material-symbols-outlined text-error text-[20px]">restart_alt</span>
+                  <span class="material-symbols-outlined text-error text-[20px]">warning</span>
                   <span class="font-mono text-[0.8rem] text-error uppercase tracking-widest font-bold">Force Full System Reset</span>
                 </div>
                 <p class="font-mono text-[0.65rem] text-outline leading-relaxed max-w-xl">
@@ -282,7 +270,7 @@
                 </p>
               </div>
               <button type="button" id="btn-factory-reset"
-                class="flex-shrink-0 px-6 py-3 bg-error hover:bg-error/80 active:scale-95 text-white border border-error font-mono text-[0.75rem] uppercase font-bold tracking-wider transition-all flex items-center gap-2 shadow-[0_0_16px_rgba(var(--error-rgb,220,38,38),0.3)]">
+                class="flex-shrink-0 px-4 py-2 bg-white hover:bg-white/90 active:scale-95 text-black border border-white/20 font-mono text-[0.7rem] uppercase tracking-wider transition-all flex items-center gap-2 hover:shadow-[0_0_16px_rgba(255,255,255,0.2)]">
                 <span class="material-symbols-outlined text-[18px]">delete_forever</span>
                 <span id="btn-factory-reset-label">Wipe &amp; Reset</span>
               </button>
@@ -297,28 +285,6 @@
           </div>
         </div>
 
-        <!-- Confirm Modal Overlay -->
-        <div id="factory-reset-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:9999;align-items:center;justify-content:center;" class="hidden">
-          <div style="background:#1a1a1a;border:1px solid rgba(220,38,38,0.5);padding:2rem;max-width:420px;width:90%;text-align:center;">
-            <span class="material-symbols-outlined" style="font-size:48px;color:#dc2626;display:block;margin-bottom:1rem;">warning</span>
-            <h3 style="font-family:monospace;font-size:1rem;color:#fff;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:0.75rem;">Confirm Full System Reset</h3>
-            <p style="font-family:monospace;font-size:0.7rem;color:#999;line-height:1.6;margin-bottom:1.5rem;">
-              This will permanently delete <strong style="color:#fff">all persons, embeddings, entities, detections, incidents, portraits, and screenshots</strong>.<br><br>
-              Type <strong style="color:#dc2626;letter-spacing:0.1em;">RESET</strong> below to confirm.
-            </p>
-            <input id="factory-reset-confirm-input" type="text" placeholder="Type RESET to confirm"
-              style="width:100%;background:#0d0d0d;border:1px solid rgba(220,38,38,0.4);color:#fff;font-family:monospace;font-size:0.8rem;padding:0.5rem 0.75rem;text-align:center;margin-bottom:1rem;outline:none;letter-spacing:0.15em;text-transform:uppercase;" />
-            <div style="display:flex;gap:0.75rem;justify-content:center;">
-              <button id="factory-reset-cancel" style="flex:1;padding:0.5rem;background:transparent;border:1px solid rgba(255,255,255,0.1);color:#999;font-family:monospace;font-size:0.7rem;text-transform:uppercase;cursor:pointer;">
-                Cancel
-              </button>
-              <button id="factory-reset-confirm" style="flex:1;padding:0.5rem;background:#dc2626;border:1px solid #dc2626;color:#fff;font-family:monospace;font-size:0.7rem;text-transform:uppercase;font-weight:bold;cursor:pointer;opacity:0.4;" disabled>
-                Wipe Everything
-              </button>
-            </div>
-          </div>
-        </div>
-
 
       </div>
     </section>
@@ -327,6 +293,7 @@
 </main>
 
 <!-- Service Layer -->
+<script src="../shared/trace_toast.js"></script>
 <script src="../shared/trace_client.js"></script>
 <script src="../shared/trace_render.js"></script>
 <script src="../shared/sidenav.js"></script>
