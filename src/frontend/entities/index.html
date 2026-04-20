@@ -249,6 +249,40 @@
       background: rgba(98, 198, 239, 0.1) !important;
     }
 
+    /* ── Form Input Styling (Enrollment Form) ──────────── */
+    .enroll-input {
+      width: 100%;
+      background: var(--md-surface-high, #2a2a2a);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: white;
+      padding: 8px 12px;
+      font-family: inherit;
+      font-size: 0.8rem;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      border-radius: 2px;
+    }
+
+    .enroll-input:focus {
+      border-color: var(--md-primary);
+      box-shadow: 0 0 0 3px rgba(98, 198, 239, 0.1);
+    }
+
+    .enroll-input::placeholder {
+      color: rgba(255, 255, 255, 0.3);
+    }
+
+    select.enroll-input {
+      appearance: none;
+      -webkit-appearance: none;
+      cursor: pointer;
+      background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='rgba(255,255,255,0.6)' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+      background-repeat: no-repeat;
+      background-position: right 8px center;
+      background-size: 18px;
+      padding-right: 32px;
+    }
+
     /* ── Thumbnail Grid Responsive ──────────────────────── */
     @media (max-width: 600px) {
       #edit-image-preview-strip {
@@ -536,216 +570,198 @@
   </div>
 
   <!-- EDIT ENTITY MODAL — Tabbed: Identity | Images & Portrait -->
-  <dialog id="modal-edit-entity" class="bg-surface-container text-on-surface border border-outline-variant/30 p-0 m-auto w-full max-w-[620px]" style="box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6); backdrop-filter: blur(2px);">
+  <dialog id="modal-edit-entity" class="bg-surface text-on-surface border border-outline-variant/20 p-0 m-auto w-full max-w-[720px]" style="box-shadow: 0 24px 48px -12px rgba(0, 0, 0, 0.7); backdrop-filter: blur(3px); border-radius: 2px;">
 
-    <!-- Modal Header — Forensic Theme -->
-    <div class="p-6 border-b border-outline-variant/30 bg-gradient-to-r from-surface-low to-surface-low flex justify-between items-start gap-4">
+    <!-- Modal Header — Clean & Aligned with Enrollment -->
+    <div class="p-6 border-b border-outline-variant/10 bg-surface flex justify-between items-start gap-4">
       <div class="flex-1">
-        <div class="flex items-center gap-2 mb-2">
+        <div class="flex items-center gap-3 mb-2">
           <span class="material-symbols-outlined text-primary text-[20px]">edit_document</span>
-          <h2 id="edit-modal-title" class="font-mono text-[0.9rem] font-bold tracking-wider text-white m-0 uppercase">Edit Entity</h2>
+          <h2 id="edit-modal-title" class="font-mono text-[0.85rem] font-bold tracking-widest text-white m-0 uppercase">Edit Entity</h2>
         </div>
-        <p id="edit-modal-desc" class="font-mono text-[0.65rem] text-outline-variant mt-2 hidden">👤 Provide a name to promote this unknown entity to a known person. This will create a new tracked identity with biometric enrollment.</p>
+        <p id="edit-modal-desc" class="font-mono text-[0.62rem] text-outline-variant mt-2.5 hidden leading-relaxed">👤 Provide a name and category to promote this unknown entity to a tracked identity. This will enable biometric enrollment and reference image uploads.</p>
       </div>
-      <button id="btn-close-edit" class="bg-transparent border-0 text-outline hover:text-white cursor-pointer p-2 flex items-center transition-colors hover:bg-surface-high rounded-sm">
+      <button id="btn-close-edit" class="flex-shrink-0 bg-transparent border-0 text-outline hover:text-white cursor-pointer p-1.5 flex items-center justify-center transition-all rounded-sm hover:bg-surface-high">
         <span class="material-symbols-outlined text-[20px]">close</span>
       </button>
     </div>
 
-    <!-- Tab Navigation — Forensic Style -->
-    <div class="flex border-b border-outline-variant/20 bg-surface-low px-0" id="edit-modal-tabs">
-      <button class="edit-tab-btn edit-tab-btn--active flex-1 py-4 px-6 font-mono text-[0.65rem] uppercase tracking-widest border-b-[3px] border-primary text-white bg-transparent cursor-pointer transition-all" data-tab="identity">
-        <span class="material-symbols-outlined text-[16px] mr-2" style="vertical-align:middle">badge</span><span>Identity</span>
+    <!-- Tab Navigation — Clean Style -->
+    <div class="flex border-b border-outline-variant/10 bg-surface px-0" id="edit-modal-tabs">
+      <button class="edit-tab-btn edit-tab-btn--active flex-1 py-4 px-6 font-mono text-[0.62rem] uppercase tracking-widest border-b-[3px] border-primary text-white bg-transparent cursor-pointer transition-all" data-tab="identity">
+        <span class="material-symbols-outlined text-[16px] inline mr-2" style="vertical-align:middle">badge</span><span>Identity</span>
       </button>
-      <button class="edit-tab-btn flex-1 py-4 px-6 font-mono text-[0.65rem] uppercase tracking-widest border-b-[3px] border-transparent text-outline hover:text-white bg-transparent cursor-pointer transition-all" data-tab="images" id="tab-btn-images">
-        <span class="material-symbols-outlined text-[16px] mr-2" style="vertical-align:middle">photo_library</span><span>Images &amp; Portrait</span>
+      <button class="edit-tab-btn flex-1 py-4 px-6 font-mono text-[0.62rem] uppercase tracking-widest border-b-[3px] border-transparent text-outline hover:text-white bg-transparent cursor-pointer transition-all" data-tab="images" id="tab-btn-images">
+        <span class="material-symbols-outlined text-[16px] inline mr-2" style="vertical-align:middle">photo_library</span><span>Images & Portrait</span>
       </button>
     </div>
 
-    <!-- TAB: Identity — Enhanced Fields -->
-    <div id="edit-tab-identity" class="p-6 space-y-6">
+    <!-- TAB: Identity — Enhanced Form Fields -->
+    <div id="edit-tab-identity" class="p-6 space-y-8 overflow-y-auto max-h-[65vh]">
       
-      <!-- Name Field -->
-      <div class="space-y-2">
-        <div class="flex items-center justify-between">
-          <label class="font-mono text-[0.65rem] uppercase tracking-widest text-outline flex items-center gap-1">
-            <span class="material-symbols-outlined text-[14px]">person</span>Full Name
-          </label>
-          <span class="font-mono text-[0.58rem] text-outline-variant">Required to enroll unknown entities</span>
+      <!-- Section 01: Identification -->
+      <div class="space-y-4">
+        <div class="flex items-center gap-3">
+          <span class="font-mono text-[0.6rem] text-primary uppercase font-bold tracking-widest">01</span>
+          <h3 class="font-mono text-[0.65rem] text-outline uppercase tracking-wider">Entity Identification</h3>
+          <div class="h-[1px] bg-outline-variant/10 flex-1"></div>
         </div>
-        <input type="text" id="edit-entity-name" class="w-full bg-surface-high border border-outline-variant/30 text-white p-3 font-body text-[0.85rem] focus:outline-none focus:border-primary focus:bg-surface-highest transition-all" placeholder="Enter full name…">
-      </div>
 
-      <!-- Category Field -->
-      <div class="space-y-2">
-        <label class="font-mono text-[0.65rem] uppercase tracking-widest text-outline flex items-center gap-1">
-          <span class="material-symbols-outlined text-[14px]">category</span>Category
-        </label>
-        <select id="edit-entity-category" class="w-full bg-surface-high border border-outline-variant/30 text-white p-3 font-body text-[0.85rem] focus:outline-none focus:border-primary focus:bg-surface-highest transition-all cursor-pointer">
-          <option value="unknown">Unknown</option>
-          <option value="criminal">Criminal</option>
-          <option value="vip">VIP / Protected</option>
-          <option value="staff">Staff / Authorized</option>
-        </select>
-      </div>
-
-      <!-- Severity / Flags Field -->
-      <div class="space-y-2">
-        <label class="font-mono text-[0.65rem] uppercase tracking-widest text-outline flex items-center gap-1">
-          <span class="material-symbols-outlined text-[14px]">warning</span>Severity / Flags
-        </label>
-        <input type="text" id="edit-entity-severity" class="w-full bg-surface-high border border-outline-variant/30 text-white p-3 font-body text-[0.85rem] focus:outline-none focus:border-primary focus:bg-surface-highest transition-all" placeholder="e.g. high, armed, violent, restricted">
-      </div>
-
-      <!-- Biographical Grid -->
-      <div class="grid grid-cols-2 gap-4">
-        <div class="space-y-2">
-          <label class="font-mono text-[0.65rem] uppercase tracking-widest text-outline flex items-center gap-1">
-            <span class="material-symbols-outlined text-[14px]">calendar_today</span>Date of Birth
-          </label>
-          <input type="text" id="edit-entity-dob" class="w-full bg-surface-high border border-outline-variant/30 text-white p-3 font-mono text-[0.75rem] focus:outline-none focus:border-primary focus:bg-surface-highest transition-all" placeholder="YYYY-MM-DD">
-        </div>
-        <div class="space-y-2">
-          <label class="font-mono text-[0.65rem] uppercase tracking-widest text-outline flex items-center gap-1">
-            <span class="material-symbols-outlined text-[14px]">wc</span>Gender
-          </label>
-          <select id="edit-entity-gender" class="w-full bg-surface-high border border-outline-variant/30 text-white p-3 font-body text-[0.85rem] focus:outline-none focus:border-primary focus:bg-surface-highest transition-all">
-            <option value="">Unknown</option>
-            <option value="male">Male</option>
-            <option value="female">Female</option>
-            <option value="other">Other</option>
-          </select>
+        <div class="grid grid-cols-2 gap-4">
+          <div class="col-span-2">
+            <label class="stat-label mb-2 block">Full Legal Name / Alias *</label>
+            <input type="text" id="edit-entity-name" class="enroll-input font-mono text-[0.75rem]" placeholder="Enter entity name">
+          </div>
+          <div>
+            <label class="stat-label mb-2 block">Risk Category *</label>
+            <select id="edit-entity-category" class="enroll-input font-mono text-[0.75rem] appearance-none cursor-pointer">
+              <option value="unknown">UNKNOWN / UNVERIFIED</option>
+              <option value="criminal">CRIMINAL / POI</option>
+              <option value="vip">PROTECTED ENTITY (VIP)</option>
+              <option value="staff">AUTHORIZED STAFF</option>
+            </select>
+          </div>
+          <div>
+            <label class="stat-label mb-2 block">Watchlist Priority</label>
+            <select id="edit-entity-severity" class="enroll-input font-mono text-[0.75rem] appearance-none cursor-pointer">
+              <option value="">-- NONE --</option>
+              <option value="low">LEVEL 1 - ROUTINE</option>
+              <option value="medium">LEVEL 2 - ELEVATED</option>
+              <option value="high">LEVEL 3 - CRITICAL</option>
+            </select>
+          </div>
         </div>
       </div>
 
-      <!-- Location Grid -->
-      <div class="grid grid-cols-2 gap-4">
-        <div class="space-y-2">
-          <label class="font-mono text-[0.65rem] uppercase tracking-widest text-outline flex items-center gap-1">
-            <span class="material-symbols-outlined text-[14px]">location_city</span>City
-          </label>
-          <input type="text" id="edit-entity-city" class="w-full bg-surface-high border border-outline-variant/30 text-white p-3 font-body text-[0.85rem] focus:outline-none focus:border-primary focus:bg-surface-highest transition-all" placeholder="Last known city">
+      <!-- Section 02: Demographics -->
+      <div class="space-y-4">
+        <div class="flex items-center gap-3">
+          <span class="font-mono text-[0.6rem] text-primary uppercase font-bold tracking-widest">02</span>
+          <h3 class="font-mono text-[0.65rem] text-outline uppercase tracking-wider">Demographics & Origin</h3>
+          <div class="h-[1px] bg-outline-variant/10 flex-1"></div>
         </div>
-        <div class="space-y-2">
-          <label class="font-mono text-[0.65rem] uppercase tracking-widest text-outline flex items-center gap-1">
-            <span class="material-symbols-outlined text-[14px]">public</span>Country
-          </label>
-          <input type="text" id="edit-entity-country" class="w-full bg-surface-high border border-outline-variant/30 text-white p-3 font-body text-[0.85rem] focus:outline-none focus:border-primary focus:bg-surface-highest transition-all" placeholder="Country">
-        </div>
-      </div>
 
-      <!-- Notes Field -->
-      <div class="space-y-2">
-        <label class="font-mono text-[0.65rem] uppercase tracking-widest text-outline flex items-center gap-1">
-          <span class="material-symbols-outlined text-[14px]">description</span>Operational Notes
-        </label>
-        <textarea id="edit-entity-notes" rows="4" class="w-full bg-surface-high border border-outline-variant/30 text-white p-3 font-body text-[0.85rem] focus:outline-none focus:border-primary focus:bg-surface-highest transition-all resize-none" placeholder="Additional details, background, context…"></textarea>
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="stat-label mb-2 block">Date of Birth</label>
+            <input type="text" id="edit-entity-dob" class="enroll-input font-mono text-[0.75rem]" placeholder="YYYY-MM-DD">
+          </div>
+          <div>
+            <label class="stat-label mb-2 block">Gender Identity</label>
+            <select id="edit-entity-gender" class="enroll-input font-mono text-[0.75rem] appearance-none cursor-pointer">
+              <option value="">-- UNDISCLOSED --</option>
+              <option value="male">MALE</option>
+              <option value="female">FEMALE</option>
+              <option value="other">OTHER / NON-BINARY</option>
+            </select>
+          </div>
+          <div>
+            <label class="stat-label mb-2 block">Origin City</label>
+            <input type="text" id="edit-entity-city" class="enroll-input font-mono text-[0.75rem]" placeholder="City">
+          </div>
+          <div>
+            <label class="stat-label mb-2 block">Nationality</label>
+            <input type="text" id="edit-entity-country" class="enroll-input font-mono text-[0.75rem]" placeholder="Country">
+          </div>
+          <div class="col-span-2">
+            <label class="stat-label mb-2 block">Intelligence Notes / Behavioral Profile</label>
+            <textarea id="edit-entity-notes" rows="3" class="enroll-input font-mono text-[0.75rem] resize-none" placeholder="Additional details, background, context…"></textarea>
+          </div>
+        </div>
       </div>
 
     </div>
 
     <!-- TAB: Images & Portrait — Redesigned -->
-    <div id="edit-tab-images" class="p-6 space-y-6 hidden">
+    <div id="edit-tab-images" class="p-6 space-y-8 overflow-y-auto max-h-[65vh] hidden">
 
-      <!-- Portrait Section -->
-      <div class="border border-outline-variant/20 bg-surface-low/50 p-5 rounded-sm space-y-4">
-        <div class="flex items-center gap-2 mb-2">
-          <span class="material-symbols-outlined text-primary text-[18px]">face</span>
-          <h3 class="font-mono text-[0.75rem] uppercase tracking-widest text-outline font-semibold">Primary Portrait</h3>
-          <span class="ml-auto font-mono text-[0.58rem] text-outline-variant">Auto-captured • immutable</span>
+      <!-- Section 03: Biometric Data -->
+      <div class="space-y-6">
+        <div class="flex items-center gap-3">
+          <span class="font-mono text-[0.6rem] text-primary uppercase font-bold tracking-widest">03</span>
+          <h3 class="font-mono text-[0.65rem] text-outline uppercase tracking-wider">Biometric Acquisition</h3>
+          <div class="h-[1px] bg-outline-variant/10 flex-1"></div>
         </div>
-        
-        <div class="flex items-center gap-5">
-          <!-- Portrait Preview -->
-          <div class="relative flex-shrink-0">
-            <div class="w-24 h-24 bg-surface-high border-2 border-outline-variant/30 rounded-sm overflow-hidden flex items-center justify-center">
-              <img id="edit-portrait-preview" class="w-full h-full object-cover hidden" alt="Current portrait" />
-              <div id="edit-portrait-placeholder" class="w-full h-full flex items-center justify-center flex-col gap-1">
-                <span class="material-symbols-outlined text-outline-variant text-[32px]">person_search</span>
-                <span class="font-mono text-[0.5rem] text-outline-variant">No portrait</span>
+
+        <!-- Primary Portrait -->
+        <div class="bg-surface-low/40 border border-outline-variant/10 p-5 rounded-sm">
+          <div class="flex items-center justify-between mb-4">
+            <h4 class="font-mono text-[0.6rem] text-primary uppercase tracking-widest">Primary System Portrait</h4>
+            <span class="font-mono text-[0.55rem] text-outline-variant uppercase">Required for facial recognition</span>
+          </div>
+          
+          <div class="flex items-start gap-6">
+            <div class="relative flex-shrink-0 group">
+              <div class="w-24 h-24 bg-surface-high border border-outline-variant/20 rounded-sm overflow-hidden flex items-center justify-center">
+                <img id="edit-portrait-preview" class="w-full h-full object-cover hidden" alt="Current portrait" />
+                <div id="edit-portrait-placeholder" class="w-full h-full flex items-center justify-center flex-col gap-1">
+                  <span class="material-symbols-outlined text-outline-variant text-[32px]">person_search</span>
+                </div>
               </div>
+              <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none rounded-sm">
+                <span class="material-symbols-outlined text-white text-[18px]">visibility</span>
+              </div>
+            </div>
+
+            <div class="flex-1 space-y-3">
+              <label for="edit-portrait-file" class="inline-flex items-center gap-2 px-4 py-2 bg-surface-high hover:bg-surface-bright text-outline hover:text-white font-mono text-[0.65rem] uppercase tracking-wider cursor-pointer transition-all rounded-sm border border-outline-variant/20">
+                <span class="material-symbols-outlined text-[16px]">upload</span>
+                <span>Replace Portrait</span>
+              </label>
+              <input type="file" id="edit-portrait-file" accept="image/*" class="hidden" />
+              <p class="font-mono text-[0.55rem] text-outline-variant leading-relaxed">
+                RECOMMENDED: 512x512 JPG/PNG. PROPER LIGHTING AND FRONT-FACING ORIENTATION REQUIRED FOR ACCURATE VECTOR GENERATION.
+              </p>
+            </div>
+          </div>
+          <div id="portrait-upload-status" class="hidden mt-3 p-3 bg-surface-high/50 border border-outline-variant/10 font-mono text-[0.6rem] text-primary rounded-sm"></div>
+        </div>
+
+        <!-- Reference Samples -->
+        <div id="images-section-known" class="space-y-4">
+          <div class="flex items-center justify-between">
+            <h4 class="font-mono text-[0.6rem] text-primary uppercase tracking-widest">Supplemental Reference Samples</h4>
+            <span id="edit-image-count" class="font-mono text-[0.55rem] text-outline-variant uppercase">0 SAMPLES LOADED</span>
+          </div>
+
+          <div id="edit-image-dropzone" class="drop-zone flex flex-col items-center justify-center p-10 bg-surface-low/30 border-2 border-dashed border-outline-variant/10 hover:border-primary/30 transition-all rounded-sm group cursor-pointer">
+            <span class="material-symbols-outlined text-outline-variant group-hover:text-primary/50 text-[40px] mb-2 transition-colors">cloud_upload</span>
+            <p class="font-mono text-[0.65rem] text-white font-medium">DRAG & DROP SAMPLES</p>
+            <p class="font-mono text-[0.55rem] text-outline-variant mt-0.5">JPG, PNG, OR BMP FORMATS SUPPORTED</p>
+            <input type="file" id="edit-image-file" accept="image/*" multiple class="hidden" />
+          </div>
+
+          <div id="edit-image-preview-container" class="hidden space-y-4">
+            <div id="edit-image-preview-strip" class="grid grid-cols-5 gap-2"></div>
+            <div class="flex gap-2 justify-end">
+              <button id="btn-clear-images-edit" class="px-4 py-2 bg-surface-high text-outline font-mono text-[0.6rem] uppercase tracking-wider hover:bg-surface-bright hover:text-white transition-all rounded-sm border-0 cursor-pointer">CLEAR ALL</button>
+              <button id="btn-upload-images" class="px-5 py-2 bg-primary text-on-primary font-mono text-[0.6rem] font-bold uppercase tracking-wider hover:bg-primary/90 disabled:opacity-20 transition-all rounded-sm border-0 cursor-pointer" disabled>COMMIT SAMPLES</button>
             </div>
           </div>
 
-          <!-- Portrait Upload -->
-          <div class="flex-1">
-            <label for="edit-portrait-file" class="block w-full px-4 py-3 text-center font-mono text-[0.65rem] uppercase tracking-widest text-outline hover:text-white border border-outline-variant/30 hover:border-outline-variant/60 bg-surface-high hover:bg-surface-bright cursor-pointer transition-all flex items-center justify-center gap-2">
-              <span class="material-symbols-outlined text-[16px]">upload_file</span>
-              <span>Replace Portrait</span>
-            </label>
-            <input type="file" id="edit-portrait-file" accept="image/*" class="hidden" />
-            <p class="font-mono text-[0.58rem] text-outline-variant mt-3 leading-relaxed">
-              📎 JPEG or PNG • Will be resized to 256×256 px<br/>
-              🔒 Score locked at 1.0 (won't be auto-overwritten)
+          <div id="images-upload-status" class="hidden mt-3 p-3 bg-surface-high/50 border border-outline-variant/10 font-mono text-[0.6rem] text-primary rounded-sm"></div>
+        </div>
+
+        <!-- Unknown Warning -->
+        <div id="images-section-unknown" class="hidden bg-warning/5 border border-warning/20 p-4 rounded-sm">
+          <div class="flex items-start gap-3">
+            <span class="material-symbols-outlined text-warning text-[18px] flex-shrink-0">lock</span>
+            <p class="font-mono text-[0.62rem] text-warning leading-relaxed uppercase">
+              BIOMETRIC ENROLLMENT DISABLED. PROMOTE ENTITY TO "KNOWN" STATUS ON THE IDENTITY TAB TO UNLOCK IMAGE UPLOAD CAPABILITIES.
             </p>
           </div>
         </div>
-
-        <!-- Portrait Upload Status -->
-        <div id="portrait-upload-status" class="hidden mt-3 p-3 bg-surface-high border border-outline-variant/20 rounded-sm font-mono text-[0.65rem]"></div>
       </div>
-
-      <!-- Reference Images Section (Known Only) -->
-      <div id="images-section-known">
-        <div class="flex items-center gap-2 mb-4">
-          <span class="material-symbols-outlined text-primary text-[18px]">photo_library</span>
-          <h3 class="font-mono text-[0.75rem] uppercase tracking-widest text-outline font-semibold">Reference Images</h3>
-          <span class="ml-auto font-mono text-[0.58rem] text-outline-variant">For recognition training</span>
-        </div>
-
-        <!-- Drop Zone — Enhanced -->
-        <div id="edit-image-dropzone" class="border-2 border-dashed border-primary/30 hover:border-primary/60 bg-surface-high/50 hover:bg-surface-bright/50 transition-all cursor-pointer p-8 text-center rounded-sm" style="transition: border-color 0.15s, background 0.15s;">
-          <span class="material-symbols-outlined text-primary/60 text-[40px] block mb-3">cloud_upload</span>
-          <p class="font-mono text-[0.75rem] text-white font-semibold mb-1">Drag images here</p>
-          <p class="font-mono text-[0.65rem] text-outline-variant">or <label for="edit-image-file" class="text-primary cursor-pointer hover:underline font-semibold">browse files</label> to add to training database</p>
-          <input type="file" id="edit-image-file" accept="image/*" multiple class="hidden" />
-        </div>
-
-        <!-- Image preview grid with thumbnails -->
-        <div id="edit-image-preview-container" class="hidden">
-          <div id="edit-image-preview-strip" class="grid grid-cols-4 gap-3 mt-4"></div>
-        </div>
-
-        <!-- Upload action row -->
-        <div class="flex items-center justify-between mt-4">
-          <span id="edit-image-count" class="font-mono text-[0.65rem] text-outline">No images selected</span>
-          <div class="flex gap-2">
-            <button id="btn-clear-images-edit" class="bg-transparent border border-outline-variant/30 hover:border-outline-variant/60 text-outline hover:text-white font-mono text-[0.65rem] uppercase tracking-widest cursor-pointer px-4 py-3 transition-all rounded-sm flex items-center gap-2">
-              <span class="material-symbols-outlined text-[16px]">clear_all</span>
-              <span>Clear</span>
-            </button>
-            <button id="btn-upload-images" class="flex items-center gap-2 px-5 py-3 bg-primary hover:bg-primary/90 active:scale-95 text-on-primary border-0 font-mono text-[0.65rem] uppercase tracking-widest cursor-pointer transition-all disabled:opacity-40 disabled:cursor-not-allowed rounded-sm" disabled>
-              <span class="material-symbols-outlined text-[16px]">upload</span>
-              <span>Upload &amp; Enroll</span>
-            </button>
-          </div>
-        </div>
-
-        <!-- Upload status -->
-        <div id="images-upload-status" class="hidden mt-3 p-3 bg-surface-high border border-outline-variant/20 rounded-sm font-mono text-[0.65rem]"></div>
-      </div>
-
-      <!-- Unknown Entity Message -->
-      <div id="images-section-unknown" class="hidden">
-        <div class="flex items-start gap-4 p-5 bg-surface-high border border-outline-variant/20 rounded-sm">
-          <span class="material-symbols-outlined text-outline-variant text-[20px] mt-0.5 flex-shrink-0">info</span>
-          <div>
-            <p class="font-mono text-[0.75rem] text-white font-semibold mb-2">Image Upload Not Available</p>
-            <p class="font-mono text-[0.65rem] text-outline-variant leading-relaxed">Switch to the <strong>Identity</strong> tab and provide a name to promote this unknown entity to a known person. Reference images can be added after enrollment is complete.</p>
-          </div>
-        </div>
-      </div>
-
     </div>
 
-    <!-- Modal Footer — Action Buttons -->
-    <div class="p-5 border-t border-outline-variant/30 bg-surface-low flex justify-end gap-3 flex-wrap" id="edit-modal-footer">
-      <button id="btn-cancel-edit" class="bg-transparent border border-outline-variant/40 hover:border-outline-variant/60 text-outline hover:text-white font-mono text-[0.65rem] uppercase tracking-widest cursor-pointer px-5 py-2.5 transition-all hover:bg-surface-high rounded-sm">
+    <!-- Modal Footer — Clean Action Buttons -->
+    <div class="p-6 border-t border-outline-variant/10 bg-surface flex justify-end gap-3" id="edit-modal-footer">
+      <button id="btn-cancel-edit" class="px-6 py-2 bg-surface-high text-outline font-mono text-[0.65rem] font-bold uppercase tracking-wider hover:bg-surface-bright hover:text-white transition-all rounded-sm border-0 cursor-pointer">
         Cancel
       </button>
-      <button id="btn-save-edit" class="bg-primary hover:bg-primary/90 active:scale-95 text-on-primary border-0 font-mono text-[0.65rem] uppercase tracking-widest cursor-pointer px-6 py-2.5 transition-all flex items-center gap-2 rounded-sm">
+      <button id="btn-save-edit" class="px-6 py-2 bg-primary text-on-primary font-mono text-[0.65rem] font-bold uppercase tracking-wider hover:bg-primary/90 transition-all rounded-sm border-0 cursor-pointer flex items-center gap-2">
         <span class="material-symbols-outlined text-[16px]">save</span>
-        <span>Save Identity</span>
+        <span>Save Changes</span>
       </button>
     </div>
 
