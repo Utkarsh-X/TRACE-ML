@@ -297,35 +297,24 @@
     var statusClass = entity.status === "active" ? "text-primary" : "text-on-surface-variant";
     var typeLabel = String(entity.type || "unknown").toUpperCase();
     var typeBadge = entity.type === "known" ? badge("filled", typeLabel) : badge("neutral", typeLabel);
-    var created = entity.created_at ? fmtDateTime(entity.created_at) : "—";
+    var created = entity.created_at ? fmtDateTime(entity.created_at) : "\u2014";
     var alerts = entity.recent_alert_count != null ? String(entity.recent_alert_count) : "0";
     var incidents = entity.open_incident_count != null ? String(entity.open_incident_count) : "0";
-    var updated = entity.last_seen_at ? fmtDateTime(entity.last_seen_at) : "—";
+    var updated = entity.last_seen_at ? fmtDateTime(entity.last_seen_at) : "\u2014";
     var url = "../entities/index.html?id=" + encodeURIComponent(entity.entity_id || "");
-    var safeEid = esc(entity.entity_id || "");
     return '<tr class="' + bgClass + ' hover:bg-surface-high transition-colors cursor-pointer" onclick="window.location.href=\'' + url + '\'">'
-      + '<td class="font-mono ' + idClass + '">' + safeEid + "</td>"
+      + '<td class="font-mono ' + idClass + '">' + esc(entity.entity_id) + "</td>"
       + "<td>" + typeBadge + "</td>"
-      + '<td class="text-on-surface">' + esc(entity.name || "—") + "</td>"
+      + '<td class="text-on-surface">' + esc(entity.name || "\u2014") + "</td>"
       + "<td>" + catBadge + "</td>"
       + '<td class="' + statusClass + '">' + esc(entity.status) + "</td>"
       + '<td class="font-mono text-outline text-[0.65rem]">' + created + "</td>"
       + '<td class="font-mono text-on-surface-variant">' + alerts + "</td>"
       + '<td class="font-mono text-on-surface-variant">' + incidents + "</td>"
       + '<td class="font-mono text-outline text-[0.65rem]">' + updated + "</td>"
-      + '<td onclick="event.stopPropagation()" class="text-center" style="width:80px;">'
-      +   '<button'
-      +     ' class="db-quick-delete inline-flex items-center gap-1 px-2 py-1 font-mono text-[0.58rem] uppercase tracking-widest'
-      +     ' text-outline hover:text-error hover:bg-error/10 border border-transparent hover:border-error/20'
-      +     ' transition-all cursor-pointer bg-transparent"'
-      +     ' data-entity-id="' + safeEid + '"'
-      +     ' title="Delete entity"'
-      +   '>'
-      +   '<span class="material-symbols-outlined" style="font-size:13px;pointer-events:none">delete</span>'
-      +   '</button>'
-      + "</td>"
       + "</tr>";
   }
+
 
   /**
    * Render a health check row.

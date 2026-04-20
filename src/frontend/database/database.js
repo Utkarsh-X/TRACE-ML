@@ -150,62 +150,6 @@
     applyFilters(typeFilter, statusFilter);
   }
 
-  function wireQuickDelete() {
-    var tbody = document.querySelector(".db-table tbody");
-    if (!tbody) return;
-    tbody.addEventListener("click", function (e) {
-      var btn = e.target.closest(".db-quick-delete");
-      if (!btn) return;
-      e.stopPropagation();
-      var entityId = btn.getAttribute("data-entity-id");
-      if (!entityId) return;
-
-      // Two-step confirm using a temporary overlay on the button
-      if (btn.getAttribute("data-confirm") !== "1") {
-        btn.setAttribute("data-confirm", "1");
-        btn.style.color = "var(--color-error, #f28b82)";
-        btn.style.borderColor = "rgba(242,139,130,0.4)";
-        btn.innerHTML = '<span class="material-symbols-outlined" style="font-size:13px;pointer-events:none">warning</span>';
-        btn.title = "Click again to confirm deletion";
-        // Auto-reset after 3 seconds
-        setTimeout(function () {
-          if (btn.getAttribute("data-confirm") === "1") {
-            btn.removeAttribute("data-confirm");
-            btn.style.color = "";
-            btn.style.borderColor = "";
-            btn.innerHTML = '<span class="material-symbols-outlined" style="font-size:13px;pointer-events:none">delete</span>';
-            btn.title = "Delete entity";
-          }
-        }, 3000);
-        return;
-      }
-
-      // Second click — confirmed
-      btn.removeAttribute("data-confirm");
-      btn.disabled = true;
-      btn.innerHTML = '<span class="material-symbols-outlined" style="font-size:13px;pointer-events:none;animation:spin 0.6s linear infinite">progress_activity</span>';
-
-      TraceClient.deleteEntity(entityId).then(function (res) {
-        if (res && res.status === "deleted") {
-          if (window.TraceToast) TraceToast.show("Entity " + entityId + " deleted.");
-          // Remove from local array and re-render
-          _allEntities = _allEntities.filter(function (e) { return e.entity_id !== entityId; });
-          applyCurrentFilters();
-          updateFooter(_allEntities.length, _allEntities.length);
-          var statEl = document.getElementById("db-stat-entities");
-          if (statEl) statEl.textContent = String(_allEntities.length);
-        } else {
-          if (window.TraceToast) TraceToast.show("Failed to delete entity.", "error");
-          btn.disabled = false;
-          btn.innerHTML = '<span class="material-symbols-outlined" style="font-size:13px;pointer-events:none">delete</span>';
-        }
-      }).catch(function () {
-        if (window.TraceToast) TraceToast.show("Network error during delete.", "error");
-        btn.disabled = false;
-        btn.innerHTML = '<span class="material-symbols-outlined" style="font-size:13px;pointer-events:none">delete</span>';
-      });
-    });
-  }
 
   function wireRefresh() {
     var executeBtn = $("db-execute");
@@ -272,7 +216,6 @@
     wireSearch();
     wireRefresh();
     wireInlineFilters();
-    wireQuickDelete();
 
     TraceClient.probe().then(function (info) {
       if (info) {
