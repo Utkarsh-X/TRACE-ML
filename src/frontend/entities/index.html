@@ -185,6 +185,81 @@
       height: 100%;
       object-fit: cover;
     }
+
+    /* ── Modal Animations ─────────────────────────────── */
+    dialog[open] {
+      animation: modal-appear 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    @keyframes modal-appear {
+      from {
+        opacity: 0;
+        transform: scale(0.95) translateY(-20px);
+      }
+      to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+      }
+    }
+
+    /* ── Tab Styling ──────────────────────────────── */
+    .edit-tab-btn {
+      position: relative;
+      overflow: hidden;
+    }
+    .edit-tab-btn::after {
+      content: '';
+      position: absolute;
+      bottom: -3px;
+      left: 0;
+      right: 0;
+      height: 0px;
+      background: rgba(255,255,255, 0.05);
+      z-index: -1;
+    }
+    .edit-tab-btn--active::after {
+      height: 20px;
+    }
+    .edit-tab-btn:hover {
+      background: rgba(255,255,255, 0.02);
+    }
+
+    /* ── Input Focus Enhancement ──────────────────────── */
+    input[type="text"],
+    input[type="file"],
+    select,
+    textarea {
+      position: relative;
+    }
+    input[type="text"]:focus,
+    select:focus,
+    textarea:focus {
+      box-shadow: 0 0 0 3px rgba(98, 198, 239, 0.1), inset 0 0 0 1px rgba(98, 198, 239, 0.2);
+    }
+
+    /* ── Drop Zone Enhanced Hover ──────────────────────── */
+    #edit-image-dropzone {
+      position: relative;
+    }
+    #edit-image-dropzone:hover {
+      border-color: rgb(98, 198, 239);
+      background: rgba(98, 198, 239, 0.05);
+    }
+    #edit-image-dropzone.dragover {
+      border-color: rgb(98, 198, 239) !important;
+      background: rgba(98, 198, 239, 0.1) !important;
+    }
+
+    /* ── Thumbnail Grid Responsive ──────────────────────── */
+    @media (max-width: 600px) {
+      #edit-image-preview-strip {
+        grid-template-columns: repeat(3, 1fr) !important;
+      }
+    }
+    @media (max-width: 400px) {
+      #edit-image-preview-strip {
+        grid-template-columns: repeat(2, 1fr) !important;
+      }
+    }
   </style>
 </head>
 
@@ -360,11 +435,13 @@
             <span class="text-[0.875rem] text-outline font-mono" id="entity-clock">—</span>
           </div>
           <div class="flex items-center gap-2">
-            <button id="btn-edit-entity" class="bg-surface-high hover:bg-surface-highest text-white border-0 py-1.5 px-3 font-mono text-[0.65rem] uppercase tracking-widest cursor-pointer transition-colors flex items-center gap-1" style="display:none;">
-              <span class="material-symbols-outlined text-[14px]">edit</span> Edit
+            <button id="btn-edit-entity" class="bg-white hover:bg-white/90 active:scale-95 text-black border border-white/20 py-2 px-5 font-mono text-[0.65rem] uppercase tracking-[0.15em] font-bold cursor-pointer transition-all flex items-center gap-2 rounded-sm shadow-[0_0_15px_rgba(255,255,255,0.1)] hover:shadow-[0_0_20px_rgba(255,255,255,0.2)]" style="display:none;">
+              <span class="material-symbols-outlined text-[16px] font-bold">edit_note</span> 
+              <span>Edit Record</span>
             </button>
-            <button id="btn-delete-entity" class="bg-error/10 hover:bg-error/20 text-error border border-error/20 hover:border-error/40 py-1.5 px-3 font-mono text-[0.65rem] uppercase tracking-widest cursor-pointer transition-colors flex items-center gap-1" style="display:none;">
-              <span class="material-symbols-outlined text-[14px]">delete</span> Delete
+            <button id="btn-delete-entity" class="bg-transparent hover:bg-error/10 text-error border border-error/30 hover:border-error/50 py-2 px-5 font-mono text-[0.65rem] uppercase tracking-[0.15em] font-bold cursor-pointer transition-all flex items-center gap-2 rounded-sm" style="display:none;">
+              <span class="material-symbols-outlined text-[16px] font-bold">delete_sweep</span> 
+              <span>Terminate</span>
             </button>
           </div>
         </div>
@@ -459,153 +536,220 @@
   </div>
 
   <!-- EDIT ENTITY MODAL — Tabbed: Identity | Images & Portrait -->
-  <dialog id="modal-edit-entity" class="bg-surface-container text-on-surface border border-outline-variant/30 p-0 m-auto backdrop:bg-black/80 w-full max-w-[560px]" style="box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6);">
+  <dialog id="modal-edit-entity" class="bg-surface-container text-on-surface border border-outline-variant/30 p-0 m-auto w-full max-w-[620px]" style="box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6); backdrop-filter: blur(2px);">
 
-    <!-- Modal Header -->
-    <div class="p-5 border-b border-outline-variant/30 flex justify-between items-center bg-surface-low">
-      <div>
-        <h2 id="edit-modal-title" class="font-headline text-xl font-bold tracking-tight text-white m-0">Edit Entity</h2>
-        <p id="edit-modal-desc" class="font-mono text-[0.65rem] text-outline mt-1 hidden">Provide a name to promote this unknown entity to a known person.</p>
+    <!-- Modal Header — Forensic Theme -->
+    <div class="p-6 border-b border-outline-variant/30 bg-gradient-to-r from-surface-low to-surface-low flex justify-between items-start gap-4">
+      <div class="flex-1">
+        <div class="flex items-center gap-2 mb-2">
+          <span class="material-symbols-outlined text-primary text-[20px]">edit_document</span>
+          <h2 id="edit-modal-title" class="font-mono text-[0.9rem] font-bold tracking-wider text-white m-0 uppercase">Edit Entity</h2>
+        </div>
+        <p id="edit-modal-desc" class="font-mono text-[0.65rem] text-outline-variant mt-2 hidden">👤 Provide a name to promote this unknown entity to a known person. This will create a new tracked identity with biometric enrollment.</p>
       </div>
-      <button id="btn-close-edit" class="bg-transparent border-0 text-outline hover:text-white cursor-pointer p-1 flex items-center transition-colors">
-        <span class="material-symbols-outlined">close</span>
+      <button id="btn-close-edit" class="bg-transparent border-0 text-outline hover:text-white cursor-pointer p-2 flex items-center transition-colors hover:bg-surface-high rounded-sm">
+        <span class="material-symbols-outlined text-[20px]">close</span>
       </button>
     </div>
 
-    <!-- Tab Navigation -->
-    <div class="flex border-b border-outline-variant/20 bg-surface-low px-5" id="edit-modal-tabs">
-      <button class="edit-tab-btn edit-tab-btn--active py-3 px-4 font-mono text-[0.65rem] uppercase tracking-widest border-b-2 border-primary text-white bg-transparent cursor-pointer transitions-colors" data-tab="identity">
-        <span class="material-symbols-outlined text-[14px] mr-1" style="vertical-align:middle">badge</span>Identity
+    <!-- Tab Navigation — Forensic Style -->
+    <div class="flex border-b border-outline-variant/20 bg-surface-low px-0" id="edit-modal-tabs">
+      <button class="edit-tab-btn edit-tab-btn--active flex-1 py-4 px-6 font-mono text-[0.65rem] uppercase tracking-widest border-b-[3px] border-primary text-white bg-transparent cursor-pointer transition-all" data-tab="identity">
+        <span class="material-symbols-outlined text-[16px] mr-2" style="vertical-align:middle">badge</span><span>Identity</span>
       </button>
-      <button class="edit-tab-btn py-3 px-4 font-mono text-[0.65rem] uppercase tracking-widest border-b-2 border-transparent text-outline hover:text-white bg-transparent cursor-pointer transition-colors" data-tab="images" id="tab-btn-images">
-        <span class="material-symbols-outlined text-[14px] mr-1" style="vertical-align:middle">photo_library</span>Images &amp; Portrait
+      <button class="edit-tab-btn flex-1 py-4 px-6 font-mono text-[0.65rem] uppercase tracking-widest border-b-[3px] border-transparent text-outline hover:text-white bg-transparent cursor-pointer transition-all" data-tab="images" id="tab-btn-images">
+        <span class="material-symbols-outlined text-[16px] mr-2" style="vertical-align:middle">photo_library</span><span>Images &amp; Portrait</span>
       </button>
     </div>
 
-    <!-- TAB: Identity -->
-    <div id="edit-tab-identity" class="p-6 space-y-4">
-      <div class="flex flex-col gap-1.5">
-        <label class="font-mono text-[0.65rem] uppercase tracking-widest text-outline">Name</label>
-        <input type="text" id="edit-entity-name" class="bg-surface-high border border-outline-variant/30 text-white p-2.5 font-body text-[0.85rem] focus:outline-none focus:border-primary transition-colors" placeholder="Full name…">
+    <!-- TAB: Identity — Enhanced Fields -->
+    <div id="edit-tab-identity" class="p-6 space-y-6">
+      
+      <!-- Name Field -->
+      <div class="space-y-2">
+        <div class="flex items-center justify-between">
+          <label class="font-mono text-[0.65rem] uppercase tracking-widest text-outline flex items-center gap-1">
+            <span class="material-symbols-outlined text-[14px]">person</span>Full Name
+          </label>
+          <span class="font-mono text-[0.58rem] text-outline-variant">Required to enroll unknown entities</span>
+        </div>
+        <input type="text" id="edit-entity-name" class="w-full bg-surface-high border border-outline-variant/30 text-white p-3 font-body text-[0.85rem] focus:outline-none focus:border-primary focus:bg-surface-highest transition-all" placeholder="Enter full name…">
       </div>
-      <div class="flex flex-col gap-1.5">
-        <label class="font-mono text-[0.65rem] uppercase tracking-widest text-outline">Category</label>
-        <select id="edit-entity-category" class="bg-surface-high border border-outline-variant/30 text-white p-2.5 font-body text-[0.85rem] focus:outline-none focus:border-primary transition-colors">
-          <option value="criminal">Criminal</option>
-          <option value="vip">VIP</option>
-          <option value="staff">Staff</option>
+
+      <!-- Category Field -->
+      <div class="space-y-2">
+        <label class="font-mono text-[0.65rem] uppercase tracking-widest text-outline flex items-center gap-1">
+          <span class="material-symbols-outlined text-[14px]">category</span>Category
+        </label>
+        <select id="edit-entity-category" class="w-full bg-surface-high border border-outline-variant/30 text-white p-3 font-body text-[0.85rem] focus:outline-none focus:border-primary focus:bg-surface-highest transition-all cursor-pointer">
           <option value="unknown">Unknown</option>
+          <option value="criminal">Criminal</option>
+          <option value="vip">VIP / Protected</option>
+          <option value="staff">Staff / Authorized</option>
         </select>
       </div>
-      <div class="flex flex-col gap-1.5">
-        <label class="font-mono text-[0.65rem] uppercase tracking-widest text-outline">Severity / Flags</label>
-        <input type="text" id="edit-entity-severity" class="bg-surface-high border border-outline-variant/30 text-white p-2.5 font-body text-[0.85rem] focus:outline-none focus:border-primary transition-colors" placeholder="e.g. high, armed, none">
+
+      <!-- Severity / Flags Field -->
+      <div class="space-y-2">
+        <label class="font-mono text-[0.65rem] uppercase tracking-widest text-outline flex items-center gap-1">
+          <span class="material-symbols-outlined text-[14px]">warning</span>Severity / Flags
+        </label>
+        <input type="text" id="edit-entity-severity" class="w-full bg-surface-high border border-outline-variant/30 text-white p-3 font-body text-[0.85rem] focus:outline-none focus:border-primary focus:bg-surface-highest transition-all" placeholder="e.g. high, armed, violent, restricted">
       </div>
-      <div class="flex flex-col gap-1.5">
-        <label class="font-mono text-[0.65rem] uppercase tracking-widest text-outline">Notes</label>
-        <textarea id="edit-entity-notes" rows="3" class="bg-surface-high border border-outline-variant/30 text-white p-2.5 font-body text-[0.85rem] focus:outline-none focus:border-primary transition-colors resize-none" placeholder="Additional operational details…"></textarea>
+
+      <!-- Biographical Grid -->
+      <div class="grid grid-cols-2 gap-4">
+        <div class="space-y-2">
+          <label class="font-mono text-[0.65rem] uppercase tracking-widest text-outline flex items-center gap-1">
+            <span class="material-symbols-outlined text-[14px]">calendar_today</span>Date of Birth
+          </label>
+          <input type="text" id="edit-entity-dob" class="w-full bg-surface-high border border-outline-variant/30 text-white p-3 font-mono text-[0.75rem] focus:outline-none focus:border-primary focus:bg-surface-highest transition-all" placeholder="YYYY-MM-DD">
+        </div>
+        <div class="space-y-2">
+          <label class="font-mono text-[0.65rem] uppercase tracking-widest text-outline flex items-center gap-1">
+            <span class="material-symbols-outlined text-[14px]">wc</span>Gender
+          </label>
+          <select id="edit-entity-gender" class="w-full bg-surface-high border border-outline-variant/30 text-white p-3 font-body text-[0.85rem] focus:outline-none focus:border-primary focus:bg-surface-highest transition-all">
+            <option value="">Unknown</option>
+            <option value="male">Male</option>
+            <option value="female">Female</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
       </div>
+
+      <!-- Location Grid -->
+      <div class="grid grid-cols-2 gap-4">
+        <div class="space-y-2">
+          <label class="font-mono text-[0.65rem] uppercase tracking-widest text-outline flex items-center gap-1">
+            <span class="material-symbols-outlined text-[14px]">location_city</span>City
+          </label>
+          <input type="text" id="edit-entity-city" class="w-full bg-surface-high border border-outline-variant/30 text-white p-3 font-body text-[0.85rem] focus:outline-none focus:border-primary focus:bg-surface-highest transition-all" placeholder="Last known city">
+        </div>
+        <div class="space-y-2">
+          <label class="font-mono text-[0.65rem] uppercase tracking-widest text-outline flex items-center gap-1">
+            <span class="material-symbols-outlined text-[14px]">public</span>Country
+          </label>
+          <input type="text" id="edit-entity-country" class="w-full bg-surface-high border border-outline-variant/30 text-white p-3 font-body text-[0.85rem] focus:outline-none focus:border-primary focus:bg-surface-highest transition-all" placeholder="Country">
+        </div>
+      </div>
+
+      <!-- Notes Field -->
+      <div class="space-y-2">
+        <label class="font-mono text-[0.65rem] uppercase tracking-widest text-outline flex items-center gap-1">
+          <span class="material-symbols-outlined text-[14px]">description</span>Operational Notes
+        </label>
+        <textarea id="edit-entity-notes" rows="4" class="w-full bg-surface-high border border-outline-variant/30 text-white p-3 font-body text-[0.85rem] focus:outline-none focus:border-primary focus:bg-surface-highest transition-all resize-none" placeholder="Additional details, background, context…"></textarea>
+      </div>
+
     </div>
 
-    <!-- TAB: Images & Portrait -->
-    <div id="edit-tab-images" class="p-6 space-y-5 hidden">
+    <!-- TAB: Images & Portrait — Redesigned -->
+    <div id="edit-tab-images" class="p-6 space-y-6 hidden">
 
-      <!-- Portrait Replace -->
-      <div>
-        <div class="flex items-center justify-between mb-3">
-          <span class="font-mono text-[0.65rem] uppercase tracking-widest text-outline">Portrait Image</span>
-          <span class="font-mono text-[0.58rem] text-outline-variant">Auto-captured · click to replace</span>
+      <!-- Portrait Section -->
+      <div class="border border-outline-variant/20 bg-surface-low/50 p-5 rounded-sm space-y-4">
+        <div class="flex items-center gap-2 mb-2">
+          <span class="material-symbols-outlined text-primary text-[18px]">face</span>
+          <h3 class="font-mono text-[0.75rem] uppercase tracking-widest text-outline font-semibold">Primary Portrait</h3>
+          <span class="ml-auto font-mono text-[0.58rem] text-outline-variant">Auto-captured • immutable</span>
         </div>
-        <div class="flex items-center gap-4">
-          <div class="w-16 h-16 bg-surface-low border border-outline-variant/30 relative overflow-hidden flex-shrink-0">
-            <img id="edit-portrait-preview" class="w-full h-full object-cover hidden" alt="Current portrait" />
-            <div id="edit-portrait-placeholder" class="w-full h-full flex items-center justify-center">
-              <span class="material-symbols-outlined text-outline-variant text-[24px]">person_search</span>
+        
+        <div class="flex items-center gap-5">
+          <!-- Portrait Preview -->
+          <div class="relative flex-shrink-0">
+            <div class="w-24 h-24 bg-surface-high border-2 border-outline-variant/30 rounded-sm overflow-hidden flex items-center justify-center">
+              <img id="edit-portrait-preview" class="w-full h-full object-cover hidden" alt="Current portrait" />
+              <div id="edit-portrait-placeholder" class="w-full h-full flex items-center justify-center flex-col gap-1">
+                <span class="material-symbols-outlined text-outline-variant text-[32px]">person_search</span>
+                <span class="font-mono text-[0.5rem] text-outline-variant">No portrait</span>
+              </div>
             </div>
           </div>
+
+          <!-- Portrait Upload -->
           <div class="flex-1">
-            <label for="edit-portrait-file" class="block w-full px-4 py-2 text-center font-mono text-[0.65rem] uppercase tracking-widest text-outline hover:text-white border border-outline-variant/30 hover:border-outline-variant/60 bg-surface-high hover:bg-surface-bright cursor-pointer transition-all">
-              <span class="material-symbols-outlined text-[14px] mr-1" style="vertical-align:middle">upload</span>Replace Portrait
+            <label for="edit-portrait-file" class="block w-full px-4 py-3 text-center font-mono text-[0.65rem] uppercase tracking-widest text-outline hover:text-white border border-outline-variant/30 hover:border-outline-variant/60 bg-surface-high hover:bg-surface-bright cursor-pointer transition-all flex items-center justify-center gap-2">
+              <span class="material-symbols-outlined text-[16px]">upload_file</span>
+              <span>Replace Portrait</span>
             </label>
             <input type="file" id="edit-portrait-file" accept="image/*" class="hidden" />
-            <p class="font-mono text-[0.58rem] text-outline-variant mt-2">JPEG or PNG · will be resized to 256×256 · score locked to 1.0 (won't be auto-overwritten)</p>
+            <p class="font-mono text-[0.58rem] text-outline-variant mt-3 leading-relaxed">
+              📎 JPEG or PNG • Will be resized to 256×256 px<br/>
+              🔒 Score locked at 1.0 (won't be auto-overwritten)
+            </p>
           </div>
         </div>
-        <div id="portrait-upload-status" class="mt-2 font-mono text-[0.65rem] hidden"></div>
+
+        <!-- Portrait Upload Status -->
+        <div id="portrait-upload-status" class="hidden mt-3 p-3 bg-surface-high border border-outline-variant/20 rounded-sm font-mono text-[0.65rem]"></div>
       </div>
 
-      <div class="border-t border-outline-variant/10"></div>
-
-      <!-- Reference Images Upload (for embedding training) -->
+      <!-- Reference Images Section (Known Only) -->
       <div id="images-section-known">
-        <div class="flex items-center justify-between mb-3">
-          <span class="font-mono text-[0.65rem] uppercase tracking-widest text-outline">Reference Images</span>
-          <span class="font-mono text-[0.58rem] text-outline-variant">Adds to recognition database · triggers auto-enrollment</span>
+        <div class="flex items-center gap-2 mb-4">
+          <span class="material-symbols-outlined text-primary text-[18px]">photo_library</span>
+          <h3 class="font-mono text-[0.75rem] uppercase tracking-widest text-outline font-semibold">Reference Images</h3>
+          <span class="ml-auto font-mono text-[0.58rem] text-outline-variant">For recognition training</span>
         </div>
 
-        <!-- Drop Zone -->
-        <div id="edit-image-dropzone" class="border-2 border-dashed border-outline-variant/30 hover:border-outline-variant/60 bg-surface-high hover:bg-surface-bright transition-all cursor-pointer p-6 text-center" style="transition: border-color 0.15s, background 0.15s;">
-          <span class="material-symbols-outlined text-outline-variant text-[32px] block mb-2">cloud_upload</span>
-          <p class="font-mono text-[0.7rem] text-outline mb-1">Drag &amp; drop images here</p>
-          <p class="font-mono text-[0.58rem] text-outline-variant">or <label for="edit-image-file" class="text-primary cursor-pointer hover:underline">browse files</label></p>
+        <!-- Drop Zone — Enhanced -->
+        <div id="edit-image-dropzone" class="border-2 border-dashed border-primary/30 hover:border-primary/60 bg-surface-high/50 hover:bg-surface-bright/50 transition-all cursor-pointer p-8 text-center rounded-sm" style="transition: border-color 0.15s, background 0.15s;">
+          <span class="material-symbols-outlined text-primary/60 text-[40px] block mb-3">cloud_upload</span>
+          <p class="font-mono text-[0.75rem] text-white font-semibold mb-1">Drag images here</p>
+          <p class="font-mono text-[0.65rem] text-outline-variant">or <label for="edit-image-file" class="text-primary cursor-pointer hover:underline font-semibold">browse files</label> to add to training database</p>
           <input type="file" id="edit-image-file" accept="image/*" multiple class="hidden" />
         </div>
 
-        <!-- Image preview strip -->
-        <div id="edit-image-preview-strip" class="flex gap-2 mt-3 flex-wrap hidden"></div>
+        <!-- Image preview grid with thumbnails -->
+        <div id="edit-image-preview-container" class="hidden">
+          <div id="edit-image-preview-strip" class="grid grid-cols-4 gap-3 mt-4"></div>
+        </div>
+
+        <!-- Upload action row -->
+        <div class="flex items-center justify-between mt-4">
+          <span id="edit-image-count" class="font-mono text-[0.65rem] text-outline">No images selected</span>
+          <div class="flex gap-2">
+            <button id="btn-clear-images-edit" class="bg-transparent border border-outline-variant/30 hover:border-outline-variant/60 text-outline hover:text-white font-mono text-[0.65rem] uppercase tracking-widest cursor-pointer px-4 py-3 transition-all rounded-sm flex items-center gap-2">
+              <span class="material-symbols-outlined text-[16px]">clear_all</span>
+              <span>Clear</span>
+            </button>
+            <button id="btn-upload-images" class="flex items-center gap-2 px-5 py-3 bg-primary hover:bg-primary/90 active:scale-95 text-on-primary border-0 font-mono text-[0.65rem] uppercase tracking-widest cursor-pointer transition-all disabled:opacity-40 disabled:cursor-not-allowed rounded-sm" disabled>
+              <span class="material-symbols-outlined text-[16px]">upload</span>
+              <span>Upload &amp; Enroll</span>
+            </button>
+          </div>
+        </div>
 
         <!-- Upload status -->
-        <div id="images-upload-status" class="mt-3 font-mono text-[0.65rem] hidden"></div>
-
-        <!-- Upload action -->
-        <div class="mt-4 flex items-center justify-between">
-          <span id="edit-image-count" class="font-mono text-[0.6rem] text-outline-variant">No images selected</span>
-          <button id="btn-upload-images" class="flex items-center gap-2 px-4 py-2 bg-surface-bright hover:bg-surface-highest text-white border border-outline-variant/30 hover:border-outline-variant/60 font-mono text-[0.65rem] uppercase tracking-widest cursor-pointer transition-all disabled:opacity-40 disabled:cursor-not-allowed" disabled>
-            <span class="material-symbols-outlined text-[14px]">upload</span>Upload &amp; Enroll
-          </button>
-        </div>
+        <div id="images-upload-status" class="hidden mt-3 p-3 bg-surface-high border border-outline-variant/20 rounded-sm font-mono text-[0.65rem]"></div>
       </div>
 
-      <!-- Message for unknown entities (no person_id → can't upload images yet) -->
+      <!-- Unknown Entity Message -->
       <div id="images-section-unknown" class="hidden">
-        <div class="flex items-start gap-3 p-4 bg-surface-high border border-outline-variant/20">
-          <span class="material-symbols-outlined text-outline-variant text-[20px] mt-0.5">info</span>
+        <div class="flex items-start gap-4 p-5 bg-surface-high border border-outline-variant/20 rounded-sm">
+          <span class="material-symbols-outlined text-outline-variant text-[20px] mt-0.5 flex-shrink-0">info</span>
           <div>
-            <p class="font-mono text-[0.7rem] text-white mb-1">Image upload not available</p>
-            <p class="font-mono text-[0.65rem] text-outline">Switch to the Identity tab and provide a name to promote this unknown entity to a known person first. Images can be added after promotion.</p>
+            <p class="font-mono text-[0.75rem] text-white font-semibold mb-2">Image Upload Not Available</p>
+            <p class="font-mono text-[0.65rem] text-outline-variant leading-relaxed">Switch to the <strong>Identity</strong> tab and provide a name to promote this unknown entity to a known person. Reference images can be added after enrollment is complete.</p>
           </div>
         </div>
       </div>
 
     </div>
 
-    <!-- Modal Footer -->
-    <div class="p-4 border-t border-outline-variant/30 bg-surface-low flex justify-end gap-3" id="edit-modal-footer">
-      <button id="btn-cancel-edit" class="bg-transparent border-0 text-outline hover:text-white font-mono text-[0.7rem] uppercase tracking-widest cursor-pointer px-4 py-2 transition-colors">Cancel</button>
-      <button id="btn-save-edit" class="bg-primary hover:bg-primary/90 text-on-primary border-0 font-mono text-[0.7rem] uppercase tracking-widest cursor-pointer px-6 py-2 transition-colors flex items-center gap-2">
-        <span class="material-symbols-outlined text-[16px]">save</span> Save Identity
-      </button>
-    </div>
-  </dialog>
-
-  <!-- INLINE DELETE CONFIRM — replaces browser confirm() -->
-  <div id="delete-confirm-bar" class="hidden fixed bottom-0 left-0 right-0 z-50 bg-error-container/95 backdrop-blur-sm border-t border-error/30 p-4 flex items-center justify-between gap-4" style="box-shadow:0 -4px 24px rgba(0,0,0,0.4)">
-    <div class="flex items-center gap-3">
-      <span class="material-symbols-outlined text-error text-[20px]">warning</span>
-      <div>
-        <p class="font-mono text-[0.75rem] text-error font-semibold">Delete Entity?</p>
-        <p class="font-mono text-[0.65rem] text-on-error-container" id="delete-confirm-desc">This will permanently remove the entity and all linked detections, alerts, and incidents.</p>
-      </div>
-    </div>
-    <div class="flex items-center gap-3 flex-shrink-0">
-      <button id="btn-delete-cancel" class="px-4 py-2 bg-transparent border border-outline-variant/30 text-white hover:bg-surface-high font-mono text-[0.65rem] uppercase tracking-widest cursor-pointer transition-colors">
+    <!-- Modal Footer — Action Buttons -->
+    <div class="p-5 border-t border-outline-variant/30 bg-surface-low flex justify-end gap-3 flex-wrap" id="edit-modal-footer">
+      <button id="btn-cancel-edit" class="bg-transparent border border-outline-variant/40 hover:border-outline-variant/60 text-outline hover:text-white font-mono text-[0.65rem] uppercase tracking-widest cursor-pointer px-5 py-2.5 transition-all hover:bg-surface-high rounded-sm">
         Cancel
       </button>
-      <button id="btn-delete-confirm" class="px-5 py-2 bg-error hover:bg-error/80 text-on-error border-0 font-mono text-[0.7rem] uppercase tracking-widest cursor-pointer transition-colors flex items-center gap-2">
-        <span class="material-symbols-outlined text-[14px]">delete_forever</span>Confirm Delete
+      <button id="btn-save-edit" class="bg-primary hover:bg-primary/90 active:scale-95 text-on-primary border-0 font-mono text-[0.65rem] uppercase tracking-widest cursor-pointer px-6 py-2.5 transition-all flex items-center gap-2 rounded-sm">
+        <span class="material-symbols-outlined text-[16px]">save</span>
+        <span>Save Identity</span>
       </button>
     </div>
-  </div>
+
+  </dialog>
 
 </main>
 

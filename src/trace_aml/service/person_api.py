@@ -382,7 +382,7 @@ def create_person_router(settings: "Settings", store: "VectorStore") -> Any:
         updated = PersonRecord(
             person_id=current["person_id"],
             name=payload.name if payload.name is not None else current.get("name", ""),
-            category=PersonCategory(current.get("category", "criminal")),
+            category=payload.category if payload.category is not None else PersonCategory(current.get("category", "criminal")),
             severity=payload.severity if payload.severity is not None else current.get("severity", ""),
             dob=payload.dob if payload.dob is not None else current.get("dob", ""),
             gender=payload.gender if payload.gender is not None else current.get("gender", ""),

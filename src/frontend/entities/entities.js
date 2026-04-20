@@ -26,8 +26,6 @@
   function showOverview() {
     $("view-overview").style.display = "block";
     $("view-detail").style.display   = "none";
-    // Hide delete confirm bar if visible
-    hideDeleteBar();
   }
 
   function showDetail() {
@@ -42,6 +40,15 @@
       _allEntities = list || [];
       renderOverviewStats(_allEntities);
       renderGrid(_allEntities);
+    }).catch(function (err) {
+      console.error("Failed to load entities:", err);
+      var grid = $("entity-grid");
+      if (grid) {
+        grid.innerHTML = '<div class="col-span-full flex flex-col items-center justify-center py-20 text-outline font-mono text-[0.75rem]">'
+          + '<span class="material-symbols-outlined text-[36px] mb-3 text-error">error</span>'
+          + 'Failed to load entities. Please check connection and try again.</div>';
+      }
+      if (window.TraceToast) TraceToast.error("Registry Error", "Failed to connect to entity service.");
     });
   }
 
@@ -267,56 +274,33 @@
 
   /* ─────────────────────────── Delete flow ──────────────────────── */
 
-  function showDeleteBar(entityId) {
-    var bar  = $("delete-confirm-bar");
-    var desc = $("delete-confirm-desc");
-    if (!bar) return;
-    if (desc) {
-      var name = ((_currentProfile && _currentProfile.entity) || {}).name || entityId;
-      desc.textContent = "Permanently delete \"" + name + "\" and all linked detections, alerts, and incidents?";
-    }
-    bar.classList.remove("hidden");
-  }
-
-  function hideDeleteBar() {
-    var bar = $("delete-confirm-bar");
-    if (bar) bar.classList.add("hidden");
-  }
-
   function wireDeleteFlow() {
-    var btnDelete = $("btn-delete-entity");
+    var btnDelete   = $("btn-delete-entity");
+
     if (btnDelete) {
       btnDelete.addEventListener("click", function () {
-        if (_currentEntityId) showDeleteBar(_currentEntityId);
-      });
-    }
-
-    var btnDeleteCancel = $("btn-delete-cancel");
-    if (btnDeleteCancel) {
-      btnDeleteCancel.addEventListener("click", hideDeleteBar);
-    }
-
-    var btnDeleteConfirm = $("btn-delete-confirm");
-    if (btnDeleteConfirm) {
-      btnDeleteConfirm.addEventListener("click", function () {
         if (!_currentEntityId) return;
-        btnDeleteConfirm.disabled = true;
-        btnDeleteConfirm.innerHTML = '<span class="material-symbols-outlined text-[14px]">hourglass_empty</span> Deleting…';
+        var name = ((_currentProfile && _currentProfile.entity) || {}).name || _currentEntityId;
+        
+        TraceDialog.confirm(
+          "Terminate Entity Record",
+          "You are about to permanently delete the entity " + name + " and all associated data, including biometric embeddings, portraits, and detection history.",
+          { type: "error", confirmText: "Terminate Record" }
+        ).then(function(ok) {
+          if (!ok) return;
 
-        TraceClient.deleteEntity(_currentEntityId).then(function (res) {
-          if (res && res.status === "deleted") {
-            hideDeleteBar();
-            if (window.TraceToast) TraceToast.show("Entity deleted successfully.");
-            showOverview();
-            loadEntityList();
-          } else {
-            if (window.TraceToast) TraceToast.show("Failed to delete entity.", "error");
-          }
-        }).catch(function () {
-          if (window.TraceToast) TraceToast.show("Network error during delete.", "error");
-        }).finally(function () {
-          btnDeleteConfirm.disabled = false;
-          btnDeleteConfirm.innerHTML = '<span class="material-symbols-outlined text-[14px]">delete_forever</span>Confirm Delete';
+          TraceClient.deleteEntity(_currentEntityId).then(function (res) {
+            if (res && res.status === "deleted") {
+              TraceToast.success("Entity Deleted", "Record has been permanently removed.");
+              showOverview();
+              loadEntityList();
+            } else {
+              var detail = (res && res.detail) ? String(res.detail) : "Unknown error";
+              TraceToast.error("Deletion Failed", detail);
+            }
+          }).catch(function (err) {
+            TraceToast.error("Deletion Error", "Network error or server unavailable.");
+          });
         });
       });
     }
@@ -362,6 +346,14 @@
     if (catSel) catSel.value = ent.category || "unknown";
     var sevInput = $("edit-entity-severity");
     if (sevInput) sevInput.value = person.severity || ent.severity || "";
+    var dobInput = $("edit-entity-dob");
+    if (dobInput) dobInput.value = person.dob || ent.dob || "";
+    var genderSel = $("edit-entity-gender");
+    if (genderSel) genderSel.value = person.gender || ent.gender || "";
+    var cityInput = $("edit-entity-city");
+    if (cityInput) cityInput.value = person.last_seen_city || ent.last_seen_city || "";
+    var countryInput = $("edit-entity-country");
+    if (countryInput) countryInput.value = person.last_seen_country || ent.last_seen_country || "";
     var notesArea = $("edit-entity-notes");
     if (notesArea) notesArea.value = person.notes || ent.notes || "";
 
@@ -371,13 +363,16 @@
     var saveBtn = $("btn-save-edit");
     if (!isKnown) {
       if (titleEl) titleEl.textContent = "Enroll Unknown Entity";
-      if (descEl) descEl.classList.remove("hidden");
+      if (descEl) {
+        descEl.classList.remove("hidden");
+        descEl.innerHTML = '👤 Provide a name and category to promote this unknown entity to a tracked identity. This will enable biometric enrollment and reference image uploads.';
+      }
       if (catSel && catSel.value === "unknown") catSel.value = "criminal";
-      if (saveBtn) saveBtn.innerHTML = '<span class="material-symbols-outlined text-[16px]">person_add</span> Enroll';
+      if (saveBtn) saveBtn.innerHTML = '<span class="material-symbols-outlined text-[16px]">person_add</span> Enroll as Known';
     } else {
       if (titleEl) titleEl.textContent = "Edit Entity";
       if (descEl) descEl.classList.add("hidden");
-      if (saveBtn) saveBtn.innerHTML = '<span class="material-symbols-outlined text-[16px]">save</span> Save Identity';
+      if (saveBtn) saveBtn.innerHTML = '<span class="material-symbols-outlined text-[16px]">save</span> Save Changes';
     }
 
     // ── Images tab: show correct section ──
@@ -395,14 +390,14 @@
         prevImg.onload  = function () { prevImg.classList.remove("hidden"); if (prevPlaceholder) prevPlaceholder.classList.add("hidden"); };
         prevImg.onerror = function () { prevImg.classList.add("hidden");    if (prevPlaceholder) prevPlaceholder.classList.remove("hidden"); };
       }
-      // Hide tabs button for unknown — Images tab is available only for known
+      // Show images tab for known entities
       var tabBtnImages = $("tab-btn-images");
       if (tabBtnImages) tabBtnImages.style.display = "";
     } else {
       if (knownSection)   knownSection.classList.add("hidden");
       if (unknownSection) unknownSection.classList.remove("hidden");
       var tabBtnImages2 = $("tab-btn-images");
-      // Still show the tab but content will say "promote first"
+      // Still show the tab but content will say "enroll first"
       if (tabBtnImages2) tabBtnImages2.style.display = "";
     }
 
@@ -411,6 +406,14 @@
 
     // Switch to requested tab
     switchModalTab(startTab || "identity");
+
+    // Focus on name input if unknown entity (better UX)
+    if (!isKnown) {
+      setTimeout(function() {
+        var nameInput = $("edit-entity-name");
+        if (nameInput) nameInput.focus();
+      }, 100);
+    }
 
     $("modal-edit-entity").showModal();
   }
@@ -422,6 +425,9 @@
     // Clear portrait upload status
     var ps = $("portrait-upload-status");
     if (ps) { ps.classList.add("hidden"); ps.textContent = ""; }
+    // Clear images upload status
+    var is = $("images-upload-status");
+    if (is) { is.classList.add("hidden"); is.textContent = ""; }
   }
 
   /* ─────────────────────────── Image Upload (Reference Images) ────── */
@@ -430,8 +436,12 @@
 
   function resetImageSelection() {
     _selectedFiles = [];
+    var container = $("edit-image-preview-container");
+    if (container) container.classList.add("hidden");
     var strip = $("edit-image-preview-strip");
-    if (strip) { strip.classList.add("hidden"); strip.innerHTML = ""; }
+    if (strip) { 
+      strip.innerHTML = ""; 
+    }
     var countEl = $("edit-image-count");
     if (countEl) countEl.textContent = "No images selected";
     var uploadBtn = $("btn-upload-images");
@@ -457,17 +467,51 @@
     var uploadBtn = $("btn-upload-images");
     if (uploadBtn) uploadBtn.disabled = false;
 
-    // Build preview strip
+    // Build preview strip with enhanced thumbnails
     var strip = $("edit-image-preview-strip");
     if (!strip) return;
     strip.classList.remove("hidden");
     strip.innerHTML = "";
-    validFiles.forEach(function (file) {
+    validFiles.forEach(function (file, index) {
       var reader = new FileReader();
       reader.onload = function (e) {
+        // Thumbnail container with hover effects
         var thumb = document.createElement("div");
-        thumb.className = "w-14 h-14 bg-surface-low border border-outline-variant/30 overflow-hidden flex-shrink-0";
-        thumb.innerHTML = '<img src="' + e.target.result + '" class="w-full h-full object-cover" alt="" />';
+        thumb.className = "relative w-16 h-16 bg-surface-high border border-outline-variant/30 overflow-hidden flex-shrink-0 rounded-sm group cursor-pointer transition-all hover:border-outline-variant/60";
+        thumb.style.filter = "grayscale(100%)";
+        thumb.style.transition = "filter 0.2s ease, border-color 0.2s ease";
+        
+        // Image element
+        var img = document.createElement("img");
+        img.src = e.target.result;
+        img.className = "w-full h-full object-cover";
+        img.alt = "Preview " + (index + 1);
+        
+        // Delete button overlay (hidden by default, shown on hover)
+        var deleteBtn = document.createElement("button");
+        deleteBtn.className = "absolute inset-0 w-full h-full flex items-center justify-center bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity rounded-sm border-0 cursor-pointer";
+        deleteBtn.innerHTML = '<span class="material-symbols-outlined text-error text-[20px]">delete</span>';
+        deleteBtn.type = "button";
+        deleteBtn.setAttribute("data-file-index", index);
+        
+        // Hover effects on thumbnail
+        thumb.addEventListener("mouseenter", function () {
+          thumb.style.filter = "grayscale(0%)";
+        });
+        thumb.addEventListener("mouseleave", function () {
+          thumb.style.filter = "grayscale(100%)";
+        });
+        
+        // Delete functionality
+        deleteBtn.addEventListener("click", function (evt) {
+          evt.stopPropagation();
+          var fileIndex = parseInt(deleteBtn.getAttribute("data-file-index"), 10);
+          _selectedFiles.splice(fileIndex, 1);
+          handleFilesSelected(_selectedFiles);
+        });
+        
+        thumb.appendChild(img);
+        thumb.appendChild(deleteBtn);
         strip.appendChild(thumb);
       };
       reader.readAsDataURL(file);
@@ -483,22 +527,27 @@
       });
     }
 
+    // Clear button
+    var clearBtn = $("btn-clear-images-edit");
+    if (clearBtn) {
+      clearBtn.addEventListener("click", resetImageSelection);
+    }
+
     // Drag-drop zone
     var dropzone = $("edit-image-dropzone");
     if (dropzone) {
       dropzone.addEventListener("dragover", function (e) {
         e.preventDefault();
-        dropzone.style.borderColor = "rgba(255,255,255,0.4)";
-        dropzone.style.background  = "#262626";
+        e.stopPropagation();
+        dropzone.classList.add("dragover");
       });
       dropzone.addEventListener("dragleave", function () {
-        dropzone.style.borderColor = "";
-        dropzone.style.background  = "";
+        dropzone.classList.remove("dragover");
       });
       dropzone.addEventListener("drop", function (e) {
         e.preventDefault();
-        dropzone.style.borderColor = "";
-        dropzone.style.background  = "";
+        e.stopPropagation();
+        dropzone.classList.remove("dragover");
         handleFilesSelected(e.dataTransfer.files);
       });
       dropzone.addEventListener("click", function (e) {
@@ -520,7 +569,7 @@
         var person = _currentProfile.linked_person || {};
         var personId = person.person_id || null;
         if (!personId) {
-          if (window.TraceToast) TraceToast.show("Cannot upload images for an unknown entity. Enroll them first.", "error");
+          if (window.TraceToast) TraceToast.error("Enrollment Required", "Cannot upload images for an unknown entity. Switch to Identity tab and enroll them first.");
           return;
         }
 
@@ -530,18 +579,18 @@
         var statusEl = $("images-upload-status");
         if (statusEl) {
           statusEl.classList.remove("hidden");
-          statusEl.style.color = "#bdbdbd";
-          statusEl.textContent = "Uploading " + _selectedFiles.length + " image(s)…";
+          statusEl.className = "mt-3 p-3 bg-surface-high border border-outline-variant/20 rounded-sm font-mono text-[0.65rem] text-outline-variant";
+          statusEl.innerHTML = '<span class="material-symbols-outlined text-[14px] align-middle mr-2">hourglass_empty</span>Uploading ' + _selectedFiles.length + ' image(s)…';
         }
 
         TraceClient.uploadPersonImages(personId, _selectedFiles).then(function (res) {
           if (res) {
             var msg = "Uploaded " + (res.uploaded || 0) + " image(s). " + (res.enrollment || "Enrollment queued.");
             if (statusEl) {
-              statusEl.style.color = "#fff";
-              statusEl.textContent = "✓ " + msg;
+              statusEl.className = "mt-3 p-3 bg-green-900/20 border border-green-500/30 rounded-sm font-mono text-[0.65rem] text-green-400";
+              statusEl.innerHTML = '<span class="material-symbols-outlined text-[14px] align-middle mr-2">check_circle</span>' + msg;
             }
-            if (window.TraceToast) TraceToast.show(msg);
+            if (window.TraceToast) TraceToast.success("Images Uploaded", msg);
             resetImageSelection();
             // Refresh the portrait after a short delay (enrollment takes a few seconds)
             setTimeout(function () {
@@ -549,17 +598,17 @@
             }, 3000);
           } else {
             if (statusEl) {
-              statusEl.style.color = "#f28b82";
-              statusEl.textContent = "✗ Upload failed. Check connection and try again.";
+              statusEl.className = "mt-3 p-3 bg-red-900/20 border border-red-500/30 rounded-sm font-mono text-[0.65rem] text-red-400";
+              statusEl.innerHTML = '<span class="material-symbols-outlined text-[14px] align-middle mr-2">error</span>Upload failed. Check file format and connection.';
             }
-            if (window.TraceToast) TraceToast.show("Image upload failed.", "error");
+            if (window.TraceToast) TraceToast.error("Upload Failed", "One or more images failed to upload. Please check the file format and try again.");
           }
         }).catch(function () {
           if (statusEl) {
-            statusEl.style.color = "#f28b82";
-            statusEl.textContent = "✗ Network error during upload.";
+            statusEl.className = "mt-3 p-3 bg-red-900/20 border border-red-500/30 rounded-sm font-mono text-[0.65rem] text-red-400";
+            statusEl.innerHTML = '<span class="material-symbols-outlined text-[14px] align-middle mr-2">error</span>Network error during upload. Check your connection and try again.';
           }
-          if (window.TraceToast) TraceToast.show("Network error during upload.", "error");
+          if (window.TraceToast) TraceToast.error("Network Error", "Connection lost during image upload. Please check your connection and try again.");
         }).finally(function () {
           uploadBtn.disabled = _selectedFiles.length === 0;
           uploadBtn.innerHTML = '<span class="material-symbols-outlined text-[14px]">upload</span>Upload &amp; Enroll';
@@ -582,17 +631,17 @@
       var statusEl = $("portrait-upload-status");
       if (statusEl) {
         statusEl.classList.remove("hidden");
-        statusEl.style.color = "#bdbdbd";
-        statusEl.textContent = "Uploading portrait…";
+        statusEl.className = "mt-3 p-3 bg-surface-high border border-outline-variant/20 rounded-sm font-mono text-[0.65rem] text-outline-variant";
+        statusEl.innerHTML = '<span class="material-symbols-outlined text-[14px] align-middle mr-2">hourglass_empty</span>Uploading portrait…';
       }
 
       TraceClient.uploadPortrait(_currentEntityId, file).then(function (res) {
         if (res && res.status === "updated") {
           if (statusEl) {
-            statusEl.style.color = "#fff";
-            statusEl.textContent = "✓ Portrait updated successfully.";
+            statusEl.className = "mt-3 p-3 bg-green-900/20 border border-green-500/30 rounded-sm font-mono text-[0.65rem] text-green-400";
+            statusEl.innerHTML = '<span class="material-symbols-outlined text-[14px] align-middle mr-2">check_circle</span>Portrait updated successfully. Score locked at 1.0.';
           }
-          if (window.TraceToast) TraceToast.show("Portrait updated.");
+          if (window.TraceToast) TraceToast.success("Portrait Updated", "Primary portrait replaced successfully. Changes are immutable.");
           // Refresh the portrait thumbnail in the modal and in the detail view
           var prevImg = $("edit-portrait-preview");
           if (prevImg) {
@@ -605,17 +654,17 @@
           }
         } else {
           if (statusEl) {
-            statusEl.style.color = "#f28b82";
-            statusEl.textContent = "✗ Portrait upload failed.";
+            statusEl.className = "mt-3 p-3 bg-red-900/20 border border-red-500/30 rounded-sm font-mono text-[0.65rem] text-red-400";
+            statusEl.innerHTML = '<span class="material-symbols-outlined text-[14px] align-middle mr-2">error</span>Portrait upload failed. Check file format (JPEG/PNG).';
           }
-          if (window.TraceToast) TraceToast.show("Portrait upload failed.", "error");
+          if (window.TraceToast) TraceToast.error("Portrait Upload Failed", "Could not upload portrait. Check file format (JPEG/PNG) and try again.");
         }
       }).catch(function () {
         if (statusEl) {
-          statusEl.style.color = "#f28b82";
-          statusEl.textContent = "✗ Network error during portrait upload.";
+          statusEl.className = "mt-3 p-3 bg-red-900/20 border border-red-500/30 rounded-sm font-mono text-[0.65rem] text-red-400";
+          statusEl.innerHTML = '<span class="material-symbols-outlined text-[14px] align-middle mr-2">error</span>Network error during portrait upload.';
         }
-        if (window.TraceToast) TraceToast.show("Network error during portrait upload.", "error");
+        if (window.TraceToast) TraceToast.error("Network Error", "Connection lost during portrait upload. Please check your connection and try again.");
       }).finally(function () {
         portraitFileInput.value = "";
       });
@@ -635,7 +684,7 @@
       var isKnown = String((_currentProfile.entity || {}).type || (_currentProfile.entity || {}).entity_type) === "known";
 
       if (!isKnown && !nameVal) {
-        if (window.TraceToast) TraceToast.show("A name is required to enroll an unknown entity.", "error");
+        if (window.TraceToast) TraceToast.warning("Name Required", "Provide a full name to enroll this unknown entity and create a tracked identity.");
         return;
       }
 
@@ -643,6 +692,10 @@
         name:     nameVal,
         category: ($("edit-entity-category") || {}).value || "unknown",
         severity: (($("edit-entity-severity") || {}).value || "").trim(),
+        dob:      (($("edit-entity-dob") || {}).value || "").trim(),
+        gender:   (($("edit-entity-gender") || {}).value || "").trim(),
+        city:     (($("edit-entity-city") || {}).value || "").trim(),
+        country:  (($("edit-entity-country") || {}).value || "").trim(),
         notes:    (($("edit-entity-notes") || {}).value || "").trim(),
       };
 
@@ -653,7 +706,10 @@
       TraceClient.updateEntity(_currentEntityId, payload).then(function (res) {
         if (res && (res.status === "updated" || res.status === "promoted")) {
           if (window.TraceToast) {
-            TraceToast.show(res.status === "promoted" ? "Entity enrolled as known person." : "Entity updated successfully.");
+            TraceToast.success(
+              res.status === "promoted" ? "Entity Enrolled" : "Entity Updated",
+              res.status === "promoted" ? "Unknown entity has been promoted to a known person with biometric enrollment." : "Entity information saved successfully."
+            );
           }
           closeEditModal();
 
@@ -669,10 +725,10 @@
           loadEntityProfile(fetchId);
           loadEntityList(); // refresh background list
         } else {
-          if (window.TraceToast) TraceToast.show("Failed to update entity.", "error");
+          if (window.TraceToast) TraceToast.error("Save Failed", "Could not update entity. Check backend logs and try again.");
         }
       }).catch(function () {
-        if (window.TraceToast) TraceToast.show("Network error during save.", "error");
+        if (window.TraceToast) TraceToast.error("Network Error", "Connection lost while saving changes. Please check your connection and try again.");
       }).finally(function () {
         btnSaveEdit.disabled = false;
         btnSaveEdit.innerHTML = origHtml;
