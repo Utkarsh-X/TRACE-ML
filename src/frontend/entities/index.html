@@ -186,19 +186,59 @@
       object-fit: cover;
     }
 
-    /* ── Modal Animations ─────────────────────────────── */
-    dialog[open] {
-      animation: modal-appear 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    /* ── Modal: hidden by default (browser native), shown as flex column when open ── */
+    dialog#modal-edit-entity {
+      /* When closed, defer to browser default (display:none) */
+    }
+    dialog#modal-edit-entity[open] {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      margin: 0;
+      /* Fixed size — NEVER changes between tabs */
+      width: 660px;
+      max-width: 94vw;
+      height: 82vh;
+      max-height: 720px;
+      min-height: 540px;
+      /* Flex column so tab content fills remaining height */
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    dialog#modal-edit-entity::backdrop {
+      background: rgba(0, 0, 0, 0.65);
+      backdrop-filter: blur(2px);
+      -webkit-backdrop-filter: blur(2px);
+    }
+
+    /* ── Modal Open Animation ──────────────────────────── */
+    dialog#modal-edit-entity[open] {
+      animation: modal-appear 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards;
     }
     @keyframes modal-appear {
       from {
         opacity: 0;
-        transform: scale(0.95) translateY(-20px);
+        transform: translate(-50%, calc(-50% - 16px)) scale(0.96);
       }
       to {
         opacity: 1;
-        transform: scale(1) translateY(0);
+        transform: translate(-50%, -50%) scale(1);
       }
+    }
+
+    /* ── Tab panels fill all remaining modal height ── */
+    #edit-tab-identity,
+    #edit-tab-images {
+      flex: 1;
+      overflow-y: auto;
+      min-height: 0; /* critical for flex children to shrink */
+    }
+    /* Footer is always pinned at bottom */
+    #edit-modal-footer {
+      flex-shrink: 0;
+      margin-top: auto;
     }
 
     /* ── Tab Styling ──────────────────────────────── */
@@ -570,7 +610,7 @@
   </div>
 
   <!-- EDIT ENTITY MODAL — Tabbed: Identity | Images & Portrait -->
-  <dialog id="modal-edit-entity" class="bg-surface text-on-surface border border-outline-variant/20 p-0 m-auto w-full max-w-[720px]" style="box-shadow: 0 24px 48px -12px rgba(0, 0, 0, 0.7); backdrop-filter: blur(3px); border-radius: 2px;">
+  <dialog id="modal-edit-entity" class="bg-surface text-on-surface border border-outline-variant/20 p-0" style="box-shadow: 0 24px 64px -16px rgba(0, 0, 0, 0.85), 0 0 0 1px rgba(255,255,255,0.05); border-radius: 2px;">
 
     <!-- Modal Header — Clean & Aligned with Enrollment -->
     <div class="p-6 border-b border-outline-variant/10 bg-surface flex justify-between items-start gap-4">
@@ -597,7 +637,7 @@
     </div>
 
     <!-- TAB: Identity — Enhanced Form Fields -->
-    <div id="edit-tab-identity" class="p-6 space-y-8 overflow-y-auto max-h-[65vh]">
+    <div id="edit-tab-identity" class="p-6 space-y-8">
       
       <!-- Section 01: Identification -->
       <div class="space-y-4">
@@ -673,7 +713,7 @@
     </div>
 
     <!-- TAB: Images & Portrait — Redesigned -->
-    <div id="edit-tab-images" class="p-6 space-y-8 overflow-y-auto max-h-[65vh] hidden">
+    <div id="edit-tab-images" class="p-6 space-y-8 hidden">
 
       <!-- Section 03: Biometric Data -->
       <div class="space-y-6">

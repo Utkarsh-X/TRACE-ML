@@ -139,6 +139,8 @@
 
                 overlay.innerHTML = 
                     '<div class="dialog-box dialog-box--' + type + '">' +
+                    '  <div class="dialog-scanline"></div>' +
+                    '  <div class="corner-bl"></div><div class="corner-br"></div>' +
                     '  <span class="material-symbols-outlined dialog-icon">' + icon + '</span>' +
                     '  <div class="dialog-title">' + title + '</div>' +
                     '  <div class="dialog-message">' + message + '</div>' +
