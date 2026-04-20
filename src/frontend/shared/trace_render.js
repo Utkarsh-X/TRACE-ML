@@ -301,8 +301,10 @@
     var alerts = entity.recent_alert_count != null ? String(entity.recent_alert_count) : "0";
     var incidents = entity.open_incident_count != null ? String(entity.open_incident_count) : "0";
     var updated = entity.last_seen_at ? fmtDateTime(entity.last_seen_at) : "—";
-    return '<tr class="' + bgClass + ' cursor-pointer">'
-      + '<td class="font-mono ' + idClass + '">' + esc(entity.entity_id) + "</td>"
+    var url = "../entities/index.html?id=" + encodeURIComponent(entity.entity_id || "");
+    var safeEid = esc(entity.entity_id || "");
+    return '<tr class="' + bgClass + ' hover:bg-surface-high transition-colors cursor-pointer" onclick="window.location.href=\'' + url + '\'">'
+      + '<td class="font-mono ' + idClass + '">' + safeEid + "</td>"
       + "<td>" + typeBadge + "</td>"
       + '<td class="text-on-surface">' + esc(entity.name || "—") + "</td>"
       + "<td>" + catBadge + "</td>"
@@ -311,6 +313,17 @@
       + '<td class="font-mono text-on-surface-variant">' + alerts + "</td>"
       + '<td class="font-mono text-on-surface-variant">' + incidents + "</td>"
       + '<td class="font-mono text-outline text-[0.65rem]">' + updated + "</td>"
+      + '<td onclick="event.stopPropagation()" class="text-center" style="width:80px;">'
+      +   '<button'
+      +     ' class="db-quick-delete inline-flex items-center gap-1 px-2 py-1 font-mono text-[0.58rem] uppercase tracking-widest'
+      +     ' text-outline hover:text-error hover:bg-error/10 border border-transparent hover:border-error/20'
+      +     ' transition-all cursor-pointer bg-transparent"'
+      +     ' data-entity-id="' + safeEid + '"'
+      +     ' title="Delete entity"'
+      +   '>'
+      +   '<span class="material-symbols-outlined" style="font-size:13px;pointer-events:none">delete</span>'
+      +   '</button>'
+      + "</td>"
       + "</tr>";
   }
 

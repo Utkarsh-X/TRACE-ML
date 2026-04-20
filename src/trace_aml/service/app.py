@@ -134,6 +134,83 @@ def create_service_app(
                 "X-Entity-Id": entity_id,
             },
         )
+
+    @app.post(
+        "/api/v1/entities/{entity_id}/portrait",
+        tags=["entities"],
+        summary="Upload / replace the portrait for an entity",
+    )
+    async def entity_portrait_upload(entity_id: str, request: Request) -> dict[str, Any]:
+        """Accept a multipart image upload and store it as the entity's portrait.
+
+        This replaces whatever auto-captured portrait exists (or creates one
+        from scratch), giving operators manual control over the face image
+        shown in the UI.  The uploaded image is resized to 256×256 and saved
+        as a JPEG alongside a metadata sidecar with score=1.0 so the
+        auto-capture pipeline will never overwrite a manually-uploaded portrait.
+
+        Returns 404 if the entity does not exist in the database.
+        Returns 422 if no valid image file is found in the multipart body.
+        """
+        import cv2 as _cv2
+        import json
+        import numpy as np
+        from datetime import datetime, timezone
+
+        entity_row = store.get_entity(entity_id)
+        if not entity_row:
+            raise HTTPException(status_code=404, detail="Entity not found")
+
+        content_type = request.headers.get("content-type", "")
+        if "multipart/form-data" not in content_type:
+            raise HTTPException(
+                status_code=422,
+                detail="Request must be multipart/form-data with a 'file' field",
+            )
+
+        form = await request.form()
+        upload = form.get("file")
+        if upload is None or not hasattr(upload, "read"):
+            raise HTTPException(status_code=422, detail="No 'file' field in multipart form")
+
+        content = await upload.read()
+        arr = np.frombuffer(content, dtype=np.uint8)
+        img = _cv2.imdecode(arr, _cv2.IMREAD_COLOR)
+        if img is None:
+            raise HTTPException(
+                status_code=422,
+                detail="Could not decode image — ensure you upload a valid JPEG or PNG file",
+            )
+
+        # Resize to standard portrait dimensions (256×256)
+        portrait_size = 256
+        img_resized = _cv2.resize(img, (portrait_size, portrait_size), interpolation=_cv2.INTER_LANCZOS4)
+
+        # Write to portrait store directory
+        portrait_dir = _portrait_store._dir
+        safe_id = entity_id.replace("/", "_").replace("\\", "_")
+        portrait_path = portrait_dir / f"{safe_id}.jpg"
+        meta_path = portrait_dir / f"{safe_id}.meta.json"
+
+        encode_params = [_cv2.IMWRITE_JPEG_QUALITY, 92]
+        ok, buf = _cv2.imencode(".jpg", img_resized, encode_params)
+        if not ok:
+            raise HTTPException(status_code=500, detail="Failed to encode portrait image")
+
+        portrait_path.write_bytes(buf.tobytes())
+
+        # score=1.0 → auto-capture pipeline will never overwrite this portrait
+        meta_payload = {
+            "score": 1.0,
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+            "source": "manual_upload",
+        }
+        meta_path.write_text(json.dumps(meta_payload, indent=2), encoding="utf-8")
+
+        return {
+            "status": "updated",
+            "entity_id": entity_id,
+        }
     # ────────────────────────────────────────────────────────────────────────
 
 
@@ -378,6 +455,121 @@ def create_service_app(
         except ValueError as exc:
             raise HTTPException(status_code=404, detail=str(exc)) from exc
         return result.model_dump(mode="json")
+
+    class EntityUpdatePayload(BaseModel):
+        name: str | None = None
+        category: str | None = None
+        severity: str | None = None
+        notes: str | None = None
+
+    @app.patch("/api/v1/entities/{entity_id}")
+    def entity_update(entity_id: str, payload: EntityUpdatePayload) -> dict[str, Any]:
+        entity_row = store.get_entity(entity_id)
+        if not entity_row:
+            raise HTTPException(status_code=404, detail="Entity not found")
+        is_known = str(entity_row.get("type", "")) == "known"
+        person_id = str(entity_row.get("source_person_id", "")) or entity_id
+
+        if is_known:
+            current = store.get_person(person_id)
+            if not current:
+                raise HTTPException(status_code=404, detail="Underlying person not found")
+            from trace_aml.core.models import PersonCategory, PersonLifecycleStatus, PersonRecord
+            from datetime import datetime, timezone
+            
+            cat = payload.category if payload.category is not None else current.get("category", "criminal")
+            updated = PersonRecord(
+                person_id=current["person_id"],
+                name=payload.name if payload.name is not None else current.get("name", ""),
+                category=PersonCategory(cat),
+                severity=payload.severity if payload.severity is not None else current.get("severity", ""),
+                dob=current.get("dob", ""),
+                gender=current.get("gender", ""),
+                last_seen_city=current.get("last_seen_city", ""),
+                last_seen_country=current.get("last_seen_country", ""),
+                notes=payload.notes if payload.notes is not None else current.get("notes", ""),
+                lifecycle_state=PersonLifecycleStatus(current.get("lifecycle_state", "draft")),
+                lifecycle_reason=current.get("lifecycle_reason", ""),
+                enrollment_score=float(current.get("enrollment_score", 0.0)),
+                valid_embeddings=int(current.get("valid_embeddings", 0)),
+                created_at=current.get("created_at", datetime.now(timezone.utc).isoformat()),
+                updated_at=datetime.now(timezone.utc).isoformat(),
+            )
+            escaped_id = updated.person_id.replace("'", "''")
+            store.persons.delete(f"person_id = '{escaped_id}'")
+            store.persons.add([store._filtered_row(store.persons, updated.model_dump())])
+            store.set_person_state(
+                person_id=updated.person_id,
+                lifecycle_state=updated.lifecycle_state,
+                lifecycle_reason=updated.lifecycle_reason,
+                enrollment_score=updated.enrollment_score,
+                valid_embeddings=updated.valid_embeddings,
+                valid_images=int(current.get("valid_images", 0)),
+                total_images=int(current.get("total_images", 0)),
+            )
+            return {"status": "updated", "entity_id": entity_id}
+        else:
+            if payload.name:
+                from trace_aml.core.ids import next_person_id
+                from trace_aml.core.models import PersonCategory, PersonLifecycleStatus, PersonRecord, EmbeddingRecord
+                from trace_aml.pipeline.collect import person_image_dir
+                import uuid
+                from datetime import datetime, timezone
+                
+                existing_ids = [p["person_id"] for p in store.list_persons()]
+                cat = payload.category or "criminal"
+                new_person_id = next_person_id(PersonCategory(cat), existing_ids)
+                now = datetime.now(timezone.utc).isoformat()
+                
+                record = PersonRecord(
+                    person_id=new_person_id,
+                    name=payload.name,
+                    category=PersonCategory(cat),
+                    severity=payload.severity or "",
+                    notes=payload.notes or "",
+                    lifecycle_state=PersonLifecycleStatus.active,
+                    lifecycle_reason="promoted_from_unknown",
+                    created_at=now,
+                    updated_at=now,
+                )
+                store.add_or_update_person(record)
+                person_image_dir(settings, new_person_id)
+                
+                profiles = store._query_rows(store.unknown_profiles, where=f"entity_id = '{store._escape(entity_id)}'")
+                records = []
+                for p in profiles:
+                    records.append(EmbeddingRecord(
+                        embedding_id=str(uuid.uuid4()),
+                        person_id=new_person_id,
+                        source_path="",
+                        quality_score=float(p.get("quality_score", 0.0)),
+                        quality_flags=[],
+                        embedding=[float(v) for v in p.get("embedding", [])]
+                    ))
+                store.replace_person_embeddings(new_person_id, records)
+                
+                store.merge_entities(entity_id, new_person_id)
+                return {"status": "promoted", "old_entity_id": entity_id, "new_entity_id": new_person_id}
+            else:
+                raise HTTPException(status_code=400, detail="Cannot edit unknown entity without providing a name to promote it.")
+
+    @app.delete("/api/v1/entities/{entity_id}")
+    def entity_delete(entity_id: str) -> dict[str, Any]:
+        entity_row = store.get_entity(entity_id)
+        if not entity_row:
+            raise HTTPException(status_code=404, detail="Entity not found")
+        is_known = str(entity_row.get("type", "")) == "known"
+        if is_known:
+            person_id = str(entity_row.get("source_person_id", "")) or entity_id
+            store.delete_person(person_id, delete_detections=True)
+            import shutil
+            from trace_aml.pipeline.collect import person_image_dir
+            img_dir = person_image_dir(settings, person_id)
+            if img_dir.exists():
+                shutil.rmtree(img_dir, ignore_errors=True)
+        else:
+            store.delete_unknown_entity(entity_id)
+        return {"status": "deleted", "entity_id": entity_id}
 
     class EntityMergePayload(BaseModel):
         target_entity_id: str
