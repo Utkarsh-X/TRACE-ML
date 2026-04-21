@@ -83,6 +83,7 @@ class RecognitionSession:
         self.last_event_at: dict[str, float] = {}  # 1-second event/rules throttle
         self.screenshot_dir = Path(settings.store.screenshots_dir)
         self.screenshot_dir.mkdir(parents=True, exist_ok=True)
+        self._last_screenshot_ts: dict[str, float] = {}   # per-entity 5s throttle
         self.portrait_store = PortraitStore(settings)
         self.event_feed: deque[str] = deque(maxlen=8)
         self.recent_confidences: deque[float] = deque(maxlen=8)
@@ -333,6 +334,53 @@ class RecognitionSession:
             return True
         return False
 
+    @staticmethod
+    def _save_screenshot_crop(
+        frame: "np.ndarray",
+        bbox: tuple,
+        path: "Path",
+        padding_ratio: float = 0.50,
+        max_size: int = 320,
+    ) -> None:
+        """Save a face-context crop of *frame* to *path* as JPEG-80.
+
+        The crop is the face bounding box expanded by *padding_ratio* on each side,
+        clamped to frame bounds, then downscaled so the longest edge ≤ *max_size* px.
+        This reduces per-image storage from ~80 KB (full JPEG-95 frame) to ~12 KB.
+
+        Falls back to saving the full frame at JPEG-60 if any error occurs.
+        """
+        try:
+            x1, y1, x2, y2 = int(bbox[0]), int(bbox[1]), int(bbox[2]), int(bbox[3])
+            h, w = frame.shape[:2]
+            # Expand bbox by padding_ratio relative to face dimensions
+            fw, fh = max(1, x2 - x1), max(1, y2 - y1)
+            px, py = int(fw * padding_ratio), int(fh * padding_ratio)
+            cx1 = max(0, x1 - px)
+            cy1 = max(0, y1 - py)
+            cx2 = min(w, x2 + px)
+            cy2 = min(h, y2 + py)
+            crop = frame[cy1:cy2, cx1:cx2]
+            if crop.size == 0:
+                raise ValueError("empty crop")
+            # Scale down to max_size on the longest side
+            ch, cw = crop.shape[:2]
+            scale = min(1.0, max_size / max(ch, cw, 1))
+            if scale < 1.0:
+                crop = cv2.resize(
+                    crop, (int(cw * scale), int(ch * scale)),
+                    interpolation=cv2.INTER_AREA,
+                )
+            cv2.imwrite(str(path), crop, [cv2.IMWRITE_JPEG_QUALITY, 80])
+        except Exception:
+            # Fallback: full frame at reduced quality
+            try:
+                cv2.imwrite(str(path), frame, [cv2.IMWRITE_JPEG_QUALITY, 60])
+            except Exception:
+                pass
+
+
+
     # ── Async DB writer ──────────────────────────────────────────────────────
 
     def _start_writer(self) -> None:
@@ -498,7 +546,18 @@ class RecognitionSession:
             if self._should_log(person_key):
                 detection_id = new_detection_id()
                 screenshot_path = self.screenshot_dir / f"{detection_id}.jpg"
-                cv2.imwrite(str(screenshot_path), frame)
+                # Save a face-context crop (bbox + 50% padding, max 320px, JPEG-80)
+                # instead of the full camera frame to save storage.
+                ss_key = match.person_id or match.track_id or "unknown"
+                import time as _time
+                _now_ts = _time.monotonic()
+                if (_now_ts - self._last_screenshot_ts.get(ss_key, 0)) >= 5.0:
+                    self._last_screenshot_ts[ss_key] = _now_ts
+                    self._save_screenshot_crop(frame, match.bbox, screenshot_path)
+                else:
+                    # Throttled — save anyway but at lower quality (full frame JPEG-60)
+                    import cv2 as _cv2
+                    _cv2.imwrite(str(screenshot_path), frame, [_cv2.IMWRITE_JPEG_QUALITY, 60])
 
                 event = DetectionEvent(
                     detection_id=detection_id,
