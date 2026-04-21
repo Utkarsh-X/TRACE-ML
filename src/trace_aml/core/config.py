@@ -212,7 +212,7 @@ class RulesSettings(BaseModel):
 class ActionPolicyBySeverity(BaseModel):
     low: list[str] = Field(default_factory=list)
     medium: list[str] = Field(default_factory=lambda: ["log"])
-    high: list[str] = Field(default_factory=lambda: ["log", "email", "alarm"])
+    high: list[str] = Field(default_factory=lambda: ["log", "pdf_report", "email", "whatsapp"])
 
 
 class ActionsSettings(BaseModel):
@@ -234,6 +234,52 @@ class StoreSettings(BaseModel):
     screenshots_dir: str = "data/screenshots"
     exports_dir: str = "data/exports"
     portraits_dir: str = "data/portraits"
+
+
+# ── Notification Channel Settings ──────────────────────────────────────────────
+
+class EmailSettings(BaseModel):
+    """SMTP email delivery configuration."""
+    enabled: bool = False
+    smtp_host: str = "smtp.gmail.com"
+    smtp_port: int = 587              # 587 = STARTTLS, 465 = SSL
+    smtp_user: str = ""
+    smtp_password: str = ""           # Insecure fallback. Prefer env var TRACE_AML_SMTP_PASSWORD
+    sender_address: str = ""
+    sender_name: str = "TRACE-AML Security"
+    recipient_addresses: list[str] = Field(default_factory=list)
+    use_tls: bool = True
+    attach_pdf: bool = True           # Attach generated PDF report to email
+
+
+class WhatsAppSettings(BaseModel):
+    """Evolution API WhatsApp delivery configuration."""
+    enabled: bool = False
+    mode: str = "evolution_api"       # Only supported mode in v1
+    base_url: str = "http://localhost:8081"  # Evolution API server URL
+    api_key: str = ""                 # Insecure fallback. Prefer env var TRACE_AML_WA_API_KEY
+    instance: str = ""               # WhatsApp instance name (e.g. yournumber@c.us)
+    recipient_numbers: list[str] = Field(default_factory=list)  # E.164 format
+    send_pdf: bool = True             # Send PDF report as WhatsApp document
+    send_text: bool = True            # Send alert caption text
+
+
+class PdfReportSettings(BaseModel):
+    """PDF/HTML incident report generation configuration."""
+    enabled: bool = True
+    library: str = "fpdf2"            # fpdf2 = pure Python, no OS deps
+    output_dir: str = "data/exports"
+    include_screenshots: bool = True
+    include_entity_portrait: bool = True
+    max_detection_rows: int = 20
+    max_alert_rows: int = 50
+
+
+class NotificationsSettings(BaseModel):
+    """Container for all notification channel configurations."""
+    email: EmailSettings = Field(default_factory=EmailSettings)
+    whatsapp: WhatsAppSettings = Field(default_factory=WhatsAppSettings)
+    pdf_report: PdfReportSettings = Field(default_factory=PdfReportSettings)
 
 
 class LoggingSettings(BaseModel):
@@ -266,6 +312,7 @@ class Settings(BaseSettings):
     temporal: TemporalSettings = Field(default_factory=TemporalSettings)
     rules: RulesSettings = Field(default_factory=RulesSettings)
     actions: ActionsSettings = Field(default_factory=ActionsSettings)
+    notifications: NotificationsSettings = Field(default_factory=NotificationsSettings)
     store: StoreSettings = Field(default_factory=StoreSettings)
     logging: LoggingSettings = Field(default_factory=LoggingSettings)
     liveness: LivenessSettings = Field(default_factory=LivenessSettings)

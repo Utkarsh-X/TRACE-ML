@@ -1,0 +1,36 @@
+# Evolution API — WhatsApp sidecar for TRACE-AML
+#
+# Quick setup:
+#   1. Set TRACE_AML_WA_API_KEY in your .env file
+#   2. docker compose -f docker-compose.evolution.yml up -d
+#   3. Open http://localhost:8081 in a browser
+#   4. Create an instance → scan the QR code with your WhatsApp phone
+#   5. In config.demo.yaml set:
+#        notifications.whatsapp.enabled: true
+#        notifications.whatsapp.instance: yournumber@c.us
+#   6. Test: POST http://localhost:8080/api/v1/notifications/test/whatsapp
+#
+# Notes:
+#   - Port 8081 avoids conflict with TRACE-AML running on 8080
+#   - For non-Docker install: git clone + npm run start:prod (uses same port)
+#   - Ban risk: medium usage (forensic alerts) is generally safe
+
+version: '3.8'
+
+services:
+  evolution:
+    image: evolutionapi/evolution-api:latest
+    container_name: trace-aml-evolution-api
+    restart: unless-stopped
+    ports:
+      - "8081:8080"       # Host 8081 → container 8080 (avoids conflict with TRACE-AML)
+    volumes:
+      - evolution_store:/app/store
+    environment:
+      - AUTHENTICATION_API_KEY=${TRACE_AML_WA_API_KEY:-change-me-in-dot-env}
+      - DATABASE_ENABLED=false     # File-based storage is sufficient for medium use
+      - LOG_LEVEL=error            # Reduce noise; change to info for debugging
+
+volumes:
+  evolution_store:
+    name: trace_aml_evolution_store

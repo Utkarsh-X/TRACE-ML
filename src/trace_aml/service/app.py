@@ -2,9 +2,12 @@
 
 import json
 from contextlib import asynccontextmanager
+from pathlib import Path
 from queue import Empty, Full, Queue
 from typing import Any
 
+from fastapi import Query, Request
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
 from trace_aml.core.config import Settings
@@ -262,8 +265,61 @@ def create_service_app(
                 settings.actions.enabled = bool(act["enabled"])
             if "cooldown_sec" in act:
                 settings.actions.cooldown_sec = int(act["cooldown_sec"])
+            # Interactive policy matrix — update on_create / on_update per severity
+            if "on_create" in act:
+                for sev, actions in act["on_create"].items():
+                    if hasattr(settings.actions.on_create, sev):
+                        setattr(settings.actions.on_create, sev, list(actions))
+            if "on_update" in act:
+                for sev, actions in act["on_update"].items():
+                    if hasattr(settings.actions.on_update, sev):
+                        setattr(settings.actions.on_update, sev, list(actions))
 
-        return settings.model_dump(mode="json")
+        if "notifications" in payload:
+            notif = payload["notifications"]
+            # Email channel
+            if "email" in notif:
+                em = notif["email"]
+                email_cfg = settings.notifications.email
+                for k in ("enabled", "smtp_host", "smtp_port", "smtp_user",
+                          "sender_address", "sender_name", "use_tls", "attach_pdf",
+                          "recipient_addresses"):
+                    if k in em:
+                        setattr(email_cfg, k, em[k])
+                # Password only accepted from payload if not overridden by env var
+                import os
+                if "smtp_password" in em and not os.getenv("TRACE_AML_SMTP_PASSWORD"):
+                    email_cfg.smtp_password = em["smtp_password"]
+            # WhatsApp channel
+            if "whatsapp" in notif:
+                wa = notif["whatsapp"]
+                wa_cfg = settings.notifications.whatsapp
+                for k in ("enabled", "base_url", "instance", "send_pdf",
+                          "send_text", "recipient_numbers"):
+                    if k in wa:
+                        setattr(wa_cfg, k, wa[k])
+                import os
+                if "api_key" in wa and not os.getenv("TRACE_AML_WA_API_KEY"):
+                    wa_cfg.api_key = wa["api_key"]
+            # PDF reports
+            if "pdf_report" in notif:
+                pdf = notif["pdf_report"]
+                pdf_cfg = settings.notifications.pdf_report
+                for k in ("enabled", "include_screenshots", "include_entity_portrait",
+                          "max_detection_rows", "max_alert_rows"):
+                    if k in pdf:
+                        setattr(pdf_cfg, k, pdf[k])
+
+        # Mask secrets before returning
+        cfg_dump = settings.model_dump(mode="json")
+        cfg_dump.get("notifications", {}).get("email", {}).pop("smtp_password", None)
+        cfg_dump.get("notifications", {}).get("whatsapp", {}).pop("api_key", None)
+        return cfg_dump
+
+    @app.patch("/api/v1/config/notifications")
+    def patch_notifications(payload: dict[str, Any]) -> dict[str, Any]:
+        """Shorthand for patching only the notifications block."""
+        return patch_config({"notifications": payload})
 
     # ── Camera Control Endpoints (Frontend-driven) ────────────────────────────
     @app.get("/api/v1/camera/status")
@@ -735,6 +791,34 @@ def create_service_app(
         rows = read_models.get_recent_alerts(limit=limit)
         return [item.model_dump(mode="json") for item in rows]
 
+    @app.get("/api/v1/alerts")
+    def list_alerts(
+        limit: int = Query(default=100, ge=1, le=5000),
+        entity_id: str = Query(default=""),
+        severity: str = Query(default=""),
+        acknowledged: str = Query(default=""),  # "true" | "false" | "" = all
+    ) -> list[dict[str, Any]]:
+        """List alerts with optional filtering by entity, severity, or acknowledged state."""
+        rows = store.list_alerts(
+            limit=limit,
+            entity_id=entity_id or None,
+            severity=severity or None,
+        )
+        if acknowledged == "true":
+            rows = [r for r in rows if r.get("acknowledged")]
+        elif acknowledged == "false":
+            rows = [r for r in rows if not r.get("acknowledged")]
+        return rows
+
+    @app.patch("/api/v1/alerts/{alert_id}/acknowledge")
+    def acknowledge_alert(alert_id: str) -> dict[str, Any]:
+        """Mark an alert as acknowledged."""
+        found = store.acknowledge_alert(alert_id)
+        if not found:
+            from fastapi import HTTPException
+            raise HTTPException(status_code=404, detail=f"Alert {alert_id} not found")
+        return {"status": "acknowledged", "alert_id": alert_id}
+
     @app.get("/api/v1/actions")
     def actions(
         incident_id: str = Query(default=""),
@@ -742,6 +826,148 @@ def create_service_app(
     ) -> list[dict[str, Any]]:
         rows = read_models.list_actions(limit=limit, incident_id=incident_id or None)
         return [item.model_dump(mode="json") for item in rows]
+
+    # ── Report Endpoints ──────────────────────────────────────────────────────
+
+    @app.post("/api/v1/incidents/{incident_id}/report")
+    def generate_incident_report(incident_id: str) -> dict[str, Any]:
+        """Generate a PDF+HTML incident report on demand."""
+        from trace_aml.actions.pdf_handler import PdfReportHandler
+        from trace_aml.core.models import ActionTrigger
+
+        # Load incident
+        inc_row = store.get_incident(incident_id)
+        if inc_row is None:
+            from fastapi import HTTPException
+            raise HTTPException(status_code=404, detail=f"Incident {incident_id} not found")
+
+        from trace_aml.core.models import IncidentRecord, IncidentStatus, AlertSeverity
+        try:
+            incident = IncidentRecord(**inc_row)
+        except Exception:
+            incident = IncidentRecord(
+                incident_id=inc_row.get("incident_id", incident_id),
+                entity_id=inc_row.get("entity_id", ""),
+            )
+
+        handler = PdfReportHandler(settings, store)
+        context: dict[str, Any] = {}
+        ok, reason = handler.execute(incident, ActionTrigger.on_create, context)
+
+        if not ok:
+            from fastapi import HTTPException
+            raise HTTPException(status_code=500, detail=reason)
+
+        pdf_path  = context.get("pdf_report_path", "")
+        html_path = context.get("html_report_path", "")
+
+        # Build URL-accessible path for the HTML companion
+        html_url = ""
+        if html_path:
+            try:
+                exports_base = Path(settings.notifications.pdf_report.output_dir).resolve()
+                rel = Path(html_path).relative_to(exports_base)
+                html_url = f"/ui/exports/{rel.as_posix()}"
+            except Exception:
+                html_url = ""
+
+        return {
+            "status": "generated",
+            "incident_id": incident_id,
+            "pdf_path": pdf_path,
+            "html_url": html_url,
+            "reason": reason,
+        }
+
+    @app.get("/api/v1/incidents/{incident_id}/reports")
+    def list_incident_reports(incident_id: str) -> list[dict[str, Any]]:
+        """List all previously generated reports for this incident."""
+        exports_dir = Path(settings.notifications.pdf_report.output_dir).resolve()
+        results = []
+        if exports_dir.is_dir():
+            for f in sorted(exports_dir.rglob(f"*{incident_id[-8:]}*.pdf"), reverse=True):
+                try:
+                    rel = f.relative_to(exports_dir)
+                    results.append({
+                        "filename": f.name,
+                        "pdf_path": str(f),
+                        "html_url": f"/ui/exports/{rel.with_suffix('.html').as_posix()}",
+                        "size_bytes": f.stat().st_size,
+                        "generated_at": f.stat().st_mtime,
+                    })
+                except Exception:
+                    continue
+        return results
+
+    @app.get("/api/v1/entities/{entity_id}/reports")
+    def list_entity_reports(entity_id: str) -> list[dict[str, Any]]:
+        """List all previously generated reports for an entity across incidents."""
+        exports_dir = Path(settings.notifications.pdf_report.output_dir).resolve()
+        results = []
+        if exports_dir.is_dir():
+            for f in sorted(exports_dir.rglob(f"{entity_id}*.pdf"), reverse=True):
+                try:
+                    rel = f.relative_to(exports_dir)
+                    results.append({
+                        "filename": f.name,
+                        "pdf_path": str(f),
+                        "html_url": f"/ui/exports/{rel.with_suffix('.html').as_posix()}",
+                        "size_bytes": f.stat().st_size,
+                        "generated_at": f.stat().st_mtime,
+                    })
+                except Exception:
+                    continue
+        return results
+
+    # ── Notification Test Endpoints ────────────────────────────────────────────
+
+    @app.post("/api/v1/notifications/test/email")
+    def test_email() -> dict[str, Any]:
+        """Send a test email to verify SMTP configuration."""
+        if not settings.notifications.email.enabled:
+            return {"status": "skipped", "reason": "email_disabled"}
+        if not settings.notifications.email.smtp_host:
+            return {"status": "failed", "reason": "email_no_smtp_host"}
+        if not settings.notifications.email.recipient_addresses:
+            return {"status": "failed", "reason": "email_no_recipients"}
+
+        from trace_aml.actions.email_handler import EmailHandler
+        from trace_aml.core.models import (
+            IncidentRecord, IncidentStatus, AlertSeverity, ActionTrigger
+        )
+        test_incident = IncidentRecord(
+            incident_id="TEST-00000000",
+            entity_id="TEST-ENTITY",
+            status=IncidentStatus.open,
+            severity=AlertSeverity.high,
+            alert_count=1,
+            summary="This is a test notification from TRACE-AML. If you received this, email alerts are working correctly.",
+        )
+        handler = EmailHandler(settings, store)
+        ok, reason = handler.execute(test_incident, ActionTrigger.on_create, {})
+        return {"status": "queued" if ok else "failed", "reason": reason}
+
+    @app.post("/api/v1/notifications/test/whatsapp")
+    def test_whatsapp() -> dict[str, Any]:
+        """Send a test WhatsApp message to verify Evolution API configuration."""
+        if not settings.notifications.whatsapp.enabled:
+            return {"status": "skipped", "reason": "whatsapp_disabled"}
+
+        from trace_aml.actions.whatsapp_handler import WhatsAppHandler
+        from trace_aml.core.models import (
+            IncidentRecord, IncidentStatus, AlertSeverity, ActionTrigger
+        )
+        test_incident = IncidentRecord(
+            incident_id="TEST-00000000",
+            entity_id="TEST-ENTITY",
+            status=IncidentStatus.open,
+            severity=AlertSeverity.high,
+            alert_count=1,
+            summary="This is a test notification from TRACE-AML. If you received this, WhatsApp alerts are working correctly.",
+        )
+        handler = WhatsAppHandler(settings, store)
+        ok, reason = handler.execute(test_incident, ActionTrigger.on_create, {})
+        return {"status": "queued" if ok else "failed", "reason": reason}
 
     @app.get("/api/v1/events/stream")
     async def stream_events(
@@ -807,5 +1033,15 @@ def create_service_app(
             return RedirectResponse(url="/ui/live_ops/index.html")
 
         app.mount("/ui", StaticFiles(directory=str(_frontend_dir), html=True), name="frontend")
+
+    # ── Exports static mount ──
+    # Serve generated PDF/HTML reports from data/exports/ at /ui/exports/
+    _exports_dir = Path(settings.notifications.pdf_report.output_dir).resolve()
+    _exports_dir.mkdir(parents=True, exist_ok=True)
+    app.mount(
+        "/ui/exports",
+        StaticFiles(directory=str(_exports_dir), html=False),
+        name="exports",
+    )
 
     return app

@@ -61,9 +61,11 @@ class IncidentStatus(StrEnum):
 
 
 class ActionType(StrEnum):
-    log = "log"
-    email = "email"
-    alarm = "alarm"
+    log        = "log"
+    email      = "email"
+    whatsapp   = "whatsapp"    # Primary messaging channel (Evolution API)
+    pdf_report = "pdf_report"  # PDF/HTML incident report generation
+    alarm      = "alarm"       # Deprecated — kept as backward-compat alias for whatsapp
 
 
 class ActionTrigger(StrEnum):
@@ -220,6 +222,8 @@ class AlertRecord(BaseModel):
     first_seen_at: str = Field(default_factory=utc_now_iso)
     last_seen_at: str = Field(default_factory=utc_now_iso)
     event_count: int = 1
+    acknowledged: bool = False
+    acknowledged_at: str = ""
 
 
 class IncidentRecord(BaseModel):

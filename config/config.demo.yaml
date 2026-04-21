@@ -118,12 +118,53 @@ actions:
   on_create:
     low: []
     medium: [log]
-    high: [log, email, alarm]
+    # pdf_report runs first so email/whatsapp can attach the generated PDF
+    high: [log, pdf_report, email, whatsapp]
   on_update:
     low: []
     medium: [log]
-    high: [log]
+    high: [log, pdf_report]
   cooldown_sec: 20
+
+# ── Notification Channels ─────────────────────────────────────────────────────
+# Credentials for sensitive fields (smtp_password, api_key) should be set via
+# environment variables:
+#   TRACE_AML_SMTP_PASSWORD=your-password
+#   TRACE_AML_WA_API_KEY=your-evolution-api-key
+# Never commit real credentials to this file.
+notifications:
+
+  email:
+    enabled: false
+    smtp_host: "smtp.gmail.com"
+    smtp_port: 587          # 587 = STARTTLS | 465 = SSL
+    smtp_user: ""           # e.g. alerts@your-org.com
+    smtp_password: ""       # Use env var TRACE_AML_SMTP_PASSWORD instead
+    sender_address: ""
+    sender_name: "TRACE-AML Security"
+    recipient_addresses: []
+    use_tls: true
+    attach_pdf: true
+
+  whatsapp:
+    enabled: false
+    mode: "evolution_api"         # Self-hosted Evolution API (REST over Baileys)
+    base_url: "http://localhost:8081"  # Evolution API on port 8081 (TRACE-AML uses 8080)
+    api_key: ""                   # Use env var TRACE_AML_WA_API_KEY instead
+    instance: ""                  # Your WhatsApp number@c.us instance name
+    recipient_numbers: []         # E.164 format, e.g. "+919876543210"
+    send_pdf: true
+    send_text: true
+
+  pdf_report:
+    enabled: true
+    library: "fpdf2"
+    output_dir: "data/exports"
+    include_screenshots: true
+    include_entity_portrait: true
+    max_detection_rows: 20
+    max_alert_rows: 50
+
 
 # ── Unknown Entity Deduplication ──────────────────────────────────────────────
 # Background clusterer that retroactively merges duplicate UNK entities.

@@ -244,8 +244,11 @@ class VectorStore:
                     pa.field("first_seen_at", pa.string()),
                     pa.field("last_seen_at", pa.string()),
                     pa.field("event_count", pa.int32()),
+                    pa.field("acknowledged", pa.bool_()),
+                    pa.field("acknowledged_at", pa.string()),
                 ]
             ),
+            migration_defaults={"acknowledged": False, "acknowledged_at": ""},
         )
 
         self.unknown_profiles = self._open_or_create(
@@ -929,7 +932,25 @@ class VectorStore:
         payload["type"] = str(payload["type"])
         payload["severity"] = str(payload["severity"])
         payload["event_count"] = int(payload.get("event_count", 1))
+        payload["acknowledged"] = bool(payload.get("acknowledged", False))
+        payload["acknowledged_at"] = str(payload.get("acknowledged_at", ""))
         self.alerts.add([self._filtered_row(self.alerts, payload)])
+
+    def acknowledge_alert(self, alert_id: str) -> bool:
+        """Mark an alert as acknowledged. Returns True if found and updated."""
+        escaped = self._escape(alert_id)
+        rows = self._query_rows(self.alerts, where=f"alert_id = '{escaped}'", limit=1)
+        if not rows:
+            return False
+        row = rows[0]
+        now = utc_now_iso()
+        # Delete and re-insert with updated fields (LanceDB update pattern)
+        self.alerts.delete(f"alert_id = '{escaped}'")
+        updated = dict(row)
+        updated["acknowledged"] = True
+        updated["acknowledged_at"] = now
+        self.alerts.add([self._filtered_row(self.alerts, updated)])
+        return True
 
     def list_alerts(
         self,

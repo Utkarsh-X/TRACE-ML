@@ -336,20 +336,65 @@
       root.innerHTML = '<div class="text-outline font-mono text-[0.62rem] py-3 text-center">No alerts linked</div>';
       return;
     }
+
+    var TYPE_ICONS = {
+      'REAPPEARANCE':       '👤',
+      'UNKNOWN_RECURRENCE': '❓',
+      'INSTABILITY':        '⚡',
+    };
+    var TYPE_BORDER = {
+      'REAPPEARANCE':       'border-l-amber-400/60',
+      'UNKNOWN_RECURRENCE': 'border-l-rose-500/60',
+      'INSTABILITY':        'border-l-orange-400/60',
+    };
+
     root.innerHTML = alerts.slice(0, 8).map(function (a) {
-      var sev    = String(a.severity || "low");
-      var type   = TraceClient.escapeHtml(String(a.type || "ALERT").toUpperCase());
-      var reason = TraceClient.escapeHtml(a.reason || "");
+      var sev    = String(a.severity || 'low');
+      var type   = String(a.type || 'ALERT').toUpperCase();
+      var reason = TraceClient.escapeHtml(a.reason || '');
       var time   = TraceClient.escapeHtml(TraceClient.formatTime(a.timestamp_utc));
-      var cnt    = a.event_count ? " · " + a.event_count + " events" : "";
-      return '<div class="alert-row alert-row--' + sev + '">'
+      var cnt    = a.event_count ? ' · ' + a.event_count + ' events' : '';
+      var icon   = TYPE_ICONS[type] || '🔔';
+      var border = TYPE_BORDER[type] || 'border-l-outline/30';
+      var alertId = TraceClient.escapeHtml(String(a.alert_id || ''));
+      var isAck  = a.acknowledged;
+
+      return '<div class="alert-row alert-row--' + sev + ' border-l-2 ' + border
+        + (isAck ? ' opacity-40' : '') + '" data-alert-id="' + alertId + '">'
         + '<div class="flex items-center justify-between mb-0.5">'
-        +   '<span class="font-mono text-[0.6rem] font-medium text-on-surface">' + type + '</span>'
-        +   '<span class="font-mono text-[0.55rem] text-outline">' + time + TraceClient.escapeHtml(cnt) + '</span>'
+        +   '<span class="font-mono text-[0.6rem] font-medium text-on-surface">' + icon + ' ' + TraceClient.escapeHtml(type) + '</span>'
+        +   '<div class="flex items-center gap-2">'
+        +     '<span class="font-mono text-[0.55rem] text-outline">' + time + TraceClient.escapeHtml(cnt) + '</span>'
+        +     (isAck
+                ? '<span class="font-mono text-[0.5rem] text-outline/50">✓ ack</span>'
+                : '<button class="btn-ack-alert font-mono text-[0.5rem] text-outline/60 hover:text-primary cursor-pointer border border-outline-variant/20 px-1.5 py-0.5 transition-colors" data-id="' + alertId + '">Ack</button>'
+              )
+        +   '</div>'
         + '</div>'
         + '<p class="text-[0.68rem] text-on-surface-variant leading-snug">' + reason + '</p>'
         + '</div>';
-    }).join("");
+    }).join('');
+
+    // Wire acknowledge buttons
+    root.querySelectorAll('.btn-ack-alert').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        var aid = btn.getAttribute('data-id');
+        if (!aid) return;
+        fetch('/api/v1/alerts/' + encodeURIComponent(aid) + '/acknowledge', { method: 'PATCH' })
+          .then(function(r) { return r.json(); })
+          .then(function(data) {
+            if (data.status === 'acknowledged') {
+              var row = root.querySelector('[data-alert-id="' + aid + '"]');
+              if (row) row.classList.add('opacity-40');
+              btn.replaceWith(document.createTextNode('✓ ack'));
+              if (window.TraceToast) TraceToast.success('Alert Acknowledged', '');
+            }
+          })
+          .catch(function() {
+            if (window.TraceToast) TraceToast.error('Acknowledge Failed', 'Check backend.');
+          });
+      });
+    });
   }
 
   /* ── Event Grouping (Suppression) ──────────────── */
@@ -535,20 +580,83 @@
       root.innerHTML = '<div class="text-outline font-mono text-[0.62rem] py-3 text-center">No actions recorded</div>';
       return;
     }
+
+    var ACTION_ICONS = {
+      'LOG':        '📋',
+      'EMAIL':      '📧',
+      'WHATSAPP':   '💬',
+      'PDF_REPORT': '📄',
+      'ALARM':      '⚠️',
+    };
+
     root.innerHTML = actions.slice(0, 10).map(function (a) {
-      var type  = TraceClient.escapeHtml(String(a.action_type || a.type || "LOG").toUpperCase());
-      var trig  = TraceClient.escapeHtml(a.trigger || "");
-      var time  = TraceClient.escapeHtml(TraceClient.formatTime(a.timestamp_utc));
-      var id    = TraceClient.escapeHtml(String(a.action_id || "").slice(-6));
-      return '<div class="bg-surface-lowest border-l border-outline-variant/20 pl-2.5 pr-2 py-2 mb-1.5">'
+      var rawType = String(a.action_type || a.type || 'LOG').toUpperCase();
+      var type    = TraceClient.escapeHtml(rawType);
+      var trig    = TraceClient.escapeHtml(a.trigger || '');
+      var time    = TraceClient.escapeHtml(TraceClient.formatTime(a.timestamp_utc));
+      var id      = TraceClient.escapeHtml(String(a.action_id || '').slice(-6));
+      var status  = String(a.status || 'success').toLowerCase();
+      var icon    = ACTION_ICONS[rawType] || '⚙️';
+      var statusColor = status === 'success' ? 'text-success' : 'text-error';
+      var statusDot   = status === 'success'
+        ? '<span class="w-1.5 h-1.5 rounded-full bg-success inline-block mr-1"></span>'
+        : '<span class="w-1.5 h-1.5 rounded-full bg-error inline-block mr-1"></span>';
+
+      // Pull PDF path from context if present
+      var ctx = a.context || {};
+      var pdfPath   = typeof ctx === 'string' ? '' : (ctx.pdf_report_path || '');
+      var htmlUrl   = '';
+      if (pdfPath) {
+        // Derive html_url from pdf path to the exported file
+        htmlUrl = pdfPath.replace(/\.pdf$/, '.html');
+      }
+      var reportLink = '';
+      if (rawType === 'PDF_REPORT' && status === 'success' && a.reason && a.reason.indexOf('pdf_generated:') === 0) {
+        var fname = a.reason.replace('pdf_generated:', '');
+        // Try to build the /ui/exports URL
+        reportLink = '<a href="#" class="pdf-report-link font-mono text-[0.52rem] text-primary hover:underline mt-0.5 block" '
+          + 'data-pdf-name="' + TraceClient.escapeHtml(fname) + '">📄 View Report</a>';
+      }
+
+      return '<div class="bg-surface-lowest border-l-2 ' + (status === 'success' ? 'border-l-success/40' : 'border-l-error/40') + ' pl-2.5 pr-2 py-2 mb-1.5">'
         + '<div class="flex items-center justify-between">'
-        +   '<span class="font-mono text-[0.6rem] text-on-surface font-medium">' + type + '</span>'
-        +   '<span class="font-mono text-[0.55rem] text-outline">' + time + '</span>'
+        +   '<span class="font-mono text-[0.6rem] font-medium text-on-surface">' + icon + ' ' + type + '</span>'
+        +   '<div class="flex items-center gap-1.5">'
+        +     statusDot
+        +     '<span class="font-mono text-[0.55rem] ' + statusColor + '">' + status.toUpperCase() + '</span>'
+        +     '<span class="font-mono text-[0.5rem] text-outline ml-1">' + time + '</span>'
+        +   '</div>'
         + '</div>'
         + (trig ? '<p class="font-mono text-[0.58rem] text-on-surface-variant mt-0.5">' + trig + '</p>' : '')
         + '<span class="font-mono text-[0.52rem] text-outline block mt-0.5">' + id + '</span>'
+        + reportLink
         + '</div>';
-    }).join("");
+    }).join('');
+
+    // Wire report links → open companion HTML in new tab
+    root.querySelectorAll('.pdf-report-link').forEach(function(link) {
+      link.addEventListener('click', function(e) {
+        e.preventDefault();
+        var fname = link.getAttribute('data-pdf-name');
+        if (!fname) return;
+        // Scan /api/v1/incidents/{id}/reports to get html_url
+        var incId = _currentId || '';
+        if (!incId) return;
+        fetch('/api/v1/incidents/' + encodeURIComponent(incId) + '/reports')
+          .then(function(r) { return r.json(); })
+          .then(function(list) {
+            var match = list.find(function(r) { return r.filename === fname || r.filename === fname + '.pdf'; });
+            if (match && match.html_url) {
+              window.open(match.html_url, '_blank');
+            } else if (list && list[0] && list[0].html_url) {
+              window.open(list[0].html_url, '_blank');
+            } else {
+              if (window.TraceToast) TraceToast.warning('Report Not Found', 'File may have been deleted.');
+            }
+          })
+          .catch(function() { if (window.TraceToast) TraceToast.error('Error', 'Could not load report list.'); });
+      });
+    });
   }
 
   function syncControls(inc) {
@@ -732,6 +840,44 @@
           setText("ctrl-status", "Failed — offline");
         }
       });
+    });
+
+    var genReportBtn = $("btn-gen-report");
+    if (genReportBtn) genReportBtn.addEventListener("click", function () {
+      if (!_currentId) return;
+      genReportBtn.disabled = true;
+      setText("ctrl-status", "Generating report…");
+      fetch('/api/v1/incidents/' + encodeURIComponent(_currentId) + '/report', { method: 'POST' })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          genReportBtn.disabled = false;
+          if (data.status === 'generated') {
+            setText("ctrl-status", "Report ready");
+            if (window.TraceToast) {
+              TraceToast.success(
+                'Report Generated',
+                data.html_url ? 'Opening in new tab…' : 'PDF saved to exports.'
+              );
+            }
+            if (data.html_url) {
+              setTimeout(function() { window.open(data.html_url, '_blank'); }, 400);
+            }
+            // Reload actions panel to show new PDF_REPORT entry
+            setTimeout(function() {
+              TraceClient.getActions(_currentId).then(function(acts) {
+                if (acts) renderActions(acts);
+              });
+            }, 1000);
+          } else {
+            setText("ctrl-status", "Report failed: " + (data.detail || 'unknown'));
+            if (window.TraceToast) TraceToast.error('Report Failed', data.detail || data.reason || '');
+          }
+        })
+        .catch(function(e) {
+          genReportBtn.disabled = false;
+          setText("ctrl-status", "Network error");
+          if (window.TraceToast) TraceToast.error('Report Error', String(e));
+        });
     });
 
     // Suppression selector wiring
