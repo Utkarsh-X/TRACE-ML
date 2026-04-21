@@ -161,19 +161,17 @@
 
     root.innerHTML = html;
 
-    // Attach event listeners for sliders/toggles  (existing config keys)
+    // Attach event listeners for sliders/toggles (existing config keys, exclude notifications which are handled separately)
     root.querySelectorAll("input[type=range], input[type=checkbox][data-key]").forEach(function(input) {
+      var key = input.getAttribute("data-key");
+      // Skip notification toggles - they use Save button instead of hot-tune
+      if (key && key.startsWith("notifications.")) return;
       input.addEventListener("change", handleConfigChange);
     });
 
     // Policy matrix checkboxes
     root.querySelectorAll("input[data-policy-trigger]").forEach(function(cb) {
       cb.addEventListener("change", handlePolicyChange);
-    });
-
-    // Global toggle for notifications channels (e.g. notifications.email.enabled)
-    root.querySelectorAll("input[data-key^='notifications.']").forEach(function(cb) {
-      cb.addEventListener("change", handleConfigChange);
     });
 
     // Notification test buttons
@@ -330,8 +328,8 @@
         ${field('SMTP Host', inp('notif-smtp-host', email.smtp_host, 'smtp.gmail.com'))}
         ${field('SMTP Port', inp('notif-smtp-port', email.smtp_port, '587'), '587=STARTTLS · 465=SSL')}
         ${field('Username', inp('notif-smtp-user', email.smtp_user, 'alerts@your-org.com'))}
-        ${field('Password', inp('notif-smtp-pass', '', '●●●●●●●●  (env: TRACE_AML_SMTP_PASSWORD)', 'password'),
-                 'Stored in env var — never in config file.')}
+        ${field('Password', inp('notif-smtp-pass', email.smtp_password || '', '●●●●●●●●', 'password'),
+                 'Stored in config file for testing.')}
         ${field('Sender Address', inp('notif-sender', email.sender_address, 'trace-aml@your-org.com'))}
         ${field('Recipients (comma-sep)', listInp('notif-email-recipients', email.recipient_addresses, 'operator@org.com, ops2@org.com'))}
       </div>
@@ -466,9 +464,39 @@
     var statusEl = document.getElementById(btnId + '-status');
     if (!btn) return;
     btn.addEventListener('click', function() {
+      // Check if email is enabled for email test button
+      if (btnId === 'btn-test-email') {
+        var emailToggle = document.querySelector('[data-key="notifications.email.enabled"]');
+        var isEnabled = emailToggle ? emailToggle.checked : false;
+        if (!isEnabled) {
+          if (statusEl) {
+            statusEl.textContent = '✗ Enable email first (toggle switch above)';
+            statusEl.style.color = 'var(--error)';
+          }
+          TraceToast.warning('Email Not Enabled', 'Please toggle the Email/SMTP switch ON and click Save before testing.');
+          return;
+        }
+      }
+      // Check if WhatsApp is enabled for WhatsApp test button
+      if (btnId === 'btn-test-wa') {
+        var waToggle = document.querySelector('[data-key="notifications.whatsapp.enabled"]');
+        var waEnabled = waToggle ? waToggle.checked : false;
+        if (!waEnabled) {
+          if (statusEl) {
+            statusEl.textContent = '✗ Enable WhatsApp first (toggle switch above)';
+            statusEl.style.color = 'var(--error)';
+          }
+          TraceToast.warning('WhatsApp Not Enabled', 'Please toggle the WhatsApp switch ON and click Save before testing.');
+          return;
+        }
+      }
       btn.disabled = true;
-      if (statusEl) statusEl.textContent = 'Sending...';
-      fetch(url, { method: 'POST' })
+      if (statusEl) statusEl.textContent = 'Saving & Sending...';
+      
+      // Auto-save notification settings first, then test
+      saveNotificationSettingsThen(function() {
+        if (statusEl) statusEl.textContent = 'Sending...';
+        fetch(url, { method: 'POST' })
         .then(function(r) { return r.json(); })
         .then(function(data) {
           var ok = data.status === 'queued' || data.status === 'sent';
@@ -483,6 +511,7 @@
           if (statusEl) { statusEl.textContent = '✗ Network error'; statusEl.style.color = 'var(--error)'; }
         })
         .finally(function() { btn.disabled = false; });
+      });
     });
   }
 
@@ -543,6 +572,63 @@
     .catch(function() { TraceToast.error('Save Failed', 'Check backend logs.'); });
   }
 
+  function saveNotificationSettingsThen(callback) {
+    // Same as saveNotificationSettings but executes callback after successful save
+    function v(id) { var el = document.getElementById(id); return el ? el.value.trim() : ''; }
+    function cb(id) { var el = document.getElementById(id); return el ? el.checked : false; }
+    function nums(id) { return v(id).split(',').map(function(s){return s.trim();}).filter(Boolean); }
+    function dkey(key) {
+      var el = document.querySelector('[data-key="' + key + '"]');
+      return el ? el.checked : false;
+    }
+
+    var payload = {
+      email: {
+        enabled:              dkey('notifications.email.enabled'),
+        smtp_host:            v('notif-smtp-host'),
+        smtp_port:            parseInt(v('notif-smtp-port'), 10) || 587,
+        smtp_user:            v('notif-smtp-user'),
+        smtp_password:        v('notif-smtp-pass') || undefined,
+        sender_address:       v('notif-sender'),
+        recipient_addresses:  nums('notif-email-recipients'),
+        attach_pdf:           cb('notif-email-attach-pdf'),
+        use_tls:              cb('notif-email-tls'),
+      },
+      whatsapp: {
+        enabled:              dkey('notifications.whatsapp.enabled'),
+        base_url:             v('notif-wa-url'),
+        instance:             v('notif-wa-instance'),
+        api_key:              v('notif-wa-key') || undefined,
+        recipient_numbers:    nums('notif-wa-numbers'),
+        send_pdf:             cb('notif-wa-send-pdf'),
+        send_text:            cb('notif-wa-send-text'),
+      },
+      pdf_report: {
+        enabled:              dkey('notifications.pdf_report.enabled'),
+        include_entity_portrait: cb('notif-pdf-portrait'),
+        include_screenshots:     cb('notif-pdf-screenshots'),
+        max_detection_rows: parseInt(document.getElementById('notif-pdf-det-rows') ? document.getElementById('notif-pdf-det-rows').value : 20, 10),
+        max_alert_rows:     parseInt(document.getElementById('notif-pdf-alert-rows') ? document.getElementById('notif-pdf-alert-rows').value : 50, 10),
+      }
+    };
+
+    if (!payload.email.smtp_password)    delete payload.email.smtp_password;
+    if (!payload.whatsapp.api_key)       delete payload.whatsapp.api_key;
+
+    fetch('/api/v1/config/notifications', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.notifications) currentConfig.notifications = data.notifications;
+      callback();
+    })
+    .catch(function() { 
+      TraceToast.error('Save Failed', 'Check backend logs.'); 
+    });
+  }
 
   function initSidebar() {
     var navItems = document.querySelectorAll("#settings-nav .nav-pill");

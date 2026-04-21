@@ -286,9 +286,8 @@ def create_service_app(
                           "recipient_addresses"):
                     if k in em:
                         setattr(email_cfg, k, em[k])
-                # Password only accepted from payload if not overridden by env var
-                import os
-                if "smtp_password" in em and not os.getenv("TRACE_AML_SMTP_PASSWORD"):
+                # Password from config file (for testing; env var takes precedence at runtime)
+                if "smtp_password" in em:
                     email_cfg.smtp_password = em["smtp_password"]
             # WhatsApp channel
             if "whatsapp" in notif:
@@ -310,10 +309,8 @@ def create_service_app(
                     if k in pdf:
                         setattr(pdf_cfg, k, pdf[k])
 
-        # Mask secrets before returning
+        # Return config (password included for testing; env var takes precedence at runtime)
         cfg_dump = settings.model_dump(mode="json")
-        cfg_dump.get("notifications", {}).get("email", {}).pop("smtp_password", None)
-        cfg_dump.get("notifications", {}).get("whatsapp", {}).pop("api_key", None)
         return cfg_dump
 
     @app.patch("/api/v1/config/notifications")
@@ -944,8 +941,9 @@ def create_service_app(
             summary="This is a test notification from TRACE-AML. If you received this, email alerts are working correctly.",
         )
         handler = EmailHandler(settings, store)
-        ok, reason = handler.execute(test_incident, ActionTrigger.on_create, {})
-        return {"status": "queued" if ok else "failed", "reason": reason}
+        # Use execute_sync to wait for actual delivery (blocking)
+        ok, reason = handler.execute_sync(test_incident, ActionTrigger.on_create, {}, timeout=30.0)
+        return {"status": "sent" if ok else "failed", "reason": reason}
 
     @app.post("/api/v1/notifications/test/whatsapp")
     def test_whatsapp() -> dict[str, Any]:

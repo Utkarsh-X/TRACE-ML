@@ -84,6 +84,73 @@ class EmailHandler(BaseActionHandler):
         )
         return True, "email_queued"
 
+    def execute_sync(
+        self,
+        incident: IncidentRecord,
+        trigger: ActionTrigger,
+        context: dict[str, Any],
+        timeout: float = 30.0,
+    ) -> tuple[bool, str]:
+        """Synchronous version that waits for email delivery (used for testing).
+
+        Args:
+            incident: The incident record that triggered this action.
+            trigger:  ``on_create`` or ``on_update``.
+            context:  Mutable shared dict passed between handlers in sequence.
+            timeout:  Max seconds to wait for SMTP delivery.
+
+        Returns:
+            (success: bool, reason: str) — reason is stored in ActionRecord.
+        """
+        cfg = self.settings.notifications.email
+        if not cfg.enabled:
+            return False, "email_disabled"
+
+        if not cfg.recipient_addresses:
+            return False, "email_no_recipients"
+
+        if not cfg.smtp_host:
+            return False, "email_no_smtp_host"
+
+        # PDF path may have been set by PdfReportHandler earlier in the batch
+        pdf_path = context.get("pdf_report_path")
+
+        try:
+            msg = self._build_message(incident, cfg, pdf_path)
+        except Exception as exc:
+            logger.error("[ACTION:EMAIL] message build failed: {}", exc)
+            return False, f"email_build_error:{exc}"
+
+        # Use a queue to get the result from the background thread
+        import queue
+        result_queue: queue.Queue[tuple[bool, str | None]] = queue.Queue()
+
+        # Start non-daemon thread and wait for it (for test mode)
+        def send_with_result():
+            self._send(msg, cfg, result_queue)
+
+        t = threading.Thread(
+            target=send_with_result,
+            daemon=False,  # Non-daemon so we can wait for it
+            name=f"email-sync-{incident.incident_id[-6:]}",
+        )
+        t.start()
+        t.join(timeout=timeout)
+
+        if t.is_alive():
+            # Thread is still running after timeout
+            return False, "email_timeout"
+
+        # Get result from queue (should be available since thread completed)
+        try:
+            success, error_reason = result_queue.get(block=False)
+            if success:
+                return True, "email_sent"
+            else:
+                return False, error_reason or "email_failed"
+        except queue.Empty:
+            return False, "email_no_result"
+
     # ── Message builder ────────────────────────────────────────────────────────
 
     def _build_message(
@@ -209,7 +276,7 @@ class EmailHandler(BaseActionHandler):
 
     # ── SMTP delivery (runs in background thread) ──────────────────────────────
 
-    def _send(self, msg: MIMEMultipart, cfg: Any) -> None:
+    def _send(self, msg: MIMEMultipart, cfg: Any, result_queue: Any = None) -> None:
         """Actually deliver the email. Always runs in a daemon thread.
 
         Connection strategy (auto-detected from port):
@@ -223,11 +290,14 @@ class EmailHandler(BaseActionHandler):
           3. ehlo()          — re-identify; server now advertises AUTH, etc.
           4. login()         — only now can AUTH succeed
         """
-        password = os.getenv("TRACE_AML_SMTP_PASSWORD", "") or cfg.smtp_password or ""
+        # Password priority: 1) env var, 2) config file, 3) empty
+        password = os.getenv("TRACE_AML_SMTP_PASSWORD") or cfg.smtp_password or ""
 
         use_ssl      = cfg.smtp_port == 465
         use_starttls = (cfg.smtp_port == 587) or (cfg.use_tls and not use_ssl)
 
+        success = False
+        error_reason = None
         try:
             if use_ssl:
                 # ── Mode 1: Implicit TLS (port 465) ──────────────────────
@@ -259,21 +329,33 @@ class EmailHandler(BaseActionHandler):
                         server.login(cfg.smtp_user, password)
                     server.send_message(msg)
 
+            success = True
             logger.info(
                 "[ACTION:EMAIL] delivered to: {}",
                 ", ".join(cfg.recipient_addresses),
             )
 
         except smtplib.SMTPAuthenticationError:
+            error_reason = "smtp_auth_failed"
             logger.error(
                 "[ACTION:EMAIL] SMTP auth failed — check smtp_user / password. "
                 "For Gmail use an App Password (myaccount.google.com/apppasswords)."
             )
         except smtplib.SMTPException as exc:
+            error_reason = f"smtp_error:{exc}"
             logger.error("[ACTION:EMAIL] SMTP error: {}", exc)
         except OSError as exc:
+            error_reason = f"network_error:{exc}"
             logger.error("[ACTION:EMAIL] network error (host={} port={}): {}",
                          cfg.smtp_host, cfg.smtp_port, exc)
         except Exception as exc:
+            error_reason = f"unexpected_error:{exc}"
             logger.error("[ACTION:EMAIL] unexpected error: {}", exc)
+
+        # Report result if a queue was provided (for synchronous/blocking mode)
+        if result_queue is not None:
+            try:
+                result_queue.put((success, error_reason))
+            except Exception:
+                pass
 
