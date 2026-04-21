@@ -253,15 +253,16 @@ class EmailSettings(BaseModel):
 
 
 class WhatsAppSettings(BaseModel):
-    """Evolution API WhatsApp delivery configuration."""
+    """WhatsApp delivery via local whatsapp-web.js bridge (Node.js).
+
+    No Docker, no cloud providers, no monthly fees. Runs directly on the
+    user's machine. First scan shows a QR code; session is saved locally.
+    """
     enabled: bool = False
-    mode: str = "evolution_api"       # Only supported mode in v1
-    base_url: str = "http://localhost:8081"  # Evolution API server URL
-    api_key: str = ""                 # Insecure fallback. Prefer env var TRACE_AML_WA_API_KEY
-    instance: str = ""               # WhatsApp instance name (e.g. yournumber@c.us)
+    bridge_url: str = "http://localhost:3001"  # Local Node.js bridge
     recipient_numbers: list[str] = Field(default_factory=list)  # E.164 format
-    send_pdf: bool = True             # Send PDF report as WhatsApp document
-    send_text: bool = True            # Send alert caption text
+    send_pdf: bool = True      # Send PDF report as WhatsApp document
+    send_text: bool = True     # Send alert caption text
 
 
 class PdfReportSettings(BaseModel):

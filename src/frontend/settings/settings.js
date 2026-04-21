@@ -346,15 +346,11 @@
 
     var waBody = `
       <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6">
-        ${field('Evolution API URL', inp('notif-wa-url', wa.base_url, 'http://localhost:8081'),
-                 'Start Evolution API: docker compose -f docker-compose.evolution.yml up -d')}
-        ${field('Instance Name', inp('notif-wa-instance', wa.instance, 'yournumber@c.us'),
-                 'Scan QR at http://localhost:8081 to get instance name.')}
-        ${field('API Key', inp('notif-wa-key', '', '●●●●●●●●  (env: TRACE_AML_WA_API_KEY)', 'password'),
-                 'Stored in env var — never in config file.')}
+        ${field('Bridge URL', inp('notif-wa-url', wa.bridge_url || '', 'http://localhost:3001'),
+                 'Local Node.js bridge running whatsapp-web.js')}
         ${field('Recipients (comma-sep, E.164)', listInp('notif-wa-numbers', wa.recipient_numbers, '+919876543210, +1234567890'))}
       </div>
-      <div class="flex items-center gap-6">
+      <div class="flex items-center gap-6 mt-4">
         <label class="flex items-center gap-2 cursor-pointer">
           ${renderToggle('notif-wa-send-pdf', wa.send_pdf)}
           <span class="font-mono text-[0.65rem] text-on-surface">Send PDF Document</span>
@@ -363,6 +359,11 @@
           ${renderToggle('notif-wa-send-text', wa.send_text)}
           <span class="font-mono text-[0.65rem] text-on-surface">Send Text Alert</span>
         </label>
+      </div>
+      <div id="wa-qr-container" class="mt-4 p-4 border border-outline-variant/10 bg-surface-container/20 rounded hidden">
+        <p class="font-mono text-[0.65rem] text-outline mb-2">Scan this QR code with WhatsApp (Settings → Linked Devices → Link a Device)</p>
+        <img id="wa-qr-img" src="" alt="WhatsApp QR Code" class="w-64 h-64 mx-auto" />
+        <p id="wa-qr-status" class="font-mono text-[0.6rem] text-center mt-2 text-outline"></p>
       </div>`;
 
     var pdfBody = `
@@ -539,9 +540,7 @@
       },
       whatsapp: {
         enabled:              dkey('notifications.whatsapp.enabled'),
-        base_url:             v('notif-wa-url'),
-        instance:             v('notif-wa-instance'),
-        api_key:              v('notif-wa-key') || undefined,
+        bridge_url:           v('notif-wa-url'),
         recipient_numbers:    nums('notif-wa-numbers'),
         send_pdf:             cb('notif-wa-send-pdf'),
         send_text:            cb('notif-wa-send-text'),
@@ -596,9 +595,7 @@
       },
       whatsapp: {
         enabled:              dkey('notifications.whatsapp.enabled'),
-        base_url:             v('notif-wa-url'),
-        instance:             v('notif-wa-instance'),
-        api_key:              v('notif-wa-key') || undefined,
+        bridge_url:           v('notif-wa-url'),
         recipient_numbers:    nums('notif-wa-numbers'),
         send_pdf:             cb('notif-wa-send-pdf'),
         send_text:            cb('notif-wa-send-text'),

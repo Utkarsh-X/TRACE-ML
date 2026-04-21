@@ -293,13 +293,10 @@ def create_service_app(
             if "whatsapp" in notif:
                 wa = notif["whatsapp"]
                 wa_cfg = settings.notifications.whatsapp
-                for k in ("enabled", "base_url", "instance", "send_pdf",
-                          "send_text", "recipient_numbers"):
+                for k in ("enabled", "bridge_url", "recipient_numbers",
+                          "send_pdf", "send_text"):
                     if k in wa:
                         setattr(wa_cfg, k, wa[k])
-                import os
-                if "api_key" in wa and not os.getenv("TRACE_AML_WA_API_KEY"):
-                    wa_cfg.api_key = wa["api_key"]
             # PDF reports
             if "pdf_report" in notif:
                 pdf = notif["pdf_report"]
@@ -947,9 +944,25 @@ def create_service_app(
 
     @app.post("/api/v1/notifications/test/whatsapp")
     def test_whatsapp() -> dict[str, Any]:
-        """Send a test WhatsApp message to verify Evolution API configuration."""
-        if not settings.notifications.whatsapp.enabled:
+        """Send a test WhatsApp message to verify local bridge."""
+        import httpx
+        wa = settings.notifications.whatsapp
+        if not wa.enabled:
             return {"status": "skipped", "reason": "whatsapp_disabled"}
+        if not wa.recipient_numbers:
+            return {"status": "failed", "reason": "whatsapp_no_recipients"}
+
+        # Pre-flight: verify bridge is running and WhatsApp is actually connected
+        try:
+            resp = httpx.get(f"{wa.bridge_url.rstrip('/')}/status", timeout=5.0)
+            bridge_status = resp.json()
+        except Exception as exc:
+            logger.error("[WA-TEST] Bridge unreachable at {}: {}", wa.bridge_url, exc)
+            return {"status": "failed", "reason": f"bridge_unreachable: {exc}"}
+
+        if not bridge_status.get("ready"):
+            qr_hint = " Scan QR at http://localhost:3001/qr" if bridge_status.get("hasQr") else ""
+            return {"status": "failed", "reason": f"whatsapp_not_ready:{qr_hint}"}
 
         from trace_aml.actions.whatsapp_handler import WhatsAppHandler
         from trace_aml.core.models import (
@@ -964,8 +977,30 @@ def create_service_app(
             summary="This is a test notification from TRACE-AML. If you received this, WhatsApp alerts are working correctly.",
         )
         handler = WhatsAppHandler(settings, store)
-        ok, reason = handler.execute(test_incident, ActionTrigger.on_create, {})
-        return {"status": "queued" if ok else "failed", "reason": reason}
+        ok, reason = handler.execute_sync(test_incident, ActionTrigger.on_create, {}, timeout=60.0)
+        return {"status": "sent" if ok else "failed", "reason": reason}
+
+    @app.get("/api/v1/whatsapp/status")
+    def whatsapp_status() -> dict[str, Any]:
+        """Get local WhatsApp bridge connection status and QR code."""
+        import httpx
+        wa = settings.notifications.whatsapp
+        if not wa.enabled:
+            return {"enabled": False, "ready": False, "qr": None}
+        try:
+            resp = httpx.get(f"{wa.bridge_url.rstrip('/')}/status", timeout=5.0)
+            data = resp.json()
+            qr_resp = None
+            if data.get("hasQr"):
+                try:
+                    qr_resp = httpx.get(f"{wa.bridge_url.rstrip('/')}/qr", timeout=5.0)
+                    qr_data = qr_resp.json()
+                    data["qr"] = qr_data.get("qrDataUrl")
+                except Exception:
+                    data["qr"] = None
+            return data
+        except Exception as exc:
+            return {"enabled": True, "ready": False, "error": str(exc), "qr": None}
 
     @app.get("/api/v1/events/stream")
     async def stream_events(
