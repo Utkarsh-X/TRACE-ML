@@ -2,30 +2,26 @@
 
 Design
 ------
-For every committed *accepted* detection the session crops the face region from
-the live frame and calls ``try_update_portrait()``.  A portrait is only updated
-when the new detection's cosine similarity is meaningfully better than the one
-already stored (gap > ``MIN_IMPROVEMENT``), preventing low-quality jitter from
-overwriting a good capture.
+All image I/O is delegated to :class:`~trace_aml.store.data_vault.DataVault`.
+The vault stores portraits as XChaCha20-Poly1305 encrypted blobs whose
+filenames are SHA-256 content hashes — no entity ID is ever visible on disk.
 
-Storage layout on disk ::
+This class retains exactly its original public API so that no callers
+(``session.py``, ``app.py``, etc.) need to change signatures.
 
-    {portraits_dir}/
-        {entity_id}.jpg          ← 256×256 JPEG portrait
-        {entity_id}.meta.json    ← {"score": 0.87, "updated_at": "..."}
-
-The JSON sidecar keeps the best score in an O(1) lookup without any DB query.
+Score gating
+~~~~~~~~~~~~
+A portrait is only replaced when the new detection's cosine similarity is
+meaningfully better than the one already stored (gap > ``MIN_IMPROVEMENT``),
+preventing low-quality jitter from overwriting a good capture.
 
 Thread safety
--------------
-A per-entity lock prevents concurrent updates from racing between sessions.
-The lock is fine-grained (keyed by entity_id) so different entities never block
-each other.
+~~~~~~~~~~~~~
+Delegated to the DataVault's per-entity locks.
 """
 
 from __future__ import annotations
 
-import json
 import threading
 from datetime import datetime, timezone
 from pathlib import Path
@@ -36,6 +32,7 @@ import numpy as np
 from loguru import logger
 
 from trace_aml.core.config import Settings
+from trace_aml.store.data_vault import DataVault
 
 # Only replace a portrait when the new similarity is this much better.
 MIN_IMPROVEMENT: float = 0.03
@@ -51,14 +48,18 @@ BBOX_PAD_FRACTION: float = 0.28
 
 
 class PortraitStore:
-    """Filesystem-backed store for per-entity best-match face portraits."""
+    """Manages the best-match face portrait for each entity via DataVault.
+
+    Public API is identical to the pre-vault version so all callers are
+    unaffected.  Internally, no JPEG is ever written to a plain file path —
+    everything goes through the encrypted vault.
+    """
 
     def __init__(self, settings: Settings) -> None:
-        self._dir = Path(settings.store.portraits_dir)
-        self._dir.mkdir(parents=True, exist_ok=True)
-        # Per-entity write lock — avoids races from concurrent recognition threads.
-        self._locks: dict[str, threading.Lock] = {}
-        self._meta_lock = threading.Lock()  # protects self._locks dict itself
+        self._vault = DataVault(settings)
+        # Legacy directory kept only for migration-script compatibility.
+        # New code never writes here.
+        self._legacy_dir = Path(settings.store.portraits_dir)
 
     # ── Public API ──────────────────────────────────────────────────────────
 
@@ -88,110 +89,97 @@ class PortraitStore:
             ``True`` if the portrait was saved / updated, ``False`` if the
             existing portrait is already at least as good.
         """
-        lock = self._entity_lock(entity_id)
-        with lock:
-            stored_score = self._read_score(entity_id)
-            if stored_score is not None and score <= stored_score + MIN_IMPROVEMENT:
-                return False  # existing portrait is already good enough
+        stored_score = self._vault.get_portrait_score(entity_id)
+        if stored_score is not None and score <= stored_score + MIN_IMPROVEMENT:
+            return False  # existing portrait is already good enough
 
-            crop = self._extract_crop(frame_bgr, bbox)
-            if crop is None:
-                return False
+        crop = self._extract_crop(frame_bgr, bbox)
+        if crop is None:
+            return False
 
-            portrait_path = self._portrait_path(entity_id)
-            try:
-                encode_params = [cv2.IMWRITE_JPEG_QUALITY, JPEG_QUALITY]
-                ok, buf = cv2.imencode(".jpg", crop, encode_params)
-                if not ok:
-                    logger.warning("PortraitStore: imencode failed for {}", entity_id)
-                    return False
-                portrait_path.write_bytes(buf.tobytes())
-                self._write_meta(entity_id, score)
-                logger.debug(
-                    "PortraitStore: updated portrait {} (score {:.3f} → {:.3f})",
-                    entity_id,
-                    stored_score or 0.0,
-                    score,
-                )
-                return True
-            except Exception as exc:
-                logger.error("PortraitStore: failed to save portrait for {}: {}", entity_id, exc)
+        try:
+            encode_params = [cv2.IMWRITE_JPEG_QUALITY, JPEG_QUALITY]
+            ok, buf = cv2.imencode(".jpg", crop, encode_params)
+            if not ok:
+                logger.warning("PortraitStore: imencode failed for {}", entity_id)
                 return False
+            self._vault.put_portrait(entity_id, buf.tobytes(), score)
+            logger.debug(
+                "PortraitStore: updated portrait {} (score {:.3f} → {:.3f})",
+                entity_id,
+                stored_score or 0.0,
+                score,
+            )
+            return True
+        except Exception as exc:
+            logger.error("PortraitStore: failed to save portrait for {}: {}", entity_id, exc)
+            return False
 
     def get_portrait_path(self, entity_id: str) -> Optional[Path]:
-        """Return the portrait path if it exists, else ``None``."""
-        p = self._portrait_path(entity_id)
-        return p if p.exists() else None
+        """Legacy compatibility shim — returns None (use get_portrait_bytes instead).
+
+        This method is kept so that any code checking ``portrait_store.get_portrait_path()``
+        still compiles, but the vault design no longer exposes filesystem paths.
+        Callers should use :meth:`get_portrait_bytes` directly.
+        """
+        # Check vault first
+        if self._vault.has_portrait(entity_id):
+            return None  # Vault manages storage — no path to expose
+        # Fallback: check legacy directory for pre-migration portraits
+        safe = entity_id.replace("/", "_").replace("\\", "_")
+        legacy = self._legacy_dir / f"{safe}.jpg"
+        return legacy if legacy.exists() else None
+
+    def get_portrait_bytes(self, entity_id: str) -> Optional[bytes]:
+        """Return the decrypted JPEG bytes for the entity's portrait, or None."""
+        return self._vault.get_portrait_bytes(entity_id)
 
     def delete_portrait(self, entity_id: str) -> None:
-        """Delete the portrait image and metadata for *entity_id*.
+        """Delete the portrait for *entity_id* from the vault.
 
         Called when an entity is reset or replaced so that a stale high-score
         portrait from a previous session cannot block future updates.
         """
-        lock = self._entity_lock(entity_id)
-        with lock:
-            for path in (self._portrait_path(entity_id), self._meta_path(entity_id)):
-                try:
-                    if path.exists():
-                        path.unlink()
-                        logger.debug("PortraitStore: deleted {} for {}", path.name, entity_id)
-                except Exception as exc:
-                    logger.warning("PortraitStore: could not delete {} — {}", path, exc)
-
+        self._vault.delete_portrait(entity_id)
+        # Also clean up any legacy file that might exist
+        safe = entity_id.replace("/", "_").replace("\\", "_")
+        for path in (
+            self._legacy_dir / f"{safe}.jpg",
+            self._legacy_dir / f"{safe}.meta.json",
+        ):
+            try:
+                if path.exists():
+                    path.unlink()
+            except Exception:
+                pass
 
     def get_best_score(self, entity_id: str) -> Optional[float]:
         """Return the stored similarity score for this entity, or ``None``."""
-        return self._read_score(entity_id)
+        return self._vault.get_portrait_score(entity_id)
 
     def has_portrait(self, entity_id: str) -> bool:
-        """Fast existence check (no file read)."""
-        return self._portrait_path(entity_id).exists()
+        """Fast existence check."""
+        if self._vault.has_portrait(entity_id):
+            return True
+        # Legacy fallback
+        safe = entity_id.replace("/", "_").replace("\\", "_")
+        return (self._legacy_dir / f"{safe}.jpg").exists()
+
+    # ── DataVault pass-through (for app.py endpoints) ───────────────────────
+
+    @property
+    def vault(self) -> DataVault:
+        """Expose vault for callers that need direct access (e.g. app.py)."""
+        return self._vault
 
     # ── Internal helpers ────────────────────────────────────────────────────
-
-    def _entity_lock(self, entity_id: str) -> threading.Lock:
-        with self._meta_lock:
-            if entity_id not in self._locks:
-                self._locks[entity_id] = threading.Lock()
-            return self._locks[entity_id]
-
-    def _portrait_path(self, entity_id: str) -> Path:
-        safe = entity_id.replace("/", "_").replace("\\", "_")
-        return self._dir / f"{safe}.jpg"
-
-    def _meta_path(self, entity_id: str) -> Path:
-        safe = entity_id.replace("/", "_").replace("\\", "_")
-        return self._dir / f"{safe}.meta.json"
-
-    def _read_score(self, entity_id: str) -> Optional[float]:
-        path = self._meta_path(entity_id)
-        if not path.exists():
-            return None
-        try:
-            data = json.loads(path.read_text(encoding="utf-8"))
-            return float(data.get("score", -1.0))
-        except Exception:
-            return None
-
-    def _write_meta(self, entity_id: str, score: float) -> None:
-        path = self._meta_path(entity_id)
-        payload = {
-            "score": round(float(score), 6),
-            "updated_at": datetime.now(timezone.utc).isoformat(),
-        }
-        path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
 
     @staticmethod
     def _extract_crop(
         frame_bgr: np.ndarray,
         bbox: tuple[int, int, int, int],
     ) -> Optional[np.ndarray]:
-        """Crop and resize the face region from the full frame.
-
-        Adds padding proportional to the bounding-box size so the portrait
-        shows a bit of context around the face (not just a tight mask).
-        """
+        """Crop and resize the face region from the full frame."""
         x, y, w, h = bbox
         if w <= 0 or h <= 0:
             return None

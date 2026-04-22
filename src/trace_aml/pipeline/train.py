@@ -33,6 +33,7 @@ from trace_aml.core.models import EmbeddingRecord, PersonLifecycleStatus
 from trace_aml.quality.gating import decide_person_lifecycle
 from trace_aml.quality.scoring import build_assessment
 from trace_aml.recognizers.arcface import ArcFaceRecognizer
+from trace_aml.store.data_vault import DataVault
 from trace_aml.store.vector_store import VectorStore
 
 
@@ -71,120 +72,135 @@ def enroll_person(
     Returns:
         ``(embeddings_created, skipped_images)`` counts for this person.
     """
-    image_root = Path(settings.store.root) / "person_images"
-    image_root.mkdir(parents=True, exist_ok=True)
-    person_dir = image_root / person_id
+    vault = DataVault(settings)
+    vault_images = vault.get_enrollment_image_bytes(person_id)
 
-    if not person_dir.exists():
-        logger.warning("No image directory for person {}", person_id)
-        store.set_person_state(
-            person_id=person_id,
-            lifecycle_state=PersonLifecycleStatus.blocked,
-            lifecycle_reason="missing_image_directory",
-            enrollment_score=0.0,
-            valid_embeddings=0,
-            valid_images=0,
-            total_images=0,
-        )
-        return 0, 0
+    # ── Determine image source: vault (new) or legacy filesystem (old) ───────
+    use_vault = len(vault_images) > 0
 
-    image_files = [
-        file
-        for file in sorted(person_dir.iterdir())
-        if file.suffix.lower() in {".jpg", ".jpeg", ".png", ".bmp"}
-    ]
+    if use_vault:
+        # Decrypt enrollment images to a temporary directory.
+        # The context manager deletes the temp dir on exit regardless of errors.
+        ctx = vault.extract_enrollment_to_tempdir(person_id)
+    else:
+        # Legacy path: read from data/person_images/{person_id}/
+        import contextlib as _cl
+        image_root = Path(settings.store.root) / "person_images"
+        image_root.mkdir(parents=True, exist_ok=True)
+        person_dir = image_root / person_id
+        ctx = _cl.nullcontext(person_dir)
 
-    records: list[EmbeddingRecord] = []
-    store.clear_image_quality(person_id)
-    valid_images = 0
-    quality_scores: list[float] = []
-    skipped_images = 0
-
-    for img_path in image_files:
-        image = cv2.imread(str(img_path))
-        if image is None:
-            logger.warning("  [{}] {} — cv2.imread returned None (corrupt or wrong format)",
-                           person_id, img_path.name)
-            skipped_images += 1
-            continue
-
-        candidate = recognizer.primary_face_from_image(image)
-        assessment = build_assessment(
-            settings=settings,
-            person_id=person_id,
-            source_path=str(img_path),
-            frame_bgr=image,
-            bbox=candidate.bbox if candidate else None,
-        )
-        store.add_image_quality(assessment)
-
-        if candidate is None:
-            h, w = image.shape[:2]
-            logger.debug("  [{}] {} ({}x{}) — no face detected by SCRFD",
-                         person_id, img_path.name, w, h)
-            skipped_images += 1
-            continue
-
-        if not assessment.passed:
-            h, w = image.shape[:2]
-            logger.debug(
-                "  [{}] {} ({}x{}) — face found (det={:.2f}), "
-                "but quality failed: {} | ratio={:.3f} sharp={:.1f} bright={:.1f} pose={:.2f} score={:.3f}",
-                person_id, img_path.name, w, h,
-                candidate.detector_score,
-                assessment.reasons,
-                assessment.face_ratio,
-                assessment.sharpness,
-                assessment.brightness,
-                assessment.pose_score,
-                assessment.quality_score,
+    with ctx as person_dir:
+        if not person_dir.exists() or not any(person_dir.iterdir()):
+            logger.warning("No images found for person {} (vault={}, dir={})",
+                           person_id, use_vault, person_dir)
+            store.set_person_state(
+                person_id=person_id,
+                lifecycle_state=PersonLifecycleStatus.blocked,
+                lifecycle_reason="missing_image_directory",
+                enrollment_score=0.0,
+                valid_embeddings=0,
+                valid_images=0,
+                total_images=0,
             )
-            skipped_images += 1
-            continue
+            return 0, 0
 
-        valid_images += 1
-        quality_scores.append(float(assessment.quality_score))
-        records.append(
-            EmbeddingRecord(
-                embedding_id=new_embedding_id(person_id),
+        image_files = [
+            file
+            for file in sorted(person_dir.iterdir())
+            if file.suffix.lower() in {".jpg", ".jpeg", ".png", ".bmp"}
+        ]
+
+        records: list[EmbeddingRecord] = []
+        store.clear_image_quality(person_id)
+        valid_images = 0
+        quality_scores: list[float] = []
+        skipped_images = 0
+
+        for img_path in image_files:
+            image = cv2.imread(str(img_path))
+            if image is None:
+                logger.warning("  [{}] {} — cv2.imread returned None (corrupt or wrong format)",
+                               person_id, img_path.name)
+                skipped_images += 1
+                continue
+
+            candidate = recognizer.primary_face_from_image(image)
+            assessment = build_assessment(
+                settings=settings,
                 person_id=person_id,
                 source_path=str(img_path),
-                embedding=candidate.embedding,
-                quality_score=float(assessment.quality_score),
-                quality_flags=[],
+                frame_bgr=image,
+                bbox=candidate.bbox if candidate else None,
             )
+            store.add_image_quality(assessment)
+
+            if candidate is None:
+                h, w = image.shape[:2]
+                logger.debug("  [{}] {} ({}x{}) — no face detected by SCRFD",
+                             person_id, img_path.name, w, h)
+                skipped_images += 1
+                continue
+
+            if not assessment.passed:
+                h, w = image.shape[:2]
+                logger.debug(
+                    "  [{}] {} ({}x{}) — face found (det={:.2f}), "
+                    "but quality failed: {} | ratio={:.3f} sharp={:.1f} bright={:.1f} pose={:.2f} score={:.3f}",
+                    person_id, img_path.name, w, h,
+                    candidate.detector_score,
+                    assessment.reasons,
+                    assessment.face_ratio,
+                    assessment.sharpness,
+                    assessment.brightness,
+                    assessment.pose_score,
+                    assessment.quality_score,
+                )
+                skipped_images += 1
+                continue
+
+            valid_images += 1
+            quality_scores.append(float(assessment.quality_score))
+            records.append(
+                EmbeddingRecord(
+                    embedding_id=new_embedding_id(person_id),
+                    person_id=person_id,
+                    source_path=str(img_path),
+                    embedding=candidate.embedding,
+                    quality_score=float(assessment.quality_score),
+                    quality_flags=[],
+                )
+            )
+
+        # Upsert embeddings into both LanceDB and the in-memory cache.
+        store.replace_person_embeddings(person_id, records)
+
+        avg_quality = (sum(quality_scores) / len(quality_scores)) if quality_scores else 0.0
+        lifecycle = decide_person_lifecycle(
+            settings=settings,
+            total_images=len(image_files),
+            valid_images=valid_images,
+            embeddings_count=len(records),
+            avg_quality=avg_quality,
+        )
+        store.set_person_state(
+            person_id=person_id,
+            lifecycle_state=lifecycle.state,
+            lifecycle_reason=lifecycle.reason,
+            enrollment_score=lifecycle.enrollment_score,
+            valid_embeddings=len(records),
+            valid_images=valid_images,
+            total_images=len(image_files),
         )
 
-    # Upsert embeddings into both LanceDB and the in-memory cache.
-    # This is an incremental operation — other persons are untouched.
-    store.replace_person_embeddings(person_id, records)
-
-    avg_quality = (sum(quality_scores) / len(quality_scores)) if quality_scores else 0.0
-    lifecycle = decide_person_lifecycle(
-        settings=settings,
-        total_images=len(image_files),
-        valid_images=valid_images,
-        embeddings_count=len(records),
-        avg_quality=avg_quality,
-    )
-    store.set_person_state(
-        person_id=person_id,
-        lifecycle_state=lifecycle.state,
-        lifecycle_reason=lifecycle.reason,
-        enrollment_score=lifecycle.enrollment_score,
-        valid_embeddings=len(records),
-        valid_images=valid_images,
-        total_images=len(image_files),
-    )
-
-    logger.info(
-        "Enrolled {}: {} embeddings, state={}, quality={:.2f}",
-        person_id,
-        len(records),
-        lifecycle.state,
-        avg_quality,
-    )
-    return len(records), skipped_images
+        logger.info(
+            "Enrolled {}: {} embeddings, state={}, quality={:.2f}",
+            person_id,
+            len(records),
+            lifecycle.state,
+            avg_quality,
+        )
+        return len(records), skipped_images
 
 
 def rebuild_embeddings(

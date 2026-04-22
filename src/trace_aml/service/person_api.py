@@ -34,6 +34,7 @@ from trace_aml.core.ids import next_person_id
 from trace_aml.core.models import PersonCategory, PersonLifecycleStatus, PersonRecord
 from trace_aml.pipeline.collect import person_image_dir
 from trace_aml.store.vector_store import VectorStore
+from trace_aml.store.data_vault import DataVault
 
 
 # ── Request / response models ──────────────────────────────────────────
@@ -422,6 +423,10 @@ def create_person_router(settings: "Settings", store: "VectorStore") -> Any:
         if not current:
             raise HTTPException(status_code=404, detail=f"Person not found: {person_id}")
         store.delete_person(person_id, delete_detections=True)
+        # Remove vault enrollment images
+        _vault = DataVault(settings)
+        _vault.delete_person_enrollment(person_id)
+        # Remove legacy filesystem images if they still exist
         img_dir = person_image_dir(settings, person_id)
         if img_dir.exists():
             shutil.rmtree(img_dir, ignore_errors=True)
@@ -444,27 +449,20 @@ def create_person_router(settings: "Settings", store: "VectorStore") -> Any:
         current = store.get_person(person_id)
         if not current:
             raise HTTPException(status_code=404, detail=f"Person not found: {person_id}")
-        img_dir = person_image_dir(settings, person_id)
 
+        _vault = DataVault(settings)
         saved: list[str] = []
-        existing_count = len([
-            f for f in img_dir.iterdir()
-            if f.suffix.lower() in {".jpg", ".jpeg", ".png", ".bmp"}
-        ]) if img_dir.exists() else 0
+        existing_count = len(_vault.get_enrollment_image_bytes(person_id))
 
-        for i, upload in enumerate(files):
+        for upload in files:
             if not upload.content_type or not upload.content_type.startswith("image/"):
                 continue
-            ext = Path(upload.filename or "image.jpg").suffix.lower()
-            if ext not in {".jpg", ".jpeg", ".png", ".bmp"}:
-                ext = ".jpg"
-            out_path = img_dir / f"upload_{existing_count + i + 1:03d}{ext}"
             content = await upload.read()
-            out_path.write_bytes(content)
-            saved.append(str(out_path))
+            # Encrypt and store in vault — no plaintext JPEG ever written to disk
+            _vault.put_enrollment_image(person_id, content)
+            saved.append(upload.filename or "image")
 
         if saved:
-            # Update state to show images arrived (embedding still pending)
             store.set_person_state(
                 person_id=person_id,
                 lifecycle_state=PersonLifecycleStatus.draft,
@@ -474,15 +472,10 @@ def create_person_router(settings: "Settings", store: "VectorStore") -> Any:
                 valid_images=int(current.get("valid_images", 0)),
                 total_images=existing_count + len(saved),
             )
-            # ── AUTO-ENROLL ────────────────────────────────────────────
-            # Kick off incremental embedding for just this person.
-            # No other persons are touched.  The job runs in the background
-            # EnrollmentWorker thread and completes in a few seconds.
             queued = _queue_enrollment(person_id)
             enrollment_note = (
                 "enrollment queued" if queued else "enrollment already in progress"
             )
-            # ──────────────────────────────────────────────────────────
         else:
             enrollment_note = "no images saved"
 

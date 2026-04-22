@@ -32,6 +32,7 @@ from trace_aml.pipeline.temporal import TemporalDecisionEngine
 from trace_aml.recognizers.arcface import ArcFaceRecognizer
 from trace_aml.store.vector_store import VectorStore
 from trace_aml.store.portrait_store import PortraitStore
+from trace_aml.store.data_vault import DataVault
 
 
 def draw_text(frame, text: str, xy: tuple[int, int], color: tuple[int, int, int], scale: float = 0.55) -> None:
@@ -85,6 +86,8 @@ class RecognitionSession:
         self.screenshot_dir.mkdir(parents=True, exist_ok=True)
         self._last_screenshot_ts: dict[str, float] = {}   # per-entity 5s throttle
         self.portrait_store = PortraitStore(settings)
+        # Reuse the vault that portrait_store already instantiated
+        self._vault = self.portrait_store.vault
         self.event_feed: deque[str] = deque(maxlen=8)
         self.recent_confidences: deque[float] = deque(maxlen=8)
         self.decision_counters = {"accept": 0, "review": 0, "reject": 0}
@@ -545,19 +548,55 @@ class RecognitionSession:
                 person_key = f"trk:{match.track_id or 'unknown'}:{decision.value}"
             if self._should_log(person_key):
                 detection_id = new_detection_id()
-                screenshot_path = self.screenshot_dir / f"{detection_id}.jpg"
-                # Save a face-context crop (bbox + 50% padding, max 320px, JPEG-80)
-                # instead of the full camera frame to save storage.
+                # ── Evidence screenshot → DataVault (encrypted, no browsable file) ──
                 ss_key = match.person_id or match.track_id or "unknown"
                 import time as _time
                 _now_ts = _time.monotonic()
+                vault_screenshot_key = ""
                 if (_now_ts - self._last_screenshot_ts.get(ss_key, 0)) >= 5.0:
                     self._last_screenshot_ts[ss_key] = _now_ts
-                    self._save_screenshot_crop(frame, match.bbox, screenshot_path)
-                else:
-                    # Throttled — save anyway but at lower quality (full frame JPEG-60)
+                    # Face-context crop path: encode to JPEG bytes then hand to vault
                     import cv2 as _cv2
-                    _cv2.imwrite(str(screenshot_path), frame, [_cv2.IMWRITE_JPEG_QUALITY, 60])
+                    import numpy as _np
+                    try:
+                        # Re-use the same crop logic as _save_screenshot_crop but in-memory
+                        x1, y1, x2, y2 = (
+                            int(match.bbox[0]), int(match.bbox[1]),
+                            int(match.bbox[2]), int(match.bbox[3]),
+                        ) if len(match.bbox) == 4 and match.bbox[2] > match.bbox[0] else (0, 0, 0, 0)
+                        if x2 > x1 and y2 > y1:
+                            fh, fw = frame.shape[:2]
+                            fw_b, fh_b = max(1, x2 - x1), max(1, y2 - y1)
+                            px, py = int(fw_b * 0.50), int(fh_b * 0.50)
+                            crop = frame[
+                                max(0, y1 - py) : min(fh, y2 + py),
+                                max(0, x1 - px) : min(fw, x2 + px),
+                            ]
+                        else:
+                            crop = frame
+                        if crop.size > 0:
+                            ch, cw = crop.shape[:2]
+                            scale = min(1.0, 320 / max(ch, cw, 1))
+                            if scale < 1.0:
+                                crop = _cv2.resize(
+                                    crop, (int(cw * scale), int(ch * scale)),
+                                    interpolation=_cv2.INTER_AREA,
+                                )
+                            ok, buf = _cv2.imencode(".jpg", crop, [_cv2.IMWRITE_JPEG_QUALITY, 80])
+                        else:
+                            ok = False
+                        if ok:
+                            from datetime import datetime as _dt, timezone as _tz
+                            vault_screenshot_key = self._vault.put_evidence(
+                                detection_id=detection_id,
+                                entity_id=resolution.entity_id,
+                                jpeg_bytes=buf.tobytes(),
+                                timestamp=_dt.now(_tz.utc).isoformat(),
+                            )
+                    except Exception as _ve:
+                        from loguru import logger as _log
+                        _log.warning("Evidence vault write failed for {}: {}", detection_id, _ve)
+                screenshot_ref = f"vault:{vault_screenshot_key}" if vault_screenshot_key else ""
 
                 event = DetectionEvent(
                     detection_id=detection_id,
@@ -575,7 +614,7 @@ class RecognitionSession:
                     quality_flags=match.quality_flags,
                     liveness_provider=liveness.provider,
                     liveness_score=liveness.score,
-                    screenshot_path=str(screenshot_path),
+                    screenshot_path=screenshot_ref,  # vault key prefix, not OS path
                     metadata=match.metadata,
                 )
                 self.store.add_detection(event, embedding=embedding)

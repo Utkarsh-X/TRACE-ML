@@ -97,9 +97,10 @@ def create_service_app(
         quality_router = create_quality_router(settings, store, session.recognizer)
         app.include_router(quality_router)
 
-    # ── Portrait endpoint ────────────────────────────────────────────────────
+    # ── Portrait endpoint ─────────────────────────────────────────────────────
     from trace_aml.store.portrait_store import PortraitStore
-    from fastapi.responses import FileResponse as _FileResponse
+    from fastapi.responses import StreamingResponse as _StreamingResponse
+    import io as _io
 
     _portrait_store = (
         session.portrait_store
@@ -109,33 +110,35 @@ def create_service_app(
 
     @app.get(
         "/api/v1/entities/{entity_id}/portrait",
-        response_class=_FileResponse,
         tags=["entities"],
         summary="Best-match face portrait for an entity",
     )
     def entity_portrait(entity_id: str) -> Any:
         """Return the highest-quality face crop captured for this entity.
 
-        The portrait is extracted from the live camera frame at the moment of
-        a confirmed *accept* match, cropped to the face bounding-box, padded,
-        and stored as a 256×256 JPEG.  This endpoint is a pure filesystem
-        read — no database queries.
-
-        Returns 404 if no portrait has been captured for this entity yet.
+        Served as an encrypted-at-rest JPEG decoded directly from the DataVault.
+        The response is identical to the pre-vault version — the frontend sees
+        no change.  Returns 404 if no portrait has been captured yet.
         """
-        path = _portrait_store.get_portrait_path(entity_id)
-        if path is None:
+        jpeg_bytes = _portrait_store.get_portrait_bytes(entity_id)
+        # Fallback: check legacy portraits directory for pre-migration portraits
+        if jpeg_bytes is None:
+            legacy_path = _portrait_store.get_portrait_path(entity_id)
+            if legacy_path is not None and legacy_path.exists():
+                jpeg_bytes = legacy_path.read_bytes()
+        if jpeg_bytes is None:
             from fastapi import HTTPException as _HTTPException
             raise _HTTPException(
                 status_code=404,
                 detail=f"No portrait available for entity '{entity_id}' yet.",
             )
-        return _FileResponse(
-            str(path),
+        return _StreamingResponse(
+            _io.BytesIO(jpeg_bytes),
             media_type="image/jpeg",
             headers={
                 "Cache-Control": "no-cache, no-store, must-revalidate",
                 "X-Entity-Id": entity_id,
+                "Content-Length": str(len(jpeg_bytes)),
             },
         )
 
@@ -145,21 +148,16 @@ def create_service_app(
         summary="Upload / replace the portrait for an entity",
     )
     async def entity_portrait_upload(entity_id: str, request: Request) -> dict[str, Any]:
-        """Accept a multipart image upload and store it as the entity's portrait.
+        """Accept a multipart image upload and store it encrypted in the DataVault.
 
-        This replaces whatever auto-captured portrait exists (or creates one
-        from scratch), giving operators manual control over the face image
-        shown in the UI.  The uploaded image is resized to 256×256 and saved
-        as a JPEG alongside a metadata sidecar with score=1.0 so the
-        auto-capture pipeline will never overwrite a manually-uploaded portrait.
+        The uploaded image is resized to 256×256 JPEG-92 and stored via the
+        vault at score=1.0 so the auto-capture pipeline will never overwrite it.
 
         Returns 404 if the entity does not exist in the database.
         Returns 422 if no valid image file is found in the multipart body.
         """
         import cv2 as _cv2
-        import json
         import numpy as np
-        from datetime import datetime, timezone
 
         entity_row = store.get_entity(entity_id)
         if not entity_row:
@@ -187,35 +185,21 @@ def create_service_app(
             )
 
         # Resize to standard portrait dimensions (256×256)
-        portrait_size = 256
-        img_resized = _cv2.resize(img, (portrait_size, portrait_size), interpolation=_cv2.INTER_LANCZOS4)
-
-        # Write to portrait store directory
-        portrait_dir = _portrait_store._dir
-        safe_id = entity_id.replace("/", "_").replace("\\", "_")
-        portrait_path = portrait_dir / f"{safe_id}.jpg"
-        meta_path = portrait_dir / f"{safe_id}.meta.json"
-
-        encode_params = [_cv2.IMWRITE_JPEG_QUALITY, 92]
-        ok, buf = _cv2.imencode(".jpg", img_resized, encode_params)
+        img_resized = _cv2.resize(img, (256, 256), interpolation=_cv2.INTER_LANCZOS4)
+        ok, buf = _cv2.imencode(".jpg", img_resized, [_cv2.IMWRITE_JPEG_QUALITY, 92])
         if not ok:
             raise HTTPException(status_code=500, detail="Failed to encode portrait image")
 
-        portrait_path.write_bytes(buf.tobytes())
-
-        # score=1.0 → auto-capture pipeline will never overwrite this portrait
-        meta_payload = {
-            "score": 1.0,
-            "updated_at": datetime.now(timezone.utc).isoformat(),
-            "source": "manual_upload",
-        }
-        meta_path.write_text(json.dumps(meta_payload, indent=2), encoding="utf-8")
+        # score=1.0 → auto-capture pipeline will never overwrite a manual upload
+        _portrait_store.vault.put_portrait(entity_id, buf.tobytes(), score=1.0)
 
         return {
             "status": "updated",
             "entity_id": entity_id,
+            "storage": "vault",
         }
-    # ────────────────────────────────────────────────────────────────────────
+    # ─────────────────────────────────────────────────────────────────────────
+
 
 
     @app.get("/")
@@ -746,6 +730,8 @@ def create_service_app(
         from loguru import logger
         from trace_aml.service.person_api import clear_enrollment_state
         result = store.factory_reset()
+        # Wipe all encrypted vault blobs and indexes
+        _portrait_store.vault.wipe()
         # Reset all per-session runtime state so the fresh DB is reflected
         # immediately without needing a service restart.
         session.last_logged_at.clear()

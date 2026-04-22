@@ -11,6 +11,16 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from trace_aml.core.errors import ConfigError
 
+# ── Portable data root ────────────────────────────────────────────────────────
+# Browser / dev mode : TRACE_DATA_ROOT is unset → resolves to "data" (relative)
+# Electron packaged  : Electron main sets TRACE_DATA_ROOT=<app.getPath('userData')>/TRACE-AML
+#                      before spawning the Python backend, so all vault/store
+#                      paths automatically land in the right OS-specific location.
+#
+# Nothing else in the codebase needs to change for Electron packaging.
+_DATA_ROOT: str = os.environ.get("TRACE_DATA_ROOT", "data").rstrip("/\\")
+
+
 
 class AppSettings(BaseModel):
     name: str = "TRACE-AML"
@@ -229,11 +239,32 @@ class ActionsSettings(BaseModel):
 
 
 class StoreSettings(BaseModel):
-    root: str = "data"
-    vectors_dir: str = "data/vectors"
-    screenshots_dir: str = "data/screenshots"
-    exports_dir: str = "data/exports"
-    portraits_dir: str = "data/portraits"
+    root: str = _DATA_ROOT
+    vectors_dir: str = f"{_DATA_ROOT}/vectors"
+    screenshots_dir: str = f"{_DATA_ROOT}/screenshots"
+    exports_dir: str = f"{_DATA_ROOT}/exports"
+    portraits_dir: str = f"{_DATA_ROOT}/portraits"
+
+
+class VaultSettings(BaseModel):
+    """DataVault — encrypted binary store for face image assets.
+
+    All sensitive images (portraits, detection screenshots, enrollment photos)
+    are stored as XChaCha20-Poly1305 encrypted blobs with SHA-256 content-
+    addressed names.  No blob filename ever contains an entity or person ID.
+
+    The encryption key is loaded from the ``TRACE_VAULT_KEY`` environment
+    variable (64 hex chars = 32 bytes).  If unset, vault runs in passthrough
+    mode (dev use only — images stored unencrypted as plain .bin files).
+    """
+
+    enabled: bool = True
+    """Master switch. False keeps legacy data/portraits/ layout untouched."""
+
+    portraits_dir: str = f"{_DATA_ROOT}/vault/portraits"
+    evidence_dir: str = f"{_DATA_ROOT}/vault/evidence"
+    enrollment_dir: str = f"{_DATA_ROOT}/vault/enrollment"
+    index_dir: str = f"{_DATA_ROOT}/index"
 
 
 # ── Notification Channel Settings ──────────────────────────────────────────────
@@ -315,6 +346,7 @@ class Settings(BaseSettings):
     actions: ActionsSettings = Field(default_factory=ActionsSettings)
     notifications: NotificationsSettings = Field(default_factory=NotificationsSettings)
     store: StoreSettings = Field(default_factory=StoreSettings)
+    vault: VaultSettings = Field(default_factory=VaultSettings)
     logging: LoggingSettings = Field(default_factory=LoggingSettings)
     liveness: LivenessSettings = Field(default_factory=LivenessSettings)
     gpu: GpuSettings = Field(default_factory=GpuSettings)

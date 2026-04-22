@@ -8,6 +8,16 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 
+# Load .env FIRST — before any trace_aml imports so that TRACE_VAULT_KEY and
+# TRACE_DATA_ROOT are in os.environ when config.py evaluates _DATA_ROOT at
+# module import time.
+try:
+    from dotenv import load_dotenv as _load_dotenv
+    _load_dotenv(dotenv_path=Path(__file__).resolve().parents[2] / ".env", override=False)
+except ImportError:
+    pass  # python-dotenv not installed — env vars must be set externally
+
+
 import typer
 from rich import box
 from rich.console import Console

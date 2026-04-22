@@ -370,9 +370,32 @@ def _duration(start_iso: str, end_iso: str) -> str:
         return "—"
 
 
-def _b64_image(path: str) -> str | None:
-    """Return inline base64 data URI for an image, or None if unavailable."""
+def _b64_image(path: str, vault: Any = None) -> str | None:
+    """Return inline base64 data URI for an image, or None if unavailable.
+
+    Handles two path formats:
+    * ``vault:{sha256}``  — decrypt from DataVault (new format)
+    * Any other string    — legacy absolute/relative filesystem path
+    """
     try:
+        if path and path.startswith("vault:") and vault is not None:
+            # New format: vault:sha256hex  OR  vault:detection_id
+            key = path[len("vault:"):]
+            # Try evidence lookup by detection_id first (stored in evidence.json)
+            # The vault key may be the detection_id OR the sha256 blob key.
+            # evidence.get_evidence_bytes() accepts detection_id.
+            # We need to find the detection_id from the vault's index.
+            # Simplest: store detection_id as the lookup key in put_evidence,
+            # so vault.get_evidence_bytes(detection_id) works directly.
+            data = None
+            # Try interpreting key as detection_id
+            with_det = vault.get_evidence_bytes(key.split(":")[0] if ":" in key else key)
+            if with_det is not None:
+                data = with_det
+            if data is None:
+                return None
+            return f"data:image/jpeg;base64,{base64.b64encode(data).decode()}"
+        # Legacy filesystem path
         p = Path(path)
         if not p.exists() or p.stat().st_size == 0:
             return None
@@ -509,20 +532,34 @@ class PdfReportHandler(BaseActionHandler):
             except Exception:
                 pass
 
-        # Portrait as base64
+        # Portrait as base64 — try vault first, then legacy filesystem
         portrait_b64: str | None = None
-        if cfg.include_entity_portrait and src_pid:
-            portraits_dir = Path(self.settings.store.portraits_dir).resolve()
-            for ext in (".jpg", ".jpeg", ".png"):
-                candidate = portraits_dir / f"{src_pid}{ext}"
-                if candidate.exists():
-                    portrait_b64 = _b64_image(str(candidate))
-                    break
+        if cfg.include_entity_portrait:
+            from trace_aml.store.portrait_store import PortraitStore
+            _ps = PortraitStore(self.settings)
+            # Try the entity_id directly (works for UNKNOWN entities)
+            _portrait_entity_id = incident.entity_id
+            jpeg_bytes = _ps.get_portrait_bytes(_portrait_entity_id)
+            # For KNOWN entities also try src_pid (enrolled portrait)
+            if jpeg_bytes is None and src_pid:
+                jpeg_bytes = _ps.get_portrait_bytes(src_pid)
+            if jpeg_bytes is not None:
+                portrait_b64 = f"data:image/jpeg;base64,{base64.b64encode(jpeg_bytes).decode()}"
+            # Final fallback: legacy flat-file portrait
+            if portrait_b64 is None and src_pid:
+                portraits_dir = Path(self.settings.store.portraits_dir).resolve()
+                for ext in (".jpg", ".jpeg", ".png"):
+                    candidate = portraits_dir / f"{src_pid}{ext}"
+                    if candidate.exists():
+                        portrait_b64 = _b64_image(str(candidate))
+                        break
 
         # Gallery screenshots
         gallery_shots: list[dict] = []
         if getattr(cfg, "include_screenshots", True):
-            gallery_shots = self._select_gallery_shots(detections)
+            from trace_aml.store.portrait_store import PortraitStore
+            _vault = PortraitStore(self.settings).vault
+            gallery_shots = self._select_gallery_shots(detections, vault=_vault)
 
         return {
             "incident":        incident,
@@ -535,19 +572,31 @@ class PdfReportHandler(BaseActionHandler):
             "detections":      detections,
             "actions_hist":    actions_hist,
             "gallery_shots":   gallery_shots,
+            "_vault":          _vault if getattr(cfg, "include_screenshots", True) else None,
         }
 
     # ── Gallery shot selection ──────────────────────────────────────────────
+
 
     @staticmethod
     def _select_gallery_shots(
         detections: list[dict],
         max_shots: int = 12,
         bucket_minutes: int = 10,
+        vault: Any = None,
     ) -> list[dict]:
         """
-        Pick the highest-confidence screenshot per 10-minute bucket,
-        returned in chronological order (max max_shots images).
+        Pick the best screenshot per 10-minute bucket, returned chronologically.
+
+        Winner selection uses a **composite quality score**::
+
+            composite = 0.6 × (smoothed_confidence / 100) + 0.4 × face_quality
+
+        This ensures the gallery shows *sharp, well-lit* frames rather than just
+        high-similarity-score detections that may be blurry.
+
+        Supports both vault-keyed paths (``vault:{sha256}``) and legacy filesystem
+        absolute paths for backward compatibility.
         """
         if not detections:
             return []
@@ -557,18 +606,38 @@ class PdfReportHandler(BaseActionHandler):
 
         for det in sorted_dets:
             spath = str(det.get("screenshot_path", ""))
-            if not spath or not Path(spath).exists():
+            if not spath:
                 continue
+
+            # Resolve whether we have a valid image for this detection
+            has_image = False
+            if spath.startswith("vault:") and vault is not None:
+                det_id = spath[len("vault:"):]
+                has_image = vault.has_evidence(det_id)
+            else:
+                has_image = Path(spath).exists() if spath else False
+
+            if not has_image:
+                continue
+
             try:
                 ts_str = str(det.get("timestamp_utc", "")).replace("Z", "+00:00")
                 ts = datetime.fromisoformat(ts_str)
                 bucket_key = int(ts.timestamp()) // (bucket_minutes * 60)
             except Exception:
                 continue
-            conf     = float(det.get("confidence", 0))
+
+            # Composite score: weighted combination of match confidence + face quality
+            smth_c   = float(det.get("smoothed_confidence", det.get("confidence", 0))) / 100.0
+            face_q   = float((det.get("metadata") or {}).get("face_quality", 0.0))
+            composite = 0.6 * smth_c + 0.4 * face_q
+
             existing = buckets.get(bucket_key)
-            if existing is None or conf > float(existing.get("confidence", 0)):
-                buckets[bucket_key] = det
+            if existing is None:
+                buckets[bucket_key] = {**det, "_composite": composite}
+            else:
+                if composite > existing.get("_composite", 0.0):
+                    buckets[bucket_key] = {**det, "_composite": composite}
 
         selected = sorted(buckets.values(), key=lambda d: str(d.get("timestamp_utc", "")))
         return selected[:max_shots]
@@ -898,7 +967,8 @@ class PdfReportHandler(BaseActionHandler):
             rendered = 0
             for shot in shots:
                 spath = str(shot.get("screenshot_path", ""))
-                b64   = _b64_image(spath)
+                vault = data.get("_vault")
+                b64   = _b64_image(spath, vault=vault)
                 if not b64:
                     continue
                 ts    = _fmt_ts(str(shot.get("timestamp_utc", "")))
