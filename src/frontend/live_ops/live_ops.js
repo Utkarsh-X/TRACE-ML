@@ -360,7 +360,7 @@
   var ENTITY_TYPE_STYLES = {
     criminal:    { color: "#ff3366", badge: "CRIM",  showConf: true,
                    status: "IDENTIFIED \u00b7 CRIMINAL / POI" },
-    missing:     { color: "#ffaa33", badge: "MISS",  showConf: false,
+    missing:     { color: "#ffaa33", badge: "MISS",  showConf: true,
                    status: "IDENTIFIED \u00b7 MISSING PERSON" },
     employee:    { color: "#33ff77", badge: "STAFF", showConf: true,
                    status: "IDENTIFIED \u00b7 AUTH STAFF" },
@@ -541,8 +541,9 @@
   }
 
   function checkCameraStatus() {
-    // Poll backend for actual camera status on page load
-    TraceClient.cameraStatus().then(function (status) {
+    // Poll backend for actual camera status on page load.
+    // Returns the promise so callers can chain (e.g. auto-resume logic).
+    return TraceClient.cameraStatus().then(function (status) {
       if (status) {
         _updateCameraUI(status.enabled);
       }
@@ -573,6 +574,73 @@
     // Clear the intel panel when recognition stops
     _intelHistory = [];
     updateEntityIntelPanel([]);
+  }
+
+  // ── Graceful shutdown: stop recognition (if active) then stop camera ──────────
+  // Chains async API calls in the correct order and invokes callback when done.
+  // A 3-second safety timeout ensures navigation always proceeds even if APIs fail.
+  function gracefulShutdown(callback) {
+    var _done = false;
+    var _timer = setTimeout(function () {
+      if (!_done) { _done = true; callback(); }
+    }, 3000);
+
+    function _finish() {
+      if (!_done) {
+        _done = true;
+        clearTimeout(_timer);
+        callback();
+      }
+    }
+
+    function _stopCamera(cb) {
+      if (!_cameraActive) { cb(); return; }
+      TraceClient.cameraDisable().then(function (r) {
+        if (r) _updateCameraUI(false);
+        cb();
+      }).catch(cb);
+    }
+
+    // Check recognition first; if enabled, disable it before stopping camera
+    TraceClient.recognitionStatus().then(function (status) {
+      if (status && status.enabled) {
+        TraceClient.recognitionDisable().then(function () {
+          _updateRecognitionUI(false);
+          _stopCamera(_finish);
+        }).catch(function () {
+          _stopCamera(_finish);
+        });
+      } else {
+        _stopCamera(_finish);
+      }
+    }).catch(function () {
+      // Cannot reach backend — just stop camera UI and proceed
+      _stopCamera(_finish);
+    });
+  }
+
+  // ── Nav-link interception: graceful shutdown before leaving live ops ──────────
+  // Intercepts clicks on all sidebar/nav links that lead away from this page.
+  // Saves camera state to localStorage (for auto-resume on return), triggers
+  // gracefulShutdown(), then navigates once shutdown completes.
+  function initNavInterception() {
+    var links = document.querySelectorAll('a[href]');
+    links.forEach(function (link) {
+      var href = (link.getAttribute('href') || '').trim();
+      // Only intercept relative links to other pages — skip anchors, external URLs,
+      // and links that stay on the live_ops page itself.
+      if (!href || href === '#' || href.startsWith('http') || href.indexOf('live_ops') !== -1) return;
+
+      link.addEventListener('click', function (e) {
+        if (!_cameraActive) return; // nothing to shut down, let the browser navigate
+
+        e.preventDefault();
+        var target = href; // capture before async completes
+        gracefulShutdown(function () {
+          window.location.href = target;
+        });
+      });
+    });
   }
 
   function pollOverlay() {
@@ -931,6 +999,9 @@
     // Init timeline filter tabs
     initFilterTabs();
 
+    // Init nav-link interception for graceful camera/recognition shutdown
+    initNavInterception();
+
     // Initial probe
     TraceClient.probe().then(function (info) {
       if (!info) return;
@@ -1001,7 +1072,21 @@
   }, 100);
 
   // Cleanup on page unload
-  window.addEventListener("beforeunload", function () {
+  // Also covers browser back/forward/close-tab cases that nav-link interception
+  // cannot catch. We use navigator.sendBeacon for fire-and-forget API calls since
+  // async fetch() won't complete during beforeunload.
+  window.addEventListener('beforeunload', function () {
+    // Best-effort: fire-and-forget shutdown via sendBeacon
+    // (nav-link interception already handles graceful shutdown for sidebar navigation;
+    //  this is a safety net for back button / tab close / keyboard shortcuts)
+    if (_cameraActive && navigator.sendBeacon) {
+      try {
+        var base = TraceClient.baseUrl;
+        navigator.sendBeacon(base + '/api/v1/recognition/disable');
+        navigator.sendBeacon(base + '/api/v1/camera/disable');
+      } catch (e) { /* sendBeacon unavailable */ }
+    }
+
     TraceClient.disconnectSSE();
     if (_snapshotTimer) clearInterval(_snapshotTimer);
     if (_timelineTimer) clearInterval(_timelineTimer);
