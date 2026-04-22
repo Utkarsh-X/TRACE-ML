@@ -177,6 +177,7 @@
     // Notification test buttons
     wireTestButton('btn-test-email',   '/api/v1/notifications/test/email');
     wireTestButton('btn-test-wa',      '/api/v1/notifications/test/whatsapp');
+    wireTestButton('btn-test-pdf',     '/api/v1/notifications/test/pdf');
 
     // Save all notification settings
     var btnSave = document.getElementById('btn-save-notifications');
@@ -403,6 +404,20 @@
           </div>
           <div class="px-5 py-5">
             ${pdfBody}
+            <div class="flex items-center gap-3 mt-5 pt-4 border-t border-outline-variant/10 bg-primary/5 p-4 rounded-sm border border-primary/20">
+              <div class="flex-1">
+                <span class="block font-mono text-[0.65rem] text-primary uppercase tracking-widest mb-1">Visual Verification</span>
+                <p class="font-mono text-[0.55rem] text-outline italic">Generate a sample forensic report with simulated data to verify the new Obsidian TRACE layout.</p>
+              </div>
+              <button id="btn-test-pdf"
+                class="flex-shrink-0 flex items-center gap-1.5 px-4 py-2 bg-primary/10 hover:bg-primary/20
+                       text-primary border border-primary/30 font-mono text-[0.65rem] uppercase
+                       transition-all active:scale-95 shadow-[0_0_15px_rgba(var(--primary-rgb),0.1)]">
+                <span class="material-symbols-outlined text-[18px]">visibility</span>
+                <span>Preview Template</span>
+              </button>
+            </div>
+            <div id="btn-test-pdf-status" class="font-mono text-[0.55rem] text-outline mt-2 text-right h-4"></div>
             <div class="mt-5 pt-4 border-t border-outline-variant/5">
               <button id="btn-save-notifications"
                 class="flex items-center gap-1.5 px-4 py-2 bg-primary hover:bg-primary/90
@@ -492,27 +507,44 @@
         }
       }
       btn.disabled = true;
-      if (statusEl) statusEl.textContent = 'Saving & Sending...';
-      
+      if (statusEl) statusEl.textContent = 'Saving & Processing...';
+
       // Auto-save notification settings first, then test
       saveNotificationSettingsThen(function() {
-        if (statusEl) statusEl.textContent = 'Sending...';
+        if (statusEl) statusEl.textContent = btnId === 'btn-test-pdf' ? 'Generating...' : 'Sending...';
         fetch(url, { method: 'POST' })
         .then(function(r) { return r.json(); })
         .then(function(data) {
-          var ok = data.status === 'queued' || data.status === 'sent';
+          var ok = data.status === 'queued' || data.status === 'sent' || data.status === 'generated';
           if (statusEl) {
             statusEl.textContent = ok ? '✓ ' + data.status : '✗ ' + (data.reason || data.status);
             statusEl.style.color = ok ? 'var(--success)' : 'var(--error)';
           }
-          if (ok) TraceToast.success('Test Sent', 'Check recipient for delivery.');
-          else    TraceToast.warning('Not Sent', data.reason || data.status);
+          if (ok) {
+            if (btnId === 'btn-test-pdf') {
+              var targetUrl = data.pdf_url || data.html_url;
+              if (targetUrl) {
+                var isFallback = !data.pdf_url && data.html_url;
+                var msg = isFallback ? 'Showing HTML Preview (PDF libs missing)' : 'Opening PDF preview...';
+                TraceToast.success('Report Generated', msg);
+                setTimeout(function() {
+                  window.open(targetUrl, '_blank');
+                }, 800);
+              } else {
+                TraceToast.warning('Generated but No URL', 'Report created but could not be served.');
+              }
+            } else {
+              TraceToast.success('Test Sent', 'Check recipient for delivery.');
+            }
+          }
+          else    TraceToast.warning('Failed', data.reason || data.status);
         })
         .catch(function(e) {
           if (statusEl) { statusEl.textContent = '✗ Network error'; statusEl.style.color = 'var(--error)'; }
         })
         .finally(function() { btn.disabled = false; });
       });
+
     });
   }
 

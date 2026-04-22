@@ -5,10 +5,12 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from queue import Empty, Full, Queue
 from typing import Any
+import os
 
 from fastapi import Query, Request
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
+from loguru import logger
 
 from trace_aml.core.config import Settings
 from trace_aml.core.models import AlertSeverity
@@ -59,7 +61,6 @@ def create_service_app(
     async def _lifespan(application: Any):
         """Run startup purge then yield control to the app."""
         if settings.pipeline.purge_ghost_entities_on_start:
-            from loguru import logger
             min_ev = settings.pipeline.ghost_entity_min_events
             logger.info("Running startup ghost entity purge (min_events={})...", min_ev)
             purged = store.purge_ghost_entities(min_events=min_ev)
@@ -980,6 +981,63 @@ def create_service_app(
         ok, reason = handler.execute_sync(test_incident, ActionTrigger.on_create, {}, timeout=60.0)
         return {"status": "sent" if ok else "failed", "reason": reason}
 
+    @app.post("/api/v1/notifications/test/pdf")
+    def test_pdf() -> dict[str, Any]:
+        """Generate a sample PDF report to verify template design."""
+        from loguru import logger
+        from trace_aml.actions.pdf_handler import PdfReportHandler
+        from trace_aml.core.models import (
+            IncidentRecord, IncidentStatus, AlertSeverity, ActionTrigger
+        )
+        test_incident = IncidentRecord(
+            incident_id="PRM-SAMPLE-01",
+            entity_id="ENT-TEST-99",
+            status=IncidentStatus.open,
+            severity=AlertSeverity.high,
+            alert_count=3,
+            summary="This is a sample forensic report generated for template validation. It contains simulated detection events and alert logs to demonstrate the high-density editorial layout of TRACE-AML v4.",
+        )
+        handler = PdfReportHandler(settings, store)
+        context: dict[str, Any] = {}
+        ok, reason = handler.execute(test_incident, ActionTrigger.on_create, context)
+        
+        if not ok:
+            return {"status": "failed", "reason": reason}
+
+        pdf_path_str = context.get("pdf_report_path", "")
+        html_path_str = context.get("html_report_path", "")
+        pdf_url = ""
+        html_url = ""
+        
+        # Resolve HTML URL (always exists if generation didn't crash)
+        if html_path_str:
+            try:
+                abs_html = Path(html_path_str).resolve()
+                abs_base = Path(settings.notifications.pdf_report.output_dir).resolve()
+                rel_html = os.path.relpath(abs_html, abs_base)
+                html_url = f"/ui/exports/{Path(rel_html).as_posix()}"
+            except Exception:
+                pass
+
+        # Resolve PDF URL
+        if pdf_path_str:
+            abs_pdf = Path(pdf_path_str).resolve()
+            if abs_pdf.exists():
+                try:
+                    abs_base = Path(settings.notifications.pdf_report.output_dir).resolve()
+                    rel_pdf = os.path.relpath(abs_pdf, abs_base)
+                    pdf_url = f"/ui/exports/{Path(rel_pdf).as_posix()}"
+                except Exception:
+                    pass
+
+        return {
+            "status": "generated",
+            "pdf_url": pdf_url,
+            "html_url": html_url,
+            "fallback_to_html": not bool(pdf_url),
+            "reason": reason if pdf_url else "PDF libraries missing; showing HTML preview instead."
+        }
+
     @app.get("/api/v1/whatsapp/status")
     def whatsapp_status() -> dict[str, Any]:
         """Get local WhatsApp bridge connection status and QR code."""
@@ -1048,14 +1106,24 @@ def create_service_app(
 
         return StreamingResponse(_iterator(), media_type="text/event-stream")
 
+    # ── Exports static mount ──
+    # Serve generated PDF/HTML reports from data/exports/ at /ui/exports/
+    from fastapi.staticfiles import StaticFiles
+
+    _exports_dir = Path(settings.notifications.pdf_report.output_dir).resolve()
+    _exports_dir.mkdir(parents=True, exist_ok=True)
+    app.mount(
+        "/ui/exports",
+        StaticFiles(directory=str(_exports_dir), html=False),
+        name="exports",
+    )
+
     # ── Static frontend mount ──
     # Serve the frontend UI from /ui/ so both API and UI run on the same port.
     # API routes are registered first and take priority over the static mount.
     import importlib.resources
-    from pathlib import Path
 
     from fastapi.responses import RedirectResponse
-    from fastapi.staticfiles import StaticFiles
 
     # Locate frontend directory relative to the package
     _frontend_dir = Path(__file__).resolve().parent.parent.parent / "frontend"
@@ -1066,15 +1134,5 @@ def create_service_app(
             return RedirectResponse(url="/ui/live_ops/index.html")
 
         app.mount("/ui", StaticFiles(directory=str(_frontend_dir), html=True), name="frontend")
-
-    # ── Exports static mount ──
-    # Serve generated PDF/HTML reports from data/exports/ at /ui/exports/
-    _exports_dir = Path(settings.notifications.pdf_report.output_dir).resolve()
-    _exports_dir.mkdir(parents=True, exist_ok=True)
-    app.mount(
-        "/ui/exports",
-        StaticFiles(directory=str(_exports_dir), html=False),
-        name="exports",
-    )
 
     return app

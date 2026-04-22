@@ -53,33 +53,50 @@ except Exception as _pw_err:
 
 # ── Shared CSS — NOT an f-string to avoid {{ }} brace-escaping hell ──────────
 _REPORT_CSS = """
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {
-  background: #0a0e1a;
-  color: #e6ebf5;
-  font-family: 'Courier New', Courier, monospace;
-  font-size: 10.5px;
-  line-height: 1.55;
+  background: #0e0e0e;
+  color: #e2e2e2;
+  font-family: 'Inter', -apple-system, sans-serif;
+  font-size: 10px;
+  line-height: 1.5;
+  -webkit-print-color-adjust: exact;
 }
 
-/* ── Page setup (WeasyPrint @page) ────────────────────────── */
+/* ── Page setup ───────────────────────────────────────────── */
 @page {
   size: A4;
-  margin: 16mm 13mm 18mm 13mm;
-  background: #0a0e1a;
+  margin: 15mm 12mm 18mm 12mm;
+  background: #0e0e0e;
 }
 
 /* ── Typography ───────────────────────────────────────────── */
+.mono { font-family: 'JetBrains Mono', monospace; }
+
 h2 {
-  font-size: 8.5px;
-  letter-spacing: 0.22em;
-  color: #64748b;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  color: #919191;
   text-transform: uppercase;
-  margin: 18px 0 8px;
-  padding-bottom: 4px;
-  border-bottom: 1px solid #1e2a3d;
+  margin: 24px 0 10px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid #1f1f1f;
   break-after: avoid;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+h2::before {
+  content: "";
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  background: #ffffff;
 }
 
 /* ── Report cover header ──────────────────────────────────── */
@@ -87,75 +104,96 @@ h2 {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  padding: 13px 16px;
-  margin-bottom: 20px;
-  background: #050810;
-  border-bottom: 3px solid #6b7280;
+  padding: 18px 20px;
+  margin-bottom: 24px;
+  background: #131313;
+  border: 1px solid #1f1f1f;
+  border-left: 3px solid #ffffff;
   break-inside: avoid;
 }
-.rpt-header.sev-high   { border-bottom-color: #dc2626; }
-.rpt-header.sev-medium { border-bottom-color: #d97706; }
-.rpt-header.sev-low    { border-bottom-color: #16a34a; }
+.rpt-header.sev-critical { border-left-color: #d32f2f; }
 
 .rpt-header__brand {
-  font-size: 18px;
-  font-weight: bold;
-  letter-spacing: 0.22em;
-  color: #e6ebf5;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: 0.15em;
+  color: #ffffff;
+  margin-bottom: 4px;
 }
 .rpt-header__sub {
-  font-size: 8px;
-  color: #64748b;
-  letter-spacing: 0.18em;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 7.5px;
+  color: #474747;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
-  margin-top: 3px;
 }
 .rpt-header__right { text-align: right; }
 
-.sev-badge {
-  display: inline-block;
-  padding: 2px 10px;
-  font-size: 8.5px;
-  letter-spacing: 0.15em;
+/* ── Badge System ────────────────────────────────────────── */
+.badge {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 7.5px;
+  font-weight: 500;
   text-transform: uppercase;
-  border-radius: 2px;
-  border: 1px solid;
+  letter-spacing: 0.08em;
+  padding: 2px 8px;
+  display: inline-flex;
+  align-items: center;
+  border-radius: 1px;
 }
-.sev-badge.high   { background: rgba(220,38,38,0.15);  color: #dc2626; border-color: #dc2626; }
-.sev-badge.medium { background: rgba(217,119,6,0.15);  color: #d97706; border-color: #d97706; }
-.sev-badge.low    { background: rgba(22,163,74,0.15);  color: #16a34a; border-color: #16a34a; }
+.badge--filled {
+  background-color: #ffffff;
+  color: #0e0e0e;
+  border: 1px solid #ffffff;
+}
+.badge--ghost {
+  background-color: transparent;
+  border: 1px solid #474747;
+  color: #c6c6c6;
+}
+.badge--neutral {
+  background-color: transparent;
+  border: 1px dashed rgba(145, 145, 145, 0.4);
+  color: #919191;
+}
+.badge--critical {
+  background-color: rgba(211, 47, 47, 0.15);
+  color: #d32f2f;
+  border: 1px solid rgba(211, 47, 47, 0.4);
+}
 
 /* ── Cards ────────────────────────────────────────────────── */
 .card {
-  background: #141928;
-  border: 1px solid #1e2a3d;
-  padding: 13px 15px;
-  border-radius: 3px;
-  margin-bottom: 10px;
+  background: #131313;
+  border: 1px solid #1f1f1f;
+  padding: 15px 18px;
+  margin-bottom: 12px;
   break-inside: avoid;
 }
 .card__label {
-  font-size: 8px;
-  color: #64748b;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 7.5px;
+  color: #474747;
   text-transform: uppercase;
-  letter-spacing: 0.2em;
-  margin-bottom: 8px;
-  padding-bottom: 4px;
-  border-bottom: 1px solid #1e2a3d;
+  letter-spacing: 0.15em;
+  margin-bottom: 12px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid #1f1f1f;
 }
 
 /* ── Two-column grid ─────────────────────────────────────── */
 .cols-2 {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 10px;
-  margin-bottom: 10px;
+  gap: 12px;
+  margin-bottom: 12px;
 }
 
-/* ── Entity cover card (portrait floated right) ──────────── */
+/* ── Entity cover card (portrait) ────────────────────────── */
 .entity-wrap {
   display: flex;
-  gap: 18px;
+  gap: 20px;
   break-inside: avoid;
 }
 .entity-wrap__fields { flex: 1; min-width: 0; }
@@ -164,76 +202,70 @@ h2 {
   width: 110px;
   height: 140px;
   object-fit: cover;
-  border: 1px solid #1e2a3d;
-  border-radius: 3px;
+  border: 1px solid #1f1f1f;
   display: block;
 }
 .portrait-placeholder {
   width: 110px;
   height: 140px;
-  background: #0d1220;
-  border: 1px dashed #1e2a3d;
-  border-radius: 3px;
+  background: #0e0e0e;
+  border: 1px dashed #1f1f1f;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #3b4a6b;
-  font-size: 9px;
+  color: #474747;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 8px;
   text-align: center;
   line-height: 1.6;
 }
 
 /* ── Field rows ──────────────────────────────────────────── */
-.field { display: flex; margin-bottom: 3px; }
+.field { display: flex; margin-bottom: 4px; border-bottom: 1px solid rgba(31,31,31,0.5); padding-bottom: 4px; }
+.field:last-child { border-bottom: none; }
 .field__k {
-  color: #64748b;
+  font-family: 'JetBrains Mono', monospace;
+  color: #474747;
   min-width: 130px;
   flex-shrink: 0;
-  font-size: 9.5px;
+  font-size: 8.5px;
+  text-transform: uppercase;
 }
 .field__v {
-  color: #e6ebf5;
+  color: #ffffff;
   font-size: 9.5px;
+  font-weight: 500;
   flex: 1;
-  overflow: hidden;
 }
-.field__v--high   { color: #dc2626; font-weight: bold; }
-.field__v--medium { color: #d97706; font-weight: bold; }
-.field__v--low    { color: #16a34a; font-weight: bold; }
 
 /* ── Tables ──────────────────────────────────────────────── */
-table { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
+table { width: 100%; border-collapse: collapse; margin-bottom: 12px; }
 thead tr { break-after: avoid; }
 tr { break-inside: avoid; }
 th {
-  background: #0d1220;
-  color: #64748b;
+  background: #0e0e0e;
+  color: #474747;
   text-align: left;
-  padding: 5px 8px;
-  font-size: 8px;
-  letter-spacing: 0.12em;
+  padding: 8px 10px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 7.5px;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
-  border-bottom: 1px solid #1e2a3d;
+  border-bottom: 1px solid #1f1f1f;
 }
 td {
-  padding: 4px 8px;
-  border-bottom: 1px solid #0d1220;
-  color: #e6ebf5;
-  font-size: 9.5px;
+  padding: 6px 10px;
+  border-bottom: 1px solid #1f1f1f;
+  color: #c6c6c6;
+  font-size: 9px;
 }
 tr:last-child td { border-bottom: none; }
-tr.alt td { background: rgba(20,25,40,0.5); }
+tr.alt td { background: rgba(31, 31, 31, 0.3); }
 
-.sev-high   { color: #dc2626; }
-.sev-medium { color: #d97706; }
-.sev-low    { color: #16a34a; }
-.conf-ok    { color: #16a34a; }
-.conf-mid   { color: #d97706; }
-.conf-low   { color: #dc2626; }
-.ok         { color: #16a34a; }
-.fail       { color: #dc2626; }
-.muted      { color: #64748b; }
-.ack-yes    { color: #64748b; font-size: 8px; }
+.text-white { color: #ffffff; }
+.text-muted { color: #919191; }
+.text-grey  { color: #474747; }
+.text-critical { color: #d32f2f; }
 
 /* ── Page breaks ─────────────────────────────────────────── */
 .page-break { break-before: page; }
@@ -242,47 +274,55 @@ tr.alt td { background: rgba(20,25,40,0.5); }
 .gallery-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
-  margin-top: 10px;
+  gap: 15px;
+  margin-top: 15px;
 }
-.gallery-item { break-inside: avoid; }
+.gallery-item { break-inside: avoid; border: 1px solid #1f1f1f; background: #131313; padding: 4px; }
 .gallery-item img {
   width: 100%;
-  height: 138px;
+  height: 130px;
   object-fit: cover;
-  border: 1px solid #1e2a3d;
-  border-radius: 3px;
   display: block;
 }
 .gallery-item figcaption {
-  font-size: 8px;
-  color: #64748b;
-  text-align: center;
-  margin-top: 4px;
-  line-height: 1.5;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 7.5px;
+  color: #474747;
+  text-align: left;
+  margin-top: 6px;
+  padding: 4px;
+  line-height: 1.4;
 }
 
 /* ── Report footer ───────────────────────────────────────── */
 .rpt-footer {
-  margin-top: 22px;
-  padding-top: 8px;
-  border-top: 1px solid #1e2a3d;
+  margin-top: 30px;
+  padding-top: 10px;
+  border-top: 1px solid #1f1f1f;
   display: flex;
   justify-content: space-between;
-  color: #3b4a6b;
-  font-size: 8.5px;
+  color: #474747;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 7.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
 }
 
 /* ── Print / light-mode override ────────────────────────── */
 @media print {
-  body { background: #fff; color: #111; }
-  .card { background: #f8f9fa; border-color: #dee2e6; }
-  th { background: #e9ecef; color: #495057; }
-  td { color: #212529; }
-  .field__k { color: #6c757d; }
-  .field__v { color: #212529; }
-  h2 { color: #495057; border-color: #dee2e6; }
-  .portrait-placeholder { border-color: #dee2e6; color: #adb5bd; }
+  body { background: #ffffff; color: #1a1c1c; }
+  .card, .rpt-header, .gallery-item { background: #ffffff; border-color: #e2e2e2; }
+  th { background: #f5f5f5; color: #757575; border-bottom-color: #e2e2e2; }
+  td { color: #1a1c1c; border-bottom-color: #f5f5f5; }
+  .field__k { color: #757575; }
+  .field__v { color: #1a1c1c; }
+  .field { border-bottom-color: #f5f5f5; }
+  h2 { color: #757575; border-bottom-color: #e2e2e2; }
+  .portrait-placeholder { border-color: #e2e2e2; color: #bdbdbd; background: #fafafa; }
+  .rpt-footer { border-top-color: #e2e2e2; color: #bdbdbd; }
+  .mono, .field__k, .card__label, h2, th, .rpt-header__brand, .rpt-header__sub, .badge, .rpt-footer, figcaption {
+    font-family: 'JetBrains Mono', monospace !important;
+  }
 }
 """
 
@@ -294,7 +334,7 @@ def _utc_now() -> datetime:
 
 
 def _fmt_ts(iso: str) -> str:
-    """ISO → 'YYYY-MM-DD HH:MM:SS UTC'."""
+    """ISO → 'YYYY-MM-DD HH:MM:SS'."""
     if not iso:
         return "—"
     try:
@@ -302,7 +342,7 @@ def _fmt_ts(iso: str) -> str:
         if t.endswith("Z"):
             t = t[:-1] + "+00:00"
         dt = datetime.fromisoformat(t)
-        return dt.strftime("%Y-%m-%d %H:%M:%S UTC")
+        return dt.strftime("%Y-%m-%d %H:%M:%S")
     except Exception:
         return str(iso)[:19]
 
@@ -354,6 +394,29 @@ def _esc(s: str) -> str:
         .replace(">", "&gt;")
         .replace('"', "&quot;")
     )
+
+
+# ── UI Mapping Helpers ───────────────────────────────────────────────────────
+
+def _severity_badge(severity: str) -> str:
+    s = str(severity or "").lower()
+    label = s.upper()
+    if s in ("critical", "extreme", "emergency"):
+        return f'<span class="badge badge--critical">{label}</span>'
+    if s == "high":
+        return f'<span class="badge badge--neutral">{label}</span>'
+    if s == "medium":
+        return f'<span class="badge badge--ghost">{label}</span>'
+    return f'<span class="badge badge--ghost">{label}</span>'
+
+def _status_badge(status: str) -> str:
+    s = str(status or "").lower()
+    label = s.upper()
+    if s in ("open", "active", "criminal"):
+        return f'<span class="badge badge--filled">{label}</span>'
+    if s in ("pending", "unknown"):
+        return f'<span class="badge badge--neutral">{label}</span>'
+    return f'<span class="badge badge--ghost">{label}</span>'
 
 
 # ── Handler ───────────────────────────────────────────────────────────────────
@@ -528,7 +591,7 @@ class PdfReportHandler(BaseActionHandler):
         return (
             f'<!DOCTYPE html>\n<html lang="en">\n<head>'
             f'<meta charset="UTF-8">'
-            f'<title>TRACE-AML Incident Report \xb7 {_esc(inc_short)}</title>'
+            f'<title>TRACE-AML Report \xb7 {_esc(inc_short)}</title>'
             f'<style>{_REPORT_CSS}</style>'
             f'</head>\n<body>\n'
             f'{cover}\n{alerts_sec}\n{dets_sec}\n{gallery}\n'
@@ -575,7 +638,11 @@ class PdfReportHandler(BaseActionHandler):
         ).upper()
         dur = _duration(incident.start_time, incident.last_seen_time)
         summary_text = _esc((incident.summary or "—")[:250])
-        sev_cls = f"field__v--{severity}"
+
+        # Badges
+        sev_badge = _severity_badge(severity)
+        cat_badge = _status_badge(person_cat)
+        inc_status_badge = _status_badge(inc_status)
 
         # Portrait HTML
         if portrait_b64:
@@ -583,7 +650,7 @@ class PdfReportHandler(BaseActionHandler):
         else:
             portrait_html = (
                 '<div class="portrait-placeholder">'
-                'NO PORTRAIT<br>AVAILABLE</div>'
+                'NO PORTRAIT<br>DATA</div>'
             )
 
         return f"""
@@ -591,26 +658,25 @@ class PdfReportHandler(BaseActionHandler):
 <div class="rpt-header sev-{severity}">
   <div>
     <div class="rpt-header__brand">TRACE&#x2011;AML</div>
-    <div class="rpt-header__sub">Forensic Incident Report &middot; Anti-Money Laundering Intelligence System</div>
+    <div class="rpt-header__sub">Forensic Incident Report &middot; Anti-Money Laundering Intel</div>
   </div>
   <div class="rpt-header__right">
-    <div class="muted" style="font-size:9px;">Generated</div>
-    <div style="color:#e6ebf5;font-size:9.5px;">{generated_at.strftime('%Y-%m-%d %H:%M:%S UTC')}</div>
-    <div style="margin-top:6px;"><span class="sev-badge {severity}">{severity.upper()} SEVERITY</span></div>
-    <div style="margin-top:5px;color:#3b4a6b;font-size:8px;">CONFIDENTIAL &mdash; DO NOT DISTRIBUTE</div>
+    <div class="text-grey mono" style="font-size:7.5px;">SYSTEM GENERATED</div>
+    <div class="text-white mono" style="font-size:9px; margin-top:2px;">{generated_at.strftime('%Y-%m-%d %H:%M:%S UTC')}</div>
+    <div style="margin-top:8px;">{sev_badge}</div>
   </div>
 </div>
 
-<h2>&#x1F464; Entity Identification</h2>
+<h2>Entity Identification</h2>
 <div class="card">
   <div class="entity-wrap">
     <div class="entity-wrap__fields">
       <div class="card__label">Biometric Identity Profile</div>
-      <div class="field"><span class="field__k">Entity ID</span><span class="field__v">{_esc(incident.entity_id)}</span></div>
+      <div class="field"><span class="field__k">Entity ID</span><span class="field__v mono">{_esc(incident.entity_id)}</span></div>
       <div class="field"><span class="field__k">Type</span><span class="field__v">{entity_type}</span></div>
       <div class="field"><span class="field__k">Status</span><span class="field__v">{entity_status}</span></div>
-      <div class="field"><span class="field__k">Name</span><span class="field__v"><strong>{_esc(person_name)}</strong></span></div>
-      <div class="field"><span class="field__k">Category</span><span class="field__v {sev_cls}">{_esc(person_cat.upper())}</span></div>
+      <div class="field"><span class="field__k">Name</span><span class="field__v text-white">{_esc(person_name)}</span></div>
+      <div class="field"><span class="field__k">Category</span><span class="field__v">{cat_badge}</span></div>
       <div class="field"><span class="field__k">Date of Birth</span><span class="field__v">{dob}</span></div>
       <div class="field"><span class="field__k">Gender</span><span class="field__v">{gender}</span></div>
       <div class="field"><span class="field__k">Last Known City</span><span class="field__v">{city}</span></div>
@@ -623,44 +689,42 @@ class PdfReportHandler(BaseActionHandler):
 <div class="cols-2">
   <div class="card">
     <div class="card__label">Enrollment Data</div>
-    <div class="field"><span class="field__k">Lifecycle State</span><span class="field__v">{lifecycle}</span></div>
-    <div class="field"><span class="field__k">Enrollment Score</span><span class="field__v">{enr_score * 100:.1f}%</span></div>
-    <div class="field"><span class="field__k">Valid Embeddings</span><span class="field__v">{valid_emb}</span></div>
-    <div class="field"><span class="field__k">Notes</span><span class="field__v">{notes}</span></div>
+    <div class="field"><span class="field__k">Lifecycle</span><span class="field__v">{lifecycle}</span></div>
+    <div class="field"><span class="field__k">Enr. Score</span><span class="field__v">{enr_score * 100:.1f}%</span></div>
+    <div class="field"><span class="field__k">Valid Emb.</span><span class="field__v">{valid_emb}</span></div>
+    <div class="field"><span class="field__k">Notes</span><span class="field__v text-muted">{notes}</span></div>
   </div>
   <div class="card">
-    <div class="card__label">Sighting Record</div>
-    <div class="field"><span class="field__k">First Detected</span><span class="field__v">{first_seen}</span></div>
-    <div class="field"><span class="field__k">Last Detected</span><span class="field__v">{last_seen}</span></div>
+    <div class="card__label">Detection Record</div>
+    <div class="field"><span class="field__k">First Seen</span><span class="field__v mono">{first_seen}</span></div>
+    <div class="field"><span class="field__k">Last Seen</span><span class="field__v mono">{last_seen}</span></div>
   </div>
 </div>
 
-<h2>&#x26A0; Incident Summary</h2>
+<h2>Incident Summary</h2>
 <div class="cols-2">
   <div class="card">
     <div class="card__label">Incident Header</div>
-    <div class="field"><span class="field__k">Incident ID</span><span class="field__v"><strong>{_esc(inc_short)}</strong></span></div>
-    <div class="field"><span class="field__k">Status</span><span class="field__v">{inc_status}</span></div>
-    <div class="field"><span class="field__k">Severity</span><span class="field__v {sev_cls}">{severity.upper()}</span></div>
+    <div class="field"><span class="field__k">ID</span><span class="field__v mono text-white">{_esc(inc_short)}</span></div>
+    <div class="field"><span class="field__k">Status</span><span class="field__v">{inc_status_badge}</span></div>
     <div class="field"><span class="field__k">Duration</span><span class="field__v">{_esc(dur)}</span></div>
     <div class="field"><span class="field__k">Alert Count</span><span class="field__v">{incident.alert_count}</span></div>
   </div>
   <div class="card">
     <div class="card__label">Timeline</div>
-    <div class="field"><span class="field__k">Opened</span><span class="field__v">{_fmt_ts(incident.start_time)}</span></div>
-    <div class="field"><span class="field__k">Last Activity</span><span class="field__v">{_fmt_ts(incident.last_seen_time)}</span></div>
-    <div class="field"><span class="field__k">Full ID</span><span class="field__v" style="font-size:8px;">{_esc(incident.incident_id)}</span></div>
+    <div class="field"><span class="field__k">Opened</span><span class="field__v mono">{_fmt_ts(incident.start_time)}</span></div>
+    <div class="field"><span class="field__k">Last Activity</span><span class="field__v mono">{_fmt_ts(incident.last_seen_time)}</span></div>
   </div>
 </div>
 
 <div class="card">
   <div class="card__label">Summary Narrative</div>
-  <div style="color:#e6ebf5;font-size:10px;line-height:1.7;">{summary_text}</div>
+  <div style="color:#ffffff; font-size:10px; line-height:1.7;">{summary_text}</div>
 </div>
 
 <div class="rpt-footer">
-  <span>TRACE-AML v4 &middot; Incident {_esc(inc_short)} &middot; CONFIDENTIAL</span>
-  <span>Page 1 of 4</span>
+  <span>TRACE-AML v4 &middot; Incident {_esc(inc_short)} &middot; FORENSIC USE ONLY</span>
+  <span>Page 1 / 4</span>
 </div>
 """
 
@@ -682,13 +746,14 @@ class PdfReportHandler(BaseActionHandler):
                 ev_ct = str(a.get("event_count", "1"))
                 reason = _esc(str(a.get("reason", "—"))[:100])
                 ack   = a.get("acknowledged", False)
-                ack_td = '<span class="ack-yes">&#x2713; ACK</span>' if ack else '<span style="color:#e6ebf5;">OPEN</span>'
+                ack_td = '<span class="text-grey mono" style="font-size:7.5px;">[ACK]</span>' if ack else '<span class="text-white mono" style="font-size:7.5px;">OPEN</span>'
                 alt   = ' class="alt"' if i % 2 else ""
+                sev_b = _severity_badge(sev)
                 rows_html += (
                     f'<tr{alt}>'
-                    f'<td class="sev-{sev}">{atype}</td>'
-                    f'<td class="sev-{sev}">{sev.upper()}</td>'
-                    f'<td class="muted">{ts}</td>'
+                    f'<td class="mono text-white" style="font-size:8px;">{atype}</td>'
+                    f'<td>{sev_b}</td>'
+                    f'<td class="mono text-grey">{ts}</td>'
                     f'<td style="text-align:center;">{ev_ct}</td>'
                     f'<td>{ack_td}</td>'
                     f'<td>{reason}</td>'
@@ -701,31 +766,31 @@ class PdfReportHandler(BaseActionHandler):
                 f'</tr></thead><tbody>{rows_html}</tbody></table>'
             )
         else:
-            alerts_table = '<div class="muted" style="padding:8px 4px;font-style:italic;">No alerts linked to this incident.</div>'
+            alerts_table = '<div class="text-grey mono" style="padding:15px; font-style:italic; border:1px solid #1f1f1f; background:#131313;">No alerts linked to this incident.</div>'
 
         # Action rows
         _ACTION_ICONS: dict[str, str] = {
-            "LOG":        "&#x1F4CB;",
-            "EMAIL":      "&#x1F4E7;",
-            "WHATSAPP":   "&#x1F4AC;",
-            "PDF_REPORT": "&#x1F4C4;",
-            "ALARM":      "&#x26A0;",
+            "LOG":        "LOG",
+            "EMAIL":      "MAIL",
+            "WHATSAPP":   "CHAT",
+            "PDF_REPORT": "PDF",
+            "ALARM":      "ALARM",
         }
         if actions_hist:
             act_rows = ""
             for i, a in enumerate(actions_hist):
                 atype_raw = str(a.get("action_type", "—")).upper()
-                icon  = _ACTION_ICONS.get(atype_raw, "&#x2699;")
+                icon  = _ACTION_ICONS.get(atype_raw, "ACT")
                 stat  = str(a.get("status", "—")).upper()
-                scls  = "ok" if stat == "SUCCESS" else "fail"
+                sbadge = '<span class="badge badge--filled">SUCCESS</span>' if stat == "SUCCESS" else f'<span class="badge badge--critical">{stat}</span>'
                 ts    = _fmt_ts(str(a.get("timestamp_utc", "")))
                 reason = _esc(str(a.get("reason", "—"))[:100])
                 alt   = ' class="alt"' if i % 2 else ""
                 act_rows += (
                     f'<tr{alt}>'
-                    f'<td>{icon}&nbsp;{_esc(atype_raw)}</td>'
-                    f'<td class="{scls}">{stat}</td>'
-                    f'<td class="muted">{ts}</td>'
+                    f'<td class="mono text-white" style="font-size:8px;"><span class="text-grey">[{icon}]</span> {atype_raw}</td>'
+                    f'<td>{sbadge}</td>'
+                    f'<td class="mono text-grey">{ts}</td>'
                     f'<td>{reason}</td>'
                     f'</tr>\n'
                 )
@@ -735,18 +800,20 @@ class PdfReportHandler(BaseActionHandler):
                 f'</tr></thead><tbody>{act_rows}</tbody></table>'
             )
         else:
-            actions_table = '<div class="muted" style="padding:8px 4px;font-style:italic;">No actions recorded for this incident.</div>'
+            actions_table = '<div class="text-grey mono" style="padding:15px; font-style:italic; border:1px solid #1f1f1f; background:#131313;">No actions recorded for this incident.</div>'
 
         return f"""
 <!-- ═══ PAGE 2: ALERT LOG & ACTIONS ═══ -->
 <div class="page-break">
-<h2>&#x1F514; Alert Log</h2>
+<h2>Alert Log</h2>
 {alerts_table}
-<h2>&#x26A1; Automated Response Actions</h2>
+
+<h2 style="margin-top:30px;">Automated Response Actions</h2>
 {actions_table}
+
 <div class="rpt-footer">
-  <span>TRACE-AML v4 &middot; Incident {_esc(inc_short)} &middot; CONFIDENTIAL</span>
-  <span>Page 2 of 4</span>
+  <span>TRACE-AML v4 &middot; Incident {_esc(inc_short)} &middot; FORENSIC USE ONLY</span>
+  <span>Page 2 / 4</span>
 </div>
 </div>
 """
@@ -777,36 +844,37 @@ class PdfReportHandler(BaseActionHandler):
                         raw_flags = []
                 flags_str = _esc(", ".join(str(f) for f in raw_flags) if raw_flags else "—")
 
-                conf_cls = "conf-ok" if conf >= 75 else ("conf-mid" if conf >= 50 else "conf-low")
+                conf_badge = f'<span class="badge badge--filled" style="width:45px; justify-content:center;">{conf:.1f}%</span>' if conf >= 75 else f'<span class="badge badge--ghost" style="width:45px; justify-content:center;">{conf:.1f}%</span>'
                 alt = ' class="alt"' if i % 2 else ""
 
                 rows_html += (
                     f'<tr{alt}>'
-                    f'<td class="muted">{ts}</td>'
-                    f'<td class="{conf_cls}">{conf:.1f}%</td>'
-                    f'<td>{decision}</td>'
-                    f'<td class="muted">{source}</td>'
-                    f'<td class="muted">{track}</td>'
-                    f'<td style="font-size:8px;color:#64748b;">{flags_str}</td>'
+                    f'<td class="mono text-grey">{ts}</td>'
+                    f'<td>{conf_badge}</td>'
+                    f'<td class="text-white">{decision}</td>'
+                    f'<td class="mono text-grey">{source}</td>'
+                    f'<td class="mono text-grey">{track}</td>'
+                    f'<td class="mono" style="font-size:7.5px; color:#474747;">{flags_str}</td>'
                     f'</tr>\n'
                 )
             det_table = (
                 '<table><thead><tr>'
-                '<th>Timestamp (UTC)</th><th>Confidence</th><th>Decision</th>'
+                '<th>Timestamp (UTC)</th><th>Conf.</th><th>Decision</th>'
                 '<th>Source</th><th>Track ID</th><th>Quality Flags</th>'
                 f'</tr></thead><tbody>{rows_html}</tbody></table>'
             )
         else:
-            det_table = '<div class="muted" style="padding:8px 4px;font-style:italic;">No detection events recorded for this entity.</div>'
+            det_table = '<div class="text-grey mono" style="padding:15px; font-style:italic; border:1px solid #1f1f1f; background:#131313;">No detection events recorded for this entity.</div>'
 
         return f"""
 <!-- ═══ PAGE 3: DETECTION TIMELINE ═══ -->
 <div class="page-break">
-<h2>&#x1F4F9; Detection Timeline ({len(detections)} events)</h2>
+<h2>Detection Timeline ({len(detections)} events)</h2>
 {det_table}
+
 <div class="rpt-footer">
-  <span>TRACE-AML v4 &middot; Incident {_esc(inc_short)} &middot; CONFIDENTIAL</span>
-  <span>Page 3 of 4</span>
+  <span>TRACE-AML v4 &middot; Incident {_esc(inc_short)} &middot; FORENSIC USE ONLY</span>
+  <span>Page 3 / 4</span>
 </div>
 </div>
 """
@@ -819,11 +887,10 @@ class PdfReportHandler(BaseActionHandler):
 
         if not shots:
             body = (
-                '<div class="card" style="text-align:center;padding:30px;">'
-                '<div class="muted">No captured screenshots available for this entity.</div>'
-                '<div class="muted" style="margin-top:8px;font-size:9px;">'
-                'Screenshots are stored automatically when the entity is detected by the recognition camera.<br>'
-                'Ensure the live-ops pipeline is running and the entity has been sighted at least once.'
+                '<div class="card" style="text-align:center; padding:40px; border-style:dashed;">'
+                '<div class="text-grey mono">NO VISUAL EVIDENCE CAPTURED</div>'
+                '<div class="text-grey mono" style="margin-top:10px; font-size:8px;">'
+                'Check pipeline stream status and entity sighting history.'
                 '</div></div>'
             )
         else:
@@ -840,32 +907,32 @@ class PdfReportHandler(BaseActionHandler):
                 dec   = _esc(str(shot.get("decision_state", "—")))
                 items += (
                     f'<figure class="gallery-item">'
-                    f'<img src="{b64}" alt="Detection screenshot">'
-                    f'<figcaption>{ts}<br>'
-                    f'Conf: {conf:.1f}% &middot; {dec}'
+                    f'<img src="{b64}" alt="Capture">'
+                    f'<figcaption>'
+                    f'<div class="text-white mono">{ts}</div>'
+                    f'<div style="margin-top:2px;">CONF: {conf:.1f}% &middot; {dec}</div>'
                     f'</figcaption></figure>\n'
                 )
                 rendered += 1
 
             if not items:
-                items = '<div class="muted" style="grid-column:1/-1;text-align:center;padding:20px;">Screenshot files not found on disk.</div>'
+                items = '<div class="text-grey mono" style="grid-column:1/-1; text-align:center; padding:20px;">FILES_NOT_FOUND_ON_DISK</div>'
 
-            info = f"Showing {rendered} best-quality captures (1 per 10-min window)"
+            info = f"SEQUENTIAL CAPTURE LOG: {rendered} SAMPLES"
             body = (
-                f'<div class="card" style="padding:6px 10px;margin-bottom:10px;">'
-                f'<span class="muted" style="font-size:9px;">{info}. '
-                f'Images are face crops with context padding.</span></div>'
+                f'<div class="mono text-grey" style="font-size:8px; margin-bottom:10px; letter-spacing:0.1em;">{info}</div>'
                 f'<div class="gallery-grid">{items}</div>'
             )
 
         return f"""
 <!-- ═══ PAGE 4: VISUAL EVIDENCE GALLERY ═══ -->
 <div class="page-break">
-<h2>&#x1F4F7; Visual Evidence Gallery</h2>
+<h2>Visual Evidence Gallery</h2>
 {body}
-<div class="rpt-footer" style="margin-top:30px;">
-  <span>TRACE-AML v4 &middot; Incident {_esc(inc_short)} &middot; CONFIDENTIAL &middot; Do not distribute</span>
-  <span>Page 4 of 4</span>
+
+<div class="rpt-footer" style="margin-top:40px;">
+  <span>TRACE-AML v4 &middot; Incident {_esc(inc_short)} &middot; FORENSIC USE ONLY</span>
+  <span>Page 4 / 4</span>
 </div>
 </div>
 """
@@ -879,19 +946,30 @@ class PdfReportHandler(BaseActionHandler):
         data: dict,
         generated_at: datetime,
     ) -> None:
-        if _PLAYWRIGHT_OK:
-            try:
-                self._write_pdf_playwright(html_str, pdf_path)
-                logger.debug("[PDF] Playwright Chromium → {}", pdf_path.name)
-                return
-            except Exception as exc:
-                logger.warning("[PDF] Playwright render failed ({}), using fpdf2 fallback", exc)
+        """Attempt to render PDF. Fails gracefully if dependencies are missing."""
+        try:
+            if _PLAYWRIGHT_OK:
+                try:
+                    self._write_pdf_playwright(html_str, pdf_path)
+                    logger.debug("[PDF] Playwright Chromium → {}", pdf_path.name)
+                    return
+                except Exception as exc:
+                    logger.warning("[PDF] Playwright render failed: {}", exc)
 
-        # ── fpdf2 fallback ────────────────────────────────────────────────────
-        self._write_pdf_fpdf2(pdf_path, data, generated_at)
+            # ── fpdf2 fallback ────────────────────────────────────────────────────
+            self._write_pdf_fpdf2(pdf_path, data, generated_at)
+        except ImportError:
+            logger.warning("[PDF] Skipping PDF generation: 'fpdf2' or 'playwright' not installed.")
+        except Exception as exc:
+            logger.error("[PDF] Generation failed: {}", exc)
 
     def _write_pdf_playwright(self, html_str: str, pdf_path: Path) -> None:
         """Render HTML to PDF via Playwright headless Chromium."""
+        try:
+            from playwright.sync_api import sync_playwright
+        except ImportError:
+            raise ImportError("playwright not installed in this environment")
+
         with sync_playwright() as pw:
             browser = pw.chromium.launch()
             page = browser.new_page()
@@ -913,7 +991,10 @@ class PdfReportHandler(BaseActionHandler):
         generated_at: datetime,
     ) -> None:
         """fpdf2-based fallback — covers all 4 sections in simple table form."""
-        from fpdf import FPDF
+        try:
+            from fpdf import FPDF
+        except ImportError:
+            raise ImportError("fpdf2 not installed")
 
         incident    = data["incident"]
         entity_row  = data["entity_row"]
@@ -928,10 +1009,16 @@ class PdfReportHandler(BaseActionHandler):
             incident.severity.value if hasattr(incident.severity, "value")
             else incident.severity
         ).lower()
-        SEV_RGB = {"high": (220, 38, 38), "medium": (217, 119, 6), "low": (22, 163, 74)}
-        sev_rgb = SEV_RGB.get(severity, (107, 114, 128))
+        
+        # Monochromatic severity logic for fallback
+        if severity in ("critical", "extreme", "emergency"):
+            sev_rgb = (211, 47, 47) # Red
+        elif severity == "high":
+            sev_rgb = (145, 145, 145) # Grey
+        else:
+            sev_rgb = (198, 198, 198) # Light Grey
 
-        BG, FG, GREY, BORDER = (10,14,26), (230,235,245), (100,110,130), (40,50,70)
+        BG, FG, GREY, BORDER = (14, 14, 14), (255, 255, 255), (145, 145, 145), (31, 31, 31)
         inc_short = incident.incident_id[-8:]
         dur       = _duration(incident.start_time, incident.last_seen_time)
 
@@ -941,34 +1028,43 @@ class PdfReportHandler(BaseActionHandler):
 
         def header():
             pdf.set_fill_color(*BG)
-            pdf.rect(0, 0, pdf.w, 28, "F")
-            pdf.set_xy(pdf.l_margin, 8)
-            pdf.set_font("Helvetica", "B", 15)
+            pdf.rect(0, 0, pdf.w, pdf.h, "F") # Fill entire page background
+            
+            pdf.set_fill_color(19, 19, 19)
+            pdf.rect(pdf.l_margin, 8, W(), 22, "F")
+            pdf.set_draw_color(*FG)
+            pdf.line(pdf.l_margin, 8, pdf.l_margin, 30)
+            
+            pdf.set_xy(pdf.l_margin + 5, 12)
+            pdf.set_font("Helvetica", "B", 14)
             pdf.set_text_color(*FG)
-            pdf.cell(W() / 2, 8, "TRACE-AML", ln=False)
+            pdf.cell(W() / 2, 6, "TRACE-AML", ln=False)
+            
             pdf.set_font("Helvetica", "", 7)
             pdf.set_text_color(*GREY)
             pdf.set_x(pdf.l_margin + W() / 2)
-            pdf.cell(W() / 2, 8, f"Generated: {generated_at.strftime('%Y-%m-%d %H:%M UTC')}", align="R", ln=True)
-            pdf.set_xy(pdf.l_margin, 18)
-            pdf.set_font("Helvetica", "B", 9)
+            pdf.cell(W() / 2 - 5, 6, f"GENERATED: {generated_at.strftime('%Y-%m-%d %H:%M UTC')}", align="R", ln=True)
+            
+            pdf.set_xy(pdf.l_margin + 5, 20)
+            pdf.set_font("Helvetica", "B", 8)
             pdf.set_text_color(*sev_rgb)
-            pdf.cell(W(), 6, f"INCIDENT REPORT  ·  {severity.upper()} SEVERITY  ·  {inc_short}", ln=True)
-            pdf.ln(6)
+            pdf.cell(W(), 6, f"FORENSIC REPORT  \xb7  {severity.upper()} SEVERITY  \xb7  {inc_short}", ln=True)
+            pdf.ln(10)
 
         def section(title: str):
             pdf.set_fill_color(*BORDER)
             pdf.rect(pdf.l_margin, pdf.get_y(), W(), 0.3, "F")
             pdf.ln(2)
-            pdf.set_font("Helvetica", "B", 8)
+            pdf.set_font("Helvetica", "B", 7)
             pdf.set_text_color(*GREY)
-            pdf.cell(W(), 5, title, ln=True)
+            pdf.cell(W(), 5, title.upper(), ln=True)
             pdf.ln(1)
 
         def kv(label: str, val: str):
-            pdf.set_font("Helvetica", "", 8)
+            pdf.set_font("Helvetica", "B", 7)
             pdf.set_text_color(*GREY)
-            pdf.cell(35, 5, f"{label}:", ln=False)
+            pdf.cell(35, 5, f"{label.upper()}:", ln=False)
+            pdf.set_font("Helvetica", "", 8)
             pdf.set_text_color(*FG)
             pdf.cell(W() - 35, 5, str(val)[:80], ln=True)
 
@@ -976,10 +1072,12 @@ class PdfReportHandler(BaseActionHandler):
             pdf.set_font("Helvetica", "B", 7)
             pdf.set_text_color(*GREY)
             for lbl, w in col_defs:
-                pdf.cell(w, 5, lbl, ln=False)
+                pdf.cell(w, 5, lbl.upper(), ln=False)
             pdf.ln()
+            pdf.set_draw_color(*BORDER)
+            pdf.line(pdf.l_margin, pdf.get_y(), pdf.l_margin + W(), pdf.get_y())
             pdf.set_font("Helvetica", "", 7)
-            pdf.set_text_color(*FG)
+            pdf.set_text_color(198, 198, 198)
             for row in rows:
                 try:
                     vals = row_fn(row)
@@ -1014,9 +1112,10 @@ class PdfReportHandler(BaseActionHandler):
             ("First Seen", _fmt_ts(str(entity_row.get("created_at", "")))),
             ("Last Seen",  _fmt_ts(str(entity_row.get("last_seen_at", "")))),
         ]:
-            pdf.set_font("Helvetica", "", 8)
+            pdf.set_font("Helvetica", "B", 7)
             pdf.set_text_color(*GREY)
-            pdf.cell(35, 5, f"{label}:", ln=False)
+            pdf.cell(35, 5, f"{label.upper()}:", ln=False)
+            pdf.set_font("Helvetica", "", 8)
             pdf.set_text_color(*FG)
             pdf.cell(text_w - 35, 5, str(val)[:60], ln=True)
 
@@ -1087,10 +1186,10 @@ class PdfReportHandler(BaseActionHandler):
 
         # ── Footer ──────────────────────────────────────────────────────────
         pdf.set_y(-15)
-        pdf.set_font("Helvetica", "I", 7)
+        pdf.set_font("Helvetica", "I", 6)
         pdf.set_text_color(*GREY)
-        pdf.cell(W() / 2, 5, f"TRACE-AML v4  ·  Incident {inc_short}  ·  CONFIDENTIAL")
-        pdf.cell(W() / 2, 5, f"Generated {generated_at.strftime('%Y-%m-%d %H:%M:%S UTC')}", align="R")
+        pdf.cell(W() / 2, 5, f"TRACE-AML V4  \xb7  INCIDENT {inc_short}  \xb7  FORENSIC USE ONLY")
+        pdf.cell(W() / 2, 5, f"GENERATED {generated_at.strftime('%Y-%m-%d %H:%M:%S UTC')}", align="R")
 
         pdf.output(str(pdf_path))
 

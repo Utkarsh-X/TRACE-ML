@@ -222,53 +222,66 @@ class EmailHandler(BaseActionHandler):
         start     = _fmt_ts(incident.start_time)
         last_seen = _fmt_ts(incident.last_seen_time)
 
+        # Monochromatic badge logic
+        sev_label = severity.upper()
+        if severity in ("critical", "extreme"):
+            sev_badge = f'<span class="badge badge--critical">{sev_label}</span>'
+        elif severity == "high":
+            sev_badge = f'<span class="badge badge--neutral">{sev_label}</span>'
+        else:
+            sev_badge = f'<span class="badge badge--ghost">{sev_label}</span>'
+
         pdf_note = ""
         if pdf_path:
             import os as _os
             fname = _os.path.basename(pdf_path)
             pdf_note = (
-                f'<tr><td class="k">Report</td>'
-                f'<td><span style="color:#4ade80">Full PDF attached ({fname})</span></td></tr>'
+                f'<tr><td class="k">REPORT</td>'
+                f'<td><span style="color:#ffffff; font-family:monospace; font-size:11px;">ATTACHED: {fname}</span></td></tr>'
             )
 
         return f"""<!DOCTYPE html>
 <html lang="en">
 <head><meta charset="UTF-8">
 <style>
-  body{{margin:0;padding:0;background:#0a0e1a;font-family:'Courier New',monospace;color:#e6ebf5}}
-  .wrap{{max-width:600px;margin:24px auto;background:#141928;border:1px solid #28324a;
-          border-top:3px solid {sev_color};padding:24px;border-radius:4px}}
-  h1{{font-size:18px;letter-spacing:0.15em;margin:0 0 4px}}
-  .sub{{color:#64748b;font-size:11px;margin-bottom:16px;letter-spacing:0.1em}}
-  .badge{{display:inline-block;padding:2px 10px;background:{sev_color}22;color:{sev_color};
-           border:1px solid {sev_color};font-size:11px;letter-spacing:0.15em;border-radius:2px}}
-  table{{width:100%;border-collapse:collapse;margin:16px 0}}
-  td{{padding:6px 0;border-bottom:1px solid #1a2236;font-size:12px;vertical-align:top}}
-  .k{{color:#64748b;width:110px;padding-right:12px;white-space:nowrap}}
-  .footer{{margin-top:20px;padding-top:12px;border-top:1px solid #1a2236;
-            color:#3b4a6b;font-size:10px;text-align:center}}
+  body {{ margin:0; padding:0; background-color:#0e0e0e; font-family:'Inter', Helvetica, Arial, sans-serif; color:#e2e2e2; }}
+  .wrap {{ max-width:600px; margin:20px auto; background-color:#131313; border:1px solid #1f1f1f; padding:30px; border-radius:2px; }}
+  .header {{ border-left:3px solid #ffffff; padding-left:15px; margin-bottom:25px; }}
+  h1 {{ font-family:'JetBrains Mono', monospace; font-size:18px; font-weight:600; letter-spacing:0.15em; color:#ffffff; margin:0 0 4px; }}
+  .sub {{ font-family:'JetBrains Mono', monospace; font-size:10px; color:#474747; letter-spacing:0.1em; }}
+  .badge {{ display:inline-block; padding:2px 10px; font-family:'JetBrains Mono', monospace; font-size:10px; letter-spacing:0.1em; border-radius:1px; }}
+  .badge--critical {{ background-color:rgba(211,47,47,0.15); color:#d32f2f; border:1px solid rgba(211,47,47,0.4); }}
+  .badge--neutral  {{ background-color:transparent; color:#919191; border:1px dashed rgba(145,145,145,0.4); }}
+  .badge--ghost    {{ background-color:transparent; color:#c6c6c6; border:1px solid #474747; }}
+  table {{ width:100%; border-collapse:collapse; margin:20px 0; }}
+  td {{ padding:8px 0; border-bottom:1px solid #1f1f1f; font-size:13px; vertical-align:top; }}
+  .k {{ font-family:'JetBrains Mono', monospace; color:#474747; width:120px; font-size:10px; letter-spacing:0.05em; padding-right:15px; }}
+  .v {{ color:#ffffff; }}
+  .mono {{ font-family:'JetBrains Mono', monospace; font-size:11px; }}
+  .footer {{ margin-top:25px; padding-top:15px; border-top:1px solid #1f1f1f; color:#474747; font-family:'JetBrains Mono', monospace; font-size:9px; text-align:center; letter-spacing:0.05em; }}
 </style>
 </head>
 <body>
 <div class="wrap">
-  <h1>TRACE-AML</h1>
-  <div class="sub">SECURITY ALERT NOTIFICATION</div>
-  <span class="badge">{severity.upper()} SEVERITY</span>
+  <div class="header">
+    <h1>TRACE-AML</h1>
+    <div class="sub">FORENSIC SECURITY ALERT</div>
+  </div>
+  
+  <div style="margin-bottom:20px;">{sev_badge}</div>
 
   <table>
-    <tr><td class="k">Incident ID</td><td>{inc_short}</td></tr>
-    <tr><td class="k">Entity</td><td>{ent_id}</td></tr>
-    <tr><td class="k">Status</td><td>{status}</td></tr>
-    <tr><td class="k">Severity</td><td style="color:{sev_color}">{severity.upper()}</td></tr>
-    <tr><td class="k">Alert Count</td><td>{incident.alert_count}</td></tr>
-    <tr><td class="k">Started</td><td>{start}</td></tr>
-    <tr><td class="k">Last Seen</td><td>{last_seen}</td></tr>
-    <tr><td class="k">Summary</td><td>{summary}</td></tr>
+    <tr><td class="k">INCIDENT ID</td><td class="v mono">{inc_short}</td></tr>
+    <tr><td class="k">ENTITY</td><td class="v mono">{ent_id}</td></tr>
+    <tr><td class="k">STATUS</td><td class="v"><span class="badge badge--ghost">{status}</span></td></tr>
+    <tr><td class="k">STARTED</td><td class="v mono">{start}</td></tr>
+    <tr><td class="k">LAST SEEN</td><td class="v mono">{last_seen}</td></tr>
+    <tr><td class="k">SUMMARY</td><td class="v">{summary}</td></tr>
     {pdf_note}
   </table>
 
   <div class="footer">
-    TRACE-AML v4 Security System &middot; Incident {inc_short} &middot; Do not reply
+    TRACE-AML v4 &middot; INCIDENT {inc_short} &middot; FORENSIC USE ONLY
   </div>
 </div>
 </body>
