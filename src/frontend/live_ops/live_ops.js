@@ -53,6 +53,13 @@
         entRoot.innerHTML = snap.active_entities.map(function (e) {
           return TraceRender.entityCard(e);
         }).join("");
+        // Wire click-to-profile navigation
+        entRoot.querySelectorAll("[data-entity-id]").forEach(function (card) {
+          card.addEventListener("click", function () {
+            var eid = card.getAttribute("data-entity-id");
+            if (eid) window.location.href = "../entities/index.html?id=" + encodeURIComponent(eid);
+          });
+        });
       }
     }
 

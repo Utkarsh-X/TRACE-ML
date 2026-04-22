@@ -129,122 +129,55 @@
             <option value="action">Actions</option>
           </select>
         </div>
+        <div>
+          <label class="font-mono text-[0.6rem] text-outline uppercase block mb-1">Suppression</label>
+          <select class="bg-surface-high font-mono text-[0.75rem] text-white border-0 px-3 py-2 cursor-pointer focus:ring-1 focus:ring-white" id="filter-suppress">
+            <option value="0">OFF</option>
+            <option value="1" selected>1 MIN</option>
+            <option value="5">5 MIN</option>
+            <option value="15">15 MIN</option>
+          </select>
+        </div>
         <button class="px-4 py-2 bg-primary text-on-primary font-mono text-[0.65rem] uppercase tracking-widest cursor-pointer border-0 hover:bg-on-surface transition-colors" id="filter-go">Query</button>
         <button class="px-4 py-2 bg-surface-high text-on-surface-variant font-mono text-[0.65rem] uppercase tracking-widest cursor-pointer border-0 hover:bg-surface-bright transition-colors" id="filter-refresh">Refresh</button>
       </div>
 
       <!-- Timeline Events -->
       <div class="flex-1 space-y-2 overflow-y-auto" id="timeline-results">
-
-        <div class="bg-surface-container p-4 hover:bg-surface-high transition-colors">
-          <div class="flex items-center justify-between mb-2">
-            <div class="flex items-center gap-2">
-              <span class="badge badge--filled">INCIDENT</span>
-              <span class="font-headline font-semibold text-[0.8rem] text-primary">INC-018 Opened</span>
+        <!-- Skeleton Loader -->
+        <div class="space-y-2 animate-pulse">
+          <div class="bg-surface-container p-4">
+            <div class="flex items-center justify-between mb-2">
+              <div class="flex items-center gap-2"><div class="w-16 h-4 bg-surface-high rounded"></div><div class="w-32 h-4 bg-surface-high rounded"></div></div>
+              <div class="w-24 h-3 bg-surface-high rounded"></div>
             </div>
-            <span class="font-mono text-[0.6rem] text-outline">2026-04-15 14:21:45</span>
+            <div class="w-full h-3 bg-surface-high rounded mb-1"></div>
+            <div class="w-3/4 h-3 bg-surface-high rounded"></div>
+            <div class="mt-3 flex gap-3"><div class="w-20 h-3 bg-surface-high rounded"></div><div class="w-20 h-3 bg-surface-high rounded"></div></div>
           </div>
-          <p class="text-[0.75rem] text-on-surface-variant leading-relaxed">Incident created for entity UNK-0042. Trigger: repeated_unknown. Severity: high.</p>
-          <div class="mt-2 flex items-center gap-3">
-            <span class="font-mono text-[0.6rem] text-outline">Entity: UNK-0042</span>
-            <span class="font-mono text-[0.6rem] text-outline">Source: rules_engine</span>
+          <div class="bg-surface-container p-4">
+            <div class="flex items-center justify-between mb-2">
+              <div class="flex items-center gap-2"><div class="w-16 h-4 bg-surface-high rounded"></div><div class="w-32 h-4 bg-surface-high rounded"></div></div>
+              <div class="w-24 h-3 bg-surface-high rounded"></div>
+            </div>
+            <div class="w-5/6 h-3 bg-surface-high rounded"></div>
+          </div>
+          <div class="bg-surface-container p-4">
+            <div class="flex items-center justify-between mb-2">
+              <div class="flex items-center gap-2"><div class="w-16 h-4 bg-surface-high rounded"></div><div class="w-32 h-4 bg-surface-high rounded"></div></div>
+              <div class="w-24 h-3 bg-surface-high rounded"></div>
+            </div>
+            <div class="w-full h-3 bg-surface-high rounded mb-1"></div>
+            <div class="w-1/2 h-3 bg-surface-high rounded"></div>
+          </div>
+          <div class="bg-surface-container p-4">
+            <div class="flex items-center justify-between mb-2">
+              <div class="flex items-center gap-2"><div class="w-16 h-4 bg-surface-high rounded"></div><div class="w-32 h-4 bg-surface-high rounded"></div></div>
+              <div class="w-24 h-3 bg-surface-high rounded"></div>
+            </div>
+            <div class="w-4/5 h-3 bg-surface-high rounded"></div>
           </div>
         </div>
-
-        <div class="bg-surface-container p-4 hover:bg-surface-high transition-colors">
-          <div class="flex items-center justify-between mb-2">
-            <div class="flex items-center gap-2">
-              <span class="badge badge--neutral">ALERT</span>
-              <span class="font-headline font-semibold text-[0.8rem] text-primary">Repeated Unknown Detection</span>
-            </div>
-            <span class="font-mono text-[0.6rem] text-outline">2026-04-15 14:21:45</span>
-          </div>
-          <p class="text-[0.75rem] text-on-surface-variant leading-relaxed">Unknown subject UNK-0042 detected 5 times in 10-second window.</p>
-          <div class="mt-2 flex items-center gap-3">
-            <span class="font-mono text-[0.6rem] text-outline">Entity: UNK-0042</span>
-            <span class="font-mono text-[0.6rem] text-outline">Alert: ALR-0891</span>
-            <span class="badge badge--neutral">HIGH</span>
-          </div>
-        </div>
-
-        <div class="bg-surface-container p-4 hover:bg-surface-high transition-colors">
-          <div class="flex items-center justify-between mb-2">
-            <div class="flex items-center gap-2">
-              <span class="badge badge--ghost">EVENT</span>
-              <span class="font-headline font-semibold text-[0.8rem] text-on-surface">Detection Confirmed</span>
-            </div>
-            <span class="font-mono text-[0.6rem] text-outline">2026-04-15 14:22:09</span>
-          </div>
-          <p class="text-[0.75rem] text-on-surface-variant leading-relaxed">ENT-KN-0001 detected. Confidence: 0.89. Decision: accept. Track: T004. Source: CAM_01.</p>
-          <div class="mt-2 flex items-center gap-3">
-            <span class="font-mono text-[0.6rem] text-outline">Entity: ENT-KN-0001</span>
-          </div>
-        </div>
-
-        <div class="bg-surface-container p-4 hover:bg-surface-high transition-colors">
-          <div class="flex items-center justify-between mb-2">
-            <div class="flex items-center gap-2">
-              <span class="badge badge--filled">ACTION</span>
-              <span class="font-headline font-semibold text-[0.8rem] text-on-surface">Log Executed</span>
-            </div>
-            <span class="font-mono text-[0.6rem] text-outline">2026-04-15 14:19:33</span>
-          </div>
-          <p class="text-[0.75rem] text-on-surface-variant leading-relaxed">Action type: log. Incident: INC-017. Trigger: on_update. Status: executed.</p>
-          <div class="mt-2 flex items-center gap-3">
-            <span class="font-mono text-[0.6rem] text-outline">Entity: ENT-KN-0001</span>
-            <span class="font-mono text-[0.6rem] text-outline">Action: ACT-0410</span>
-          </div>
-        </div>
-
-        <div class="bg-surface-container p-4 hover:bg-surface-high transition-colors">
-          <div class="flex items-center justify-between mb-2">
-            <div class="flex items-center gap-2">
-              <span class="badge badge--neutral">ALERT</span>
-              <span class="font-headline font-semibold text-[0.8rem] text-primary">Reappearance Alert</span>
-            </div>
-            <span class="font-mono text-[0.6rem] text-outline">2026-04-15 14:18:44</span>
-          </div>
-          <p class="text-[0.75rem] text-on-surface-variant leading-relaxed">Entity ENT-KN-0001 reappeared. 3 detections in 10s window. Pattern matches reappearance rule.</p>
-          <div class="mt-2 flex items-center gap-3">
-            <span class="font-mono text-[0.6rem] text-outline">Entity: ENT-KN-0001</span>
-            <span class="font-mono text-[0.6rem] text-outline">Alert: ALR-0889</span>
-            <span class="badge badge--ghost">MEDIUM</span>
-          </div>
-        </div>
-
-        <div class="bg-surface-container p-4 hover:bg-surface-high transition-colors">
-          <div class="flex items-center justify-between mb-2">
-            <div class="flex items-center gap-2">
-              <span class="badge badge--ghost">EVENT</span>
-              <span class="font-headline font-semibold text-[0.8rem] text-on-surface">Entity Resolved</span>
-            </div>
-            <span class="font-mono text-[0.6rem] text-outline">2026-04-15 14:21:30</span>
-          </div>
-          <p class="text-[0.75rem] text-on-surface-variant leading-relaxed">Unknown face assigned entity ID UNK-0042. No match in active gallery (96 embeddings searched).</p>
-        </div>
-
-        <div class="bg-surface-container p-4 hover:bg-surface-high transition-colors">
-          <div class="flex items-center justify-between mb-2">
-            <div class="flex items-center gap-2">
-              <span class="badge badge--ghost">EVENT</span>
-              <span class="font-headline font-semibold text-[0.8rem] text-on-surface">Detection Confirmed</span>
-            </div>
-            <span class="font-mono text-[0.6rem] text-outline">2026-04-15 14:18:20</span>
-          </div>
-          <p class="text-[0.75rem] text-on-surface-variant leading-relaxed">ENT-KN-0001 detected. Confidence: 0.91. Decision: accept. Track: T004.</p>
-        </div>
-
-        <div class="bg-surface-container p-4 hover:bg-surface-high transition-colors">
-          <div class="flex items-center justify-between mb-2">
-            <div class="flex items-center gap-2">
-              <span class="badge badge--ghost">EVENT</span>
-              <span class="font-headline font-semibold text-[0.8rem] text-on-surface">Health Check</span>
-            </div>
-            <span class="font-mono text-[0.6rem] text-outline">2026-04-15 14:17:55</span>
-          </div>
-          <p class="text-[0.75rem] text-on-surface-variant leading-relaxed">Pipeline health OK. FPS: 28.4. Active tracks: 3. Queue: 0.</p>
-        </div>
-
       </div>
     </section>
 
@@ -252,11 +185,11 @@
 </main>
 
 <!-- Service Layer -->
-<script src="../shared/trace_toast.js"></script>
-<script src="../shared/trace_client.js"></script>
-<script src="../shared/trace_render.js"></script>
-<script src="../shared/sidenav.js"></script>
-<script src="./history.js"></script>
+<script src="../shared/trace_toast.js?v=2"></script>
+<script src="../shared/trace_client.js?v=2"></script>
+<script src="../shared/trace_render.js?v=2"></script>
+<script src="../shared/sidenav.js?v=2"></script>
+<script src="./history.js?v=2"></script>
 
 </div><!-- /app-shell -->
 </body>

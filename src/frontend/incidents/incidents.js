@@ -22,6 +22,7 @@
   var _currentId  = null;
   var _offset     = 0;
   var _done       = false;
+  var _loading    = false;
   var _tlRaw      = []; // raw data from server
   var _tlSuppressed = []; // processed data after suppression
   var _tlShown    = 0;
@@ -31,8 +32,10 @@
   ════════════════════════════════════════════════ */
 
   function loadCards(initial) {
-    if (_done) return;
+    if (_done || _loading) return;
+    _loading = true;
     TraceClient.incidents({ limit: PAGE_SIZE, skip: _offset }).then(function (list) {
+      _loading = false;
       // Remove skeleton placeholders on first batch
       if (initial) {
         ["sk1","sk2","sk3"].forEach(function (id) {
@@ -61,6 +64,9 @@
       // This allows the timeline placeholder "Select an incident above" to remain visible
 
       updateArrows();
+    }).catch(function(err) {
+      _loading = false;
+      console.error("Failed to load incidents", err);
     });
   }
 
@@ -673,7 +679,7 @@
     if (!strip) return;
     var cards = strip.querySelectorAll(".inc-card");
     cards.forEach(function (c) { c.parentNode.removeChild(c); });
-    _offset = 0; _done = false;
+    _offset = 0; _done = false; _loading = false;
   }
 
   /* ════════════════════════════════════════════════
@@ -910,9 +916,31 @@
     initSentinel();
     initForensicPanel();
 
+    // Read optional deep-link ?id=<incident_id> (set by Linked Cases on entity page)
+    var _deepLinkId = null;
+    try {
+      var _params = new URLSearchParams(window.location.search);
+      _deepLinkId = _params.get("id") || null;
+    } catch (e) { /* old browser */ }
+
     // Load cards immediately — no probe() gate
     loadCards(true);
     TraceClient.probe(); // fire-and-forget for connection badge
+
+    // If a specific incident was requested, auto-select it after cards render
+    if (_deepLinkId) {
+      // Give the DOM a tick to insert the cards, then find and activate
+      setTimeout(function () {
+        var strip = $("card-strip");
+        var card = strip && strip.querySelector('[data-id="' + _deepLinkId + '"]');
+        if (card) {
+          activateCard(card);
+          card.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+        }
+        // Load incident detail regardless of whether the card was found in this batch
+        loadIncident(_deepLinkId);
+      }, 300);
+    }
   }
 
   if (document.readyState === "loading") {

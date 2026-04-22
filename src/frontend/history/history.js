@@ -15,8 +15,51 @@
     return {
       entity_id: entityId || undefined,
       kinds: kind ? [kind] : undefined,
-      limit: 200,
+      limit: 1000,
     };
+  }
+
+  function getSuppressedTimeline(rawEvents, windowMinutes) {
+    if (windowMinutes === 0) return rawEvents;
+    
+    var windowMs = windowMinutes * 60000;
+    var result = [];
+    if (rawEvents.length === 0) return result;
+
+    var currentGroup = null;
+
+    rawEvents.forEach(function(ev) {
+      var evTime = new Date(ev.timestamp_utc).getTime();
+      
+      if (!currentGroup) {
+        currentGroup = {
+          ev: ev,
+          count: 1,
+          startTime: evTime,
+          endTime: evTime
+        };
+      } else {
+        var diff = Math.abs(evTime - currentGroup.startTime);
+        var sameKind = (ev.kind === currentGroup.ev.kind);
+        var sameTitle = (ev.title === currentGroup.ev.title);
+
+        if (diff <= windowMs && sameKind && sameTitle) {
+          currentGroup.count++;
+          currentGroup.endTime = evTime;
+        } else {
+          result.push(currentGroup);
+          currentGroup = {
+            ev: ev,
+            count: 1,
+            startTime: evTime,
+            endTime: evTime
+          };
+        }
+      }
+    });
+
+    if (currentGroup) result.push(currentGroup);
+    return result;
   }
 
   function loadTimeline() {
@@ -33,7 +76,17 @@
       root.innerHTML = TraceRender.emptyState("No timeline events");
       return;
     }
-    var sorted = items.slice().reverse();
+    
+    var win = parseInt(($("filter-suppress") || {}).value || "1", 10);
+    // Sort chronological before grouping
+    items.sort(function(a, b) {
+      return new Date(a.timestamp_utc).getTime() - new Date(b.timestamp_utc).getTime();
+    });
+    
+    var suppressed = getSuppressedTimeline(items, win);
+    // Reverse to show newest first
+    var sorted = suppressed.slice().reverse();
+    
     root.innerHTML = sorted.map(function (item) {
       return TraceRender.timelineCard(item);
     }).join("");
@@ -55,6 +108,11 @@
       filterInput.addEventListener("keydown", function (e) {
         if (e.key === "Enter") loadTimeline();
       });
+    }
+    
+    var suppressSelect = $("filter-suppress");
+    if (suppressSelect) {
+      suppressSelect.addEventListener("change", loadTimeline);
     }
 
     TraceClient.probe().then(function (info) {

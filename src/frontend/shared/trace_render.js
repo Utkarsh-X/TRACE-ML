@@ -84,24 +84,37 @@
 
   /* ───────────────────── Component Renderers ─────────────────────── */
 
-  /**
-   * Render a timeline card (used on Incidents, History, Entity pages).
-   * @param {Object} item  TimelineItem from API
-   * @returns {string} HTML
-   */
   function timelineCard(item) {
-    var kindLabel = String(item.kind || "event").toUpperCase();
-    var badgeHtml = badge(_timelineKind(item.kind), kindLabel);
-    var title = esc(item.title || "");
-    var time = esc(fmtTime(item.timestamp_utc));
-    var summary = esc(item.summary || "");
+    var ev = item.ev || item;
+    var count = item.count || 1;
+
+    var kindLabel = String(ev.kind || "event").toUpperCase();
+    var badgeHtml = badge(_timelineKind(ev.kind), kindLabel);
+    
+    var title = esc(ev.title || "");
+    if (count > 1) {
+      title = '<span class="text-primary mr-1">[' + count + 'x]</span>' + title;
+    }
+
+    var timeStr;
+    if (count > 1) {
+      var earliest = Math.min(item.startTime, item.endTime);
+      var latest = Math.max(item.startTime, item.endTime);
+      timeStr = esc(fmtTime(new Date(earliest).toISOString())) + " \u2014 " + esc(fmtTime(new Date(latest).toISOString()));
+    } else {
+      timeStr = esc(fmtTime(ev.timestamp_utc));
+    }
+
+    var summary = esc(ev.summary || "");
     var meta = [];
-    if (item.entity_id) meta.push("Entity: " + esc(item.entity_id));
-    if (item.source) meta.push("Source: " + esc(item.source));
-    if (item.incident_id) meta.push("Incident: " + esc(item.incident_id));
-    if (item.metadata) {
-      if (item.metadata.track_id) meta.push("Track: " + esc(item.metadata.track_id));
-      if (item.metadata.event_count) meta.push("Events: " + esc(item.metadata.event_count));
+    if (count === 1) {
+      if (ev.entity_id) meta.push("Entity: " + esc(ev.entity_id));
+      if (ev.source) meta.push("Source: " + esc(ev.source));
+      if (ev.incident_id) meta.push("Incident: " + esc(ev.incident_id));
+      if (ev.metadata) {
+        if (ev.metadata.track_id) meta.push("Track: " + esc(ev.metadata.track_id));
+        if (ev.metadata.event_count) meta.push("Events: " + esc(ev.metadata.event_count));
+      }
     }
 
     return '<div class="bg-surface-container p-4 hover:bg-surface-high transition-colors">'
@@ -109,7 +122,7 @@
       + '<div class="flex items-center gap-2">' + badgeHtml
       + '<span class="font-headline font-semibold text-[0.8rem] text-primary">' + title + "</span>"
       + "</div>"
-      + '<span class="font-mono text-[0.6rem] text-outline">' + time + "</span>"
+      + '<span class="font-mono text-[0.6rem] text-outline">' + timeStr + "</span>"
       + "</div>"
       + '<p class="text-[0.75rem] text-on-surface-variant leading-relaxed">' + summary + "</p>"
       + (meta.length
@@ -145,7 +158,7 @@
       ? '<span class="font-mono text-[0.6rem] text-outline">' + esc(info.join("  ")) + "</span>"
       : '';
 
-    return '<div class="bg-surface-high p-3 hover:bg-surface-bright transition-colors cursor-pointer">'
+    return '<div class="bg-surface-high p-3 hover:bg-surface-bright transition-colors cursor-pointer" data-entity-id="' + esc(entity.entity_id || "") + '">'
       + '<div class="flex items-center justify-between mb-1">'
       + '<span class="font-headline font-semibold text-[0.8rem] text-primary truncate max-w-[160px]">' + name + "</span>"
       + catBadge
@@ -190,7 +203,7 @@
     // Truncate summary to avoid overflow
     if (summary.length > 80) summary = summary.substring(0, 77) + "...";
 
-    return '<div class="bg-surface-high p-4 hover:bg-surface-bright transition-colors cursor-pointer">'
+    return '<div class="bg-surface-high p-4 hover:bg-surface-bright transition-colors cursor-pointer" data-incident-id="' + esc(inc.incident_id || "") + '">'
       + '<div class="flex items-center justify-between mb-1 gap-2">'
       + '<span class="font-headline font-semibold text-[0.8rem] text-primary truncate">' + esc(displayId) + "</span>"
       + statusBadge

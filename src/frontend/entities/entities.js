@@ -261,6 +261,15 @@
   }
 
   function renderIncidents(incidents) {
+    var btnCases = $("btn-open-cases");
+    if (btnCases) {
+      if (incidents && incidents.length > 0) {
+        btnCases.href = "../incidents/index.html?id=" + encodeURIComponent(incidents[0].incident_id);
+      } else {
+        btnCases.href = "../incidents/index.html";
+      }
+    }
+
     var root = $("entity-incidents-root");
     if (!root) return;
     if (!incidents || incidents.length === 0) {
@@ -270,6 +279,13 @@
     root.innerHTML = incidents.map(function (inc) {
       return TraceRender.incidentCard(inc);
     }).join("");
+    // Wire click-to-incident navigation: each card opens that exact incident
+    root.querySelectorAll("[data-incident-id]").forEach(function (card) {
+      card.addEventListener("click", function () {
+        var iid = card.getAttribute("data-incident-id");
+        if (iid) window.location.href = "../incidents/index.html?id=" + encodeURIComponent(iid);
+      });
+    });
   }
 
   /* ─────────────────────────── Delete flow ──────────────────────── */
