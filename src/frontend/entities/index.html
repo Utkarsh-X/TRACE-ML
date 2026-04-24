@@ -334,6 +334,35 @@
         grid-template-columns: repeat(2, 1fr) !important;
       }
     }
+
+    /* ── Linked Cases Panel ───────────────────────── */
+    .linked-cases-panel {
+      height: fit-content;
+      align-self: flex-start;
+      max-height: 600px;
+      display: flex;
+      flex-direction: column;
+      border: 1px solid rgba(255,255,255,0.04);
+    }
+    #entity-incidents-root {
+      flex: 1;
+      overflow-y: auto;
+      padding-right: 6px;
+      margin-right: -6px; /* offset padding for scrollbar */
+    }
+    #entity-incidents-root::-webkit-scrollbar {
+      width: 4px;
+    }
+    #entity-incidents-root::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    #entity-incidents-root::-webkit-scrollbar-thumb {
+      background: rgba(255,255,255,0.1);
+      border-radius: 10px;
+    }
+    #entity-incidents-root::-webkit-scrollbar-thumb:hover {
+      background: rgba(255,255,255,0.2);
+    }
   </style>
 </head>
 
@@ -594,7 +623,7 @@
           </div>
         </div>
 
-        <div class="flex-1 bg-surface-container p-6">
+        <div class="w-full lg:w-[380px] bg-surface-container p-6 self-start linked-cases-panel">
           <div class="flex items-center gap-2 mb-4">
             <span class="material-symbols-outlined text-primary text-[16px]">link</span>
             <h3 class="section-header">Linked Cases</h3>

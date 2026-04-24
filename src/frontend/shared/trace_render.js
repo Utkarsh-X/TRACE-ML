@@ -117,7 +117,9 @@
       }
     }
 
-    return '<div class="bg-surface-container p-4 hover:bg-surface-high transition-colors">'
+    var payloadStr = esc(encodeURIComponent(JSON.stringify(item)));
+
+    return '<div class="bg-surface-container p-4 hover:bg-surface-high transition-colors cursor-pointer timeline-card-item" data-payload="' + payloadStr + '">'
       + '<div class="flex items-center justify-between mb-2">'
       + '<div class="flex items-center gap-2">' + badgeHtml
       + '<span class="font-headline font-semibold text-[0.8rem] text-primary">' + title + "</span>"
