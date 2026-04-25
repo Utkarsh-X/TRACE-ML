@@ -24,8 +24,17 @@
       display: flex;
       flex-direction: column;
       gap: 0.25rem;
+      background: transparent;
+      border-top: none;
+      border-left: none;
+      border-bottom: none;
+      cursor: pointer;
+      transition: background 0.15s;
+      text-align: left;
     }
     .stat-bar__item:last-child { border-right: none; }
+    .stat-bar__item:hover { background: rgba(255,255,255,0.03); }
+    .stat-bar__item.active { background: rgba(255,255,255,0.05); }
     .stat-bar__label {
       font-family: 'JetBrains Mono', monospace;
       font-size: 0.58rem;
@@ -33,6 +42,7 @@
       letter-spacing: 0.12em;
       color: #919191;
     }
+    .stat-bar__item:hover .stat-bar__label { color: #c0c0c0; }
     .stat-bar__value {
       font-family: 'Inter', sans-serif;
       font-size: 1.75rem;
@@ -40,6 +50,15 @@
       line-height: 1;
       color: #fff;
     }
+    .stat-bar__hint {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.52rem;
+      color: #474747;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-top: 2px;
+    }
+    .stat-bar__item:hover .stat-bar__hint { color: #666; }
 
     /* ── Entity card grid ─────────────────────────── */
     #entity-grid {
@@ -59,14 +78,61 @@
       padding: 1.1rem 1.25rem 1rem;
       cursor: pointer;
       position: relative;
-      transition: background 0.15s, border-color 0.15s;
+      transition: background 0.15s, border-color 0.15s, box-shadow 0.15s;
     }
     .entity-card:hover {
       background: #232323;
       border-color: rgba(255,255,255,0.14);
+      box-shadow: 0 4px 20px rgba(0,0,0,0.4);
     }
-    .entity-card:hover .ec-arrow { opacity: 1; }
-    .ec-arrow { opacity: 0; transition: opacity 0.15s; }
+    .entity-card:hover .ec-arrow { opacity: 1; transform: translateX(3px); }
+    .ec-arrow { opacity: 0; transition: opacity 0.15s, transform 0.15s; }
+
+    /* ── Activity signal pill ──────────────────────── */
+    .activity-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.5rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      padding: 2px 6px;
+      border-radius: 2px;
+    }
+    .activity-pill::before {
+      content: '';
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .activity-pill--active  { color: #4ade80; background: rgba(74,222,128,0.08); }
+    .activity-pill--active::before { background: #4ade80; box-shadow: 0 0 4px #4ade80; animation: pulse-dot 2s infinite; }
+    .activity-pill--idle    { color: #919191; background: rgba(145,145,145,0.08); }
+    .activity-pill--idle::before { background: #555; }
+    .activity-pill--flagged { color: #ff6b6b; background: rgba(255,107,107,0.08); }
+    .activity-pill--flagged::before { background: #ff6b6b; animation: pulse-dot 1s infinite; }
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    /* ── Quick filter chips ───────────────────────── */
+    .quick-filter-chip {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.6rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      padding: 4px 12px;
+      background: transparent;
+      border: 1px solid rgba(255,255,255,0.1);
+      color: #919191;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s, border-color 0.15s;
+    }
+    .quick-filter-chip:hover { background: rgba(255,255,255,0.04); color: #ccc; border-color: rgba(255,255,255,0.2); }
+    .quick-filter-chip.active { background: rgba(255,255,255,0.1); color: #fff; border-color: rgba(255,255,255,0.35); }
 
     /* top accent line per type - monochromatic patterns */
     .entity-card::before {
@@ -336,14 +402,155 @@
     }
 
     /* ── Linked Cases Panel ───────────────────────── */
+    /* Panel stretches to match timeline height via items-stretch on parent flex row */
     .linked-cases-panel {
-      height: fit-content;
-      align-self: flex-start;
-      max-height: 600px;
       display: flex;
       flex-direction: column;
-      border: 1px solid rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.06);
+      background: #171717;
+      overflow: hidden;
     }
+    .linked-cases-panel__header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 14px;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      flex-shrink: 0;
+    }
+    .linked-cases-panel__scroll {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px;
+      min-height: 0;
+    }
+    .linked-cases-panel__scroll::-webkit-scrollbar { width: 4px; }
+    .linked-cases-panel__scroll::-webkit-scrollbar-track { background: transparent; }
+    .linked-cases-panel__scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 4px; }
+    .linked-cases-panel__scroll::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.14); }
+    .linked-cases-panel__footer {
+      flex-shrink: 0;
+      border-top: 1px solid rgba(255,255,255,0.05);
+    }
+
+    /* ── Timeline Frame ──────────────────────────── */
+    .tl-panel {
+      border: 1px solid rgba(255,255,255,0.06);
+      background: #171717;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    .tl-scroll {
+      max-height: 480px;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+    }
+    .tl-scroll::-webkit-scrollbar { width: 4px; }
+    .tl-scroll::-webkit-scrollbar-track { background: transparent; }
+    .tl-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 4px; }
+    .tl-scroll::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.14); }
+
+    /* ALERT / INCIDENT: section header rows */
+    .tl-header-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 14px 9px 12px;
+      border-left: 2px solid;
+      background: rgba(255,255,255,0.025);
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      margin-top: 1px;
+    }
+    .tl-header-row:first-child { margin-top: 0; }
+    .tl-header-row--alert    { border-left-color: rgba(255,255,255,0.3); }
+    .tl-header-row--incident { border-left-color: #ff6b6b; background: rgba(255,107,107,0.05); }
+
+    .tl-header-row__time {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.58rem;
+      color: #666;
+      white-space: nowrap;
+      min-width: 58px;
+      tabular-nums: all;
+    }
+    .tl-header-row__label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.55rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      padding: 1px 6px;
+      border: 1px solid;
+      flex-shrink: 0;
+    }
+    .tl-header-row__label--alert    { color: #c8c8c8; border-color: rgba(200,200,200,0.25); }
+    .tl-header-row__label--incident { color: #ff6b6b; border-color: rgba(255,107,107,0.4); }
+    .tl-header-row__title {
+      font-size: 0.75rem;
+      color: #e0e0e0;
+      font-weight: 500;
+      min-width: 0;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* EVENT: sub-rows under an alert */
+    .tl-event-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 5px 14px 5px 26px; /* extra left indent */
+      border-bottom: 1px solid rgba(255,255,255,0.025);
+      transition: background 0.12s;
+    }
+    .tl-event-row:last-child { border-bottom: none; }
+    .tl-event-row:hover { background: rgba(255,255,255,0.02); }
+    .tl-event-row__time {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.55rem;
+      color: #444;
+      white-space: nowrap;
+      min-width: 58px;
+    }
+    .tl-event-row__dot {
+      width: 4px;
+      height: 4px;
+      border-radius: 50%;
+      background: #3a3a3a;
+      flex-shrink: 0;
+    }
+    .tl-event-row__text {
+      font-size: 0.68rem;
+      color: #888;
+      min-width: 0;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* Load more button at bottom of panel */
+    .tl-load-more {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      width: 100%;
+      padding: 10px;
+      background: transparent;
+      border: none;
+      border-top: 1px solid rgba(255,255,255,0.05);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.58rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: #555;
+      cursor: pointer;
+      transition: color 0.15s, background 0.15s;
+      flex-shrink: 0;
+    }
+    .tl-load-more:hover { color: #aaa; background: rgba(255,255,255,0.02); }
     #entity-incidents-root {
       flex: 1;
       overflow-y: auto;
@@ -362,6 +569,87 @@
     }
     #entity-incidents-root::-webkit-scrollbar-thumb:hover {
       background: rgba(255,255,255,0.2);
+    }
+
+    /* ── Action Buttons (Matching History Page) ────────────────────── */
+    .fbar-btn {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.6rem;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      padding: 0 16px;
+      height: 38px;
+      border: none;
+      cursor: pointer;
+      transition: all 0.15s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+    .fbar-btn:hover { opacity: 0.75; }
+    .fbar-btn-primary { background: var(--primary); color: var(--on-primary); font-weight: 700; }
+    .fbar-btn-ghost   { background: transparent; color: var(--outline); border: 1px solid rgba(255,255,255,0.1); }
+    .fbar-btn-ghost:hover { background: rgba(255,255,255,0.05); color: white; opacity: 1; }
+
+    /* ── Entity Activity Graph (EAG) ────────────────────── */
+    .eag-panel {
+      border: 1px solid rgba(255,255,255,0.06);
+      background: #171717;
+      overflow: hidden;
+    }
+    .eag-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 16px;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+    }
+    .eag-header__left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .eag-header__title {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.55rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: #555;
+    }
+    .eag-header__pattern {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.52rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      padding: 1px 7px;
+      border: 1px solid rgba(255,255,255,0.12);
+      color: #888;
+    }
+    .eag-header__pattern--burst       { color: #ffb4ab; border-color: rgba(255,180,171,0.3); }
+    .eag-header__pattern--continuous  { color: #4ade80; border-color: rgba(74,222,128,0.25); }
+    .eag-header__pattern--low         { color: #555;    border-color: rgba(255,255,255,0.1); }
+    .eag-header__range {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.52rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: #333;
+    }
+    .eag-chart-wrap {
+      position: relative;
+      padding: 6px 0 0;
+      min-height: 120px;
+    }
+    /* Tooltip */
+    #eag-tooltip {
+      position: absolute;
+      background: #1e1e1e;
+      border: 1px solid rgba(255,255,255,0.1);
+      padding: 6px 10px;
+      pointer-events: none;
+      display: none;
+      z-index: 10;
     }
   </style>
 </head>
@@ -444,13 +732,14 @@
     <div class="p-5 pb-0">
 
       <!-- Page header + search row -->
-      <div class="flex items-center justify-between flex-wrap gap-3 mb-5">
+      <div class="flex items-center justify-between flex-wrap gap-3 mb-3">
         <div>
           <div class="flex items-center gap-2 mb-1">
             <span class="w-1 h-1 bg-primary inline-block"></span>
             <span class="font-mono text-[0.62rem] uppercase tracking-[0.2em] text-outline">Entity Registry</span>
           </div>
           <h1 class="font-headline text-2xl font-bold tracking-tight text-white">ENTITY REGISTRY</h1>
+          <p class="font-mono text-[0.65rem] text-outline mt-1">Track, investigate, and manage identified and unknown entities</p>
         </div>
         <div class="flex items-center gap-2">
           <!-- Search -->
@@ -458,34 +747,41 @@
             <span class="material-symbols-outlined text-outline flex-shrink-0 pl-3" style="font-size:15px;line-height:1">search</span>
             <input id="entity-search" type="text" placeholder="Search by name or ID…" class="bg-transparent font-mono text-[0.72rem] text-white border-0 px-3 py-2 min-w-0" style="outline:none;box-shadow:none;width:200px" />
           </div>
-          <!-- Filter -->
-          <select id="entity-filter" class="bg-surface-high font-mono text-[0.72rem] text-white border-0 px-3 py-2 cursor-pointer">
-            <option value="">All Types</option>
-            <option value="known">Known</option>
-            <option value="unknown">Unknown</option>
-          </select>
           <span class="font-mono text-[0.6rem] text-outline uppercase" id="entity-count-label">—</span>
         </div>
       </div>
 
-      <!-- Compact stat bar (single row, 4 tiles) -->
+      <!-- Quick filter chips -->
+      <div class="flex items-center gap-2 mb-4">
+        <button class="quick-filter-chip active" data-qf="all">All</button>
+        <button class="quick-filter-chip" data-qf="active">● Active</button>
+        <button class="quick-filter-chip" data-qf="incidents">⚠ With Incidents</button>
+        <button class="quick-filter-chip" data-qf="unknown">? Unknown</button>
+        <button class="quick-filter-chip" data-qf="known">✓ Known</button>
+      </div>
+
+      <!-- Interactive stat bar (click to filter) -->
       <div class="stat-bar">
-        <div class="stat-bar__item">
+        <button class="stat-bar__item" id="stat-btn-total" title="Show all entities">
           <span class="stat-bar__label">Total Entities</span>
           <span class="stat-bar__value" id="ov-total">—</span>
-        </div>
-        <div class="stat-bar__item">
+          <span class="stat-bar__hint">Click to reset</span>
+        </button>
+        <button class="stat-bar__item" id="stat-btn-known" title="Filter: Known entities">
           <span class="stat-bar__label">Known</span>
           <span class="stat-bar__value" style="color:#fff" id="ov-known">—</span>
-        </div>
-        <div class="stat-bar__item">
+          <span class="stat-bar__hint">Filter enrolled</span>
+        </button>
+        <button class="stat-bar__item" id="stat-btn-unknown" title="Filter: Unknown entities">
           <span class="stat-bar__label">Unknown</span>
           <span class="stat-bar__value" style="color:#919191" id="ov-unknown">—</span>
-        </div>
-        <div class="stat-bar__item">
+          <span class="stat-bar__hint">Filter unidentified</span>
+        </button>
+        <button class="stat-bar__item" id="stat-btn-incidents" title="Filter: Entities with open incidents">
           <span class="stat-bar__label">Open Incidents</span>
           <span class="stat-bar__value" style="color:#ffb4ab" id="ov-incidents">—</span>
-        </div>
+          <span class="stat-bar__hint">Filter at-risk</span>
+        </button>
       </div>
 
     </div>
@@ -509,31 +805,33 @@
         Back to Entities
       </button>
 
-      <!-- Entity Header -->
+      <!-- Entity Header (FIX 4: dominant status, narrative hierarchy) -->
       <div class="flex justify-between items-start mb-10">
         <div>
           <div class="flex items-center gap-3 mb-2">
             <span class="w-1 h-1 bg-primary inline-block"></span>
             <span class="font-mono text-[0.6875rem] uppercase tracking-[0.2em] text-outline" id="entity-profile-label">Entity Profile</span>
           </div>
-          <h1 class="font-headline text-4xl font-bold tracking-tight text-white mb-4" id="entity-display-name">—</h1>
-          <div class="flex gap-6">
+          <!-- Name -->
+          <h1 class="font-headline text-4xl font-bold tracking-tight text-white mb-2" id="entity-display-name">—</h1>
+          <!-- Dominant status badge -->
+          <div class="flex items-center gap-3 mb-4">
+            <span id="entity-status-badge" class="inline-flex items-center gap-2 px-3 py-1 font-mono text-[0.65rem] font-bold uppercase tracking-widest border" style="border-color:rgba(255,255,255,0.2);color:#fff">—</span>
+            <span class="font-mono text-[0.6rem] text-neutral-500 uppercase tracking-wider">·</span>
+            <span class="font-mono text-[0.65rem] text-outline uppercase" id="entity-type">—</span>
+          </div>
+          <!-- Secondary metadata row -->
+          <div class="flex gap-5">
             <div class="flex flex-col">
-              <span class="font-mono text-[0.6rem] text-neutral-500 uppercase tracking-widest">Status</span>
-              <span class="text-[0.875rem] text-primary uppercase font-medium" id="entity-status">—</span>
+              <span class="font-mono text-[0.55rem] text-neutral-600 uppercase tracking-widest">Open Cases</span>
+              <span class="text-[0.8rem] uppercase font-semibold" id="entity-severity">—</span>
             </div>
-            <div class="flex flex-col pl-6 border-l border-outline-variant/30">
-              <span class="font-mono text-[0.6rem] text-neutral-500 uppercase tracking-widest">Category</span>
-              <span class="text-[0.875rem] text-primary uppercase font-medium" id="entity-type">—</span>
+            <div class="flex flex-col pl-5 border-l border-outline-variant/20" id="entity-watchlist-col" style="display:none;">
+              <span class="font-mono text-[0.55rem] text-neutral-600 uppercase tracking-widest">Watchlist Priority</span>
+              <span class="text-[0.8rem] uppercase font-semibold" id="entity-watchlist">—</span>
             </div>
-            <div class="flex flex-col pl-6 border-l border-outline-variant/30">
-              <span class="font-mono text-[0.6rem] text-neutral-500 uppercase tracking-widest">Open Cases</span>
-              <span class="text-[0.875rem] uppercase font-medium" id="entity-severity">—</span>
-            </div>
-            <div class="flex flex-col pl-6 border-l border-outline-variant/30" id="entity-watchlist-col" style="display:none;">
-              <span class="font-mono text-[0.6rem] text-neutral-500 uppercase tracking-widest">Watchlist Priority</span>
-              <span class="text-[0.875rem] uppercase font-medium" id="entity-watchlist">—</span>
-            </div>
+            <!-- Hidden legacy status for JS compat -->
+            <span id="entity-status" style="display:none">—</span>
           </div>
         </div>
         <div class="text-right flex flex-col items-end gap-3">
@@ -542,21 +840,21 @@
             <span class="text-[0.875rem] text-outline font-mono" id="entity-clock">—</span>
           </div>
           <div class="flex items-center gap-2">
-            <button id="btn-edit-entity" class="bg-white hover:bg-white/90 active:scale-95 text-black border border-white/20 py-2 px-5 font-mono text-[0.65rem] uppercase tracking-[0.15em] font-bold cursor-pointer transition-all flex items-center gap-2 rounded-sm shadow-[0_0_15px_rgba(255,255,255,0.1)] hover:shadow-[0_0_20px_rgba(255,255,255,0.2)]" style="display:none;">
-              <span class="material-symbols-outlined text-[16px] font-bold">edit_note</span> 
-              <span>Edit Record</span>
+            <button id="btn-edit-entity" class="fbar-btn fbar-btn-primary min-w-[140px]" style="display:none;">
+              <span class="material-symbols-outlined" style="font-size:16px;">edit</span> 
+              Edit Record
             </button>
-            <button id="btn-delete-entity" class="bg-transparent hover:bg-error/10 text-error border border-error/30 hover:border-error/50 py-2 px-5 font-mono text-[0.65rem] uppercase tracking-[0.15em] font-bold cursor-pointer transition-all flex items-center gap-2 rounded-sm" style="display:none;">
-              <span class="material-symbols-outlined text-[16px] font-bold">delete_sweep</span> 
-              <span>Terminate</span>
+            <button id="btn-delete-entity" class="fbar-btn fbar-btn-ghost min-w-[120px]" style="display:none;">
+              <span class="material-symbols-outlined" style="font-size:16px;">delete</span> 
+              Terminate
             </button>
           </div>
         </div>
       </div>
 
       <!-- Row 1: Photo + Stats -->
-      <div class="flex flex-col lg:flex-row gap-8 items-start mb-10">
-        <div class="w-full lg:w-1/3 aspect-[4/5] bg-surface-low relative overflow-hidden max-h-[360px]">
+      <div class="flex flex-col lg:flex-row gap-8 lg:items-stretch mb-10">
+        <div class="w-full lg:w-1/3 aspect-[4/5] bg-surface-low relative overflow-hidden max-h-[400px] lg:self-start">
           <div class="portrait-frame w-full h-full">
             <!-- Portrait image — hidden until loaded; shown on load, hidden again on 404 -->
             <img
@@ -574,69 +872,99 @@
             <!-- Tactical scan-line overlay (purely cosmetic, sits on top) -->
             <div class="portrait-frame__scanline"></div>
           </div>
-          <div class="absolute bottom-4 left-4 right-4">
-            <div class="glass-panel p-3 space-y-2">
-              <div class="flex justify-between items-center">
-                <span class="font-mono text-[0.6rem] text-on-surface-variant uppercase tracking-widest">Enrollment Score</span>
-                <span class="text-[0.8rem] text-white font-medium" id="entity-confidence">—</span>
-              </div>
-              <div class="w-full bg-surface-lowest h-[2px]">
-                <div class="bg-primary h-full" id="entity-confidence-bar" style="width: 0%"></div>
-              </div>
-            </div>
-          </div>
+          <!-- Removed glass confidence overlay (FIX 5) - moved to stats panel -->
         </div>
 
-        <div class="flex-1 grid grid-cols-2 gap-4">
-          <div class="col-span-2 mb-2">
-            <span class="section-header">Detection Summary</span>
+        <!-- FIX 6: Stats as narrative, not widget grid -->
+        <div class="flex-1 flex flex-col gap-4">
+          <div class="mb-1">
+            <span class="section-header">Intelligence Summary</span>
           </div>
-          <div class="bg-surface-low p-5 flex flex-col justify-between h-32">
-            <span class="stat-label">Appearances</span>
-            <div class="flex items-baseline gap-2">
-              <span class="font-headline text-3xl font-light text-primary" id="stat-appearances">—</span>
-              <span class="material-symbols-outlined text-[14px] text-primary">trending_up</span>
+          <!-- Narrative stat block -->
+          <div class="bg-surface-low p-5 border-l-2 border-primary/40">
+            <p class="font-mono text-[0.65rem] text-outline uppercase tracking-widest mb-2">Detection Activity</p>
+            <p class="text-white text-[1.05rem] font-semibold leading-snug">
+              <span id="stat-appearances" class="text-primary text-2xl font-light">—</span>
+              <span class="text-outline text-[0.85rem] font-normal"> detections across </span>
+              <span id="stat-incident-count" class="text-primary text-2xl font-light">—</span>
+              <span class="text-outline text-[0.85rem] font-normal"> cases</span>
+            </p>
+            <p class="font-mono text-[0.6rem] text-outline mt-2" id="stat-last-activity">Last activity: —</p>
+          </div>
+          <div class="grid grid-cols-2 gap-4">
+            <div class="bg-surface-low p-4 flex flex-col gap-2">
+              <span class="font-mono text-[0.55rem] text-neutral-500 uppercase tracking-widest">Recent Alerts</span>
+              <span class="font-headline text-2xl font-light text-primary" id="stat-avg-conf">—</span>
+              <span class="font-mono text-[0.55rem] text-outline">alerts in last 30 days</span>
+            </div>
+            <div class="bg-surface-low p-4 flex flex-col gap-2">
+              <span class="font-mono text-[0.55rem] text-neutral-500 uppercase tracking-widest">Enrollment Score</span>
+              <span class="font-headline text-2xl font-light text-primary" id="entity-confidence">—</span>
+              <div class="w-full bg-surface-lowest h-[2px] mt-1">
+                <div class="bg-primary h-full transition-all" id="entity-confidence-bar" style="width:0%"></div>
+              </div>
             </div>
           </div>
-          <div class="bg-surface-low p-5 flex flex-col justify-between h-32">
-            <span class="stat-label">Cases</span>
-            <span class="font-headline text-3xl font-light text-primary" id="stat-incident-count">—</span>
-          </div>
-          <div class="bg-surface-low p-5 flex flex-col justify-between h-32">
-            <span class="stat-label">Recent Alerts</span>
-            <span class="font-headline text-3xl font-light text-primary" id="stat-avg-conf">—</span>
-          </div>
-          <div class="bg-surface-low p-5 flex flex-col justify-between h-32">
-            <span class="stat-label">Source</span>
-            <div>
-              <span class="text-[0.9rem] text-white block uppercase" id="stat-source">CAM_01</span>
-              <span class="font-mono text-[0.6rem] text-neutral-500 mt-1 block" id="stat-source-detail">Primary Webcam</span>
+          <!-- Activity Graph — fills the empty space in the stats column next to the portrait -->
+          <div class="eag-panel flex-1" id="entity-activity-panel" style="min-height:120px;">
+            <div class="eag-header">
+              <div class="eag-header__left">
+                <span class="eag-header__title">Activity Over Time</span>
+                <span class="eag-header__pattern" id="eag-pattern-label">—</span>
+              </div>
+              <span class="eag-header__range" id="eag-range-label">—</span>
+            </div>
+            <div id="entity-activity-graph" class="eag-chart-wrap">
+              <!-- SVG injected by JS -->
             </div>
           </div>
         </div>
       </div>
 
-      <!-- Row 2: Timeline + Linked Cases -->
-      <div class="flex flex-col lg:flex-row gap-8 mb-10">
-        <div class="w-full lg:w-2/3">
-          <div class="flex items-center justify-between mb-6">
-            <h3 class="section-header">Detection Timeline</h3>
+      <!-- Row 2: Timeline + Linked Cases — items-stretch so both match height -->
+      <div class="flex flex-col lg:flex-row gap-6 mb-10 lg:items-stretch">
+
+        <!-- Timeline column -->
+        <div class="w-full lg:w-2/3 flex flex-col">
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="section-header">Event Timeline</h3>
           </div>
-          <div class="space-y-2" id="entity-timeline-root">
+          <!-- Timeline panel: proper framed scroll container -->
+          <div id="entity-timeline-root" class="flex-1">
             <div class="text-outline font-mono text-[0.7rem] py-8 text-center">No timeline data</div>
           </div>
         </div>
 
-        <div class="w-full lg:w-[380px] bg-surface-container p-6 self-start linked-cases-panel">
-          <div class="flex items-center gap-2 mb-4">
-            <span class="material-symbols-outlined text-primary text-[16px]">link</span>
+        <!-- Linked Cases column — same frame, stretches to match timeline -->
+        <div class="w-full lg:w-[340px] flex flex-col">
+          <div class="flex items-center justify-between mb-3">
             <h3 class="section-header">Linked Cases</h3>
           </div>
-          <div class="space-y-4" id="entity-incidents-root">
-            <div class="text-outline font-mono text-[0.7rem] py-4 text-center">No cases</div>
+          <div class="linked-cases-panel flex-1">
+            <!-- Panel header bar matching timeline style -->
+            <div class="linked-cases-panel__header">
+              <span style="font-family:'JetBrains Mono',monospace;font-size:0.55rem;text-transform:uppercase;letter-spacing:0.12em;color:#555;">Case files</span>
+              <span class="material-symbols-outlined" style="font-size:13px;color:#333">link</span>
+            </div>
+            <!-- Scrollable incident list -->
+            <div class="linked-cases-panel__scroll" id="entity-incidents-root">
+              <div class="text-outline font-mono text-[0.7rem] py-4 text-center">No cases</div>
+            </div>
+            <!-- Pinned footer action -->
+            <div class="linked-cases-panel__footer">
+              <a id="btn-open-cases"
+                class="block w-full py-2.5 font-mono text-[0.6rem] uppercase tracking-widest text-center no-underline transition-colors"
+                style="color:#555;background:transparent;"
+                onmouseover="this.style.color='#aaa';this.style.background='rgba(255,255,255,0.03)';"
+                onmouseout="this.style.color='#555';this.style.background='transparent';"
+                href="../incidents/index.html">
+                <span class="material-symbols-outlined" style="font-size:12px;vertical-align:middle;margin-right:4px">open_in_new</span>
+                Open Cases Workspace
+              </a>
+            </div>
           </div>
-          <a id="btn-open-cases" class="block w-full mt-6 py-2.5 bg-primary text-on-primary font-mono text-[0.65rem] uppercase tracking-widest hover:bg-on-surface transition-all text-center no-underline" href="../incidents/index.html">Open Cases Workspace</a>
         </div>
+
       </div>
 
     </div>

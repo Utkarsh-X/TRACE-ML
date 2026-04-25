@@ -20,6 +20,7 @@
   var _allEntities = [];
   var _currentEntityId = null;
   var _currentProfile  = null;
+  var _activeQuickFilter = "all"; // tracks current quick-filter chip
 
   /* ─────────────────────────── View Switching ────────────────────────── */
 
@@ -104,10 +105,14 @@
             + (isKnown ? 'person' : 'person_off')
           + '</span>';
 
+      var pill = activityPillHtml(ent);
       return '<div class="entity-card entity-card--' + cardType + '" data-entity-id="' + TraceClient.escapeHtml(ent.entity_id) + '">'
-        /* top row: badge + arrow */
+        /* top row: badge + activity pill + arrow */
         + '<div class="flex items-center justify-between mb-2">'
-        +   '<span class="entity-card__badge entity-card__badge--' + typeKey + '">' + badgeText + '</span>'
+        +   '<div class="flex items-center gap-2">'
+        +     '<span class="entity-card__badge entity-card__badge--' + typeKey + '">' + badgeText + '</span>'
+        +     pill
+        +   '</div>'
         +   '<span class="ec-arrow material-symbols-outlined" style="font-size:14px;color:#919191">arrow_forward</span>'
         + '</div>'
         /* avatar + name block */
@@ -138,20 +143,50 @@
     });
   }
 
+  /* ─────────────────────────── Activity helper ───────────────────── */
+
+  function getActivityState(entity) {
+    if (!entity.last_seen_at) return "idle";
+    var ms = Date.now() - new Date(entity.last_seen_at).getTime();
+    var openInc = parseInt(entity.open_incident_count, 10) || 0;
+    if (openInc > 0) return "flagged";
+    if (ms < 5 * 60 * 1000) return "active";   // <5 min
+    if (ms < 24 * 60 * 60 * 1000) return "active"; // <24 h
+    return "idle";
+  }
+
+  function activityPillHtml(entity) {
+    var state = getActivityState(entity);
+    var labels = { active: "ACTIVE", idle: "IDLE", flagged: "FLAGGED" };
+    return '<span class="activity-pill activity-pill--' + state + '">' + labels[state] + '</span>';
+  }
+
   /* ─────────────────────────── Filtering ────────────────────────── */
 
   function applyFilters() {
     var search = ($("entity-search") || {}).value || "";
-    var type   = ($("entity-filter") || {}).value || "";
-    var q      = search.toLowerCase();
+    var q = search.toLowerCase();
 
     var filtered = _allEntities.filter(function (e) {
       var matchText = (e.name || "").toLowerCase().includes(q)
         || (e.entity_id || "").toLowerCase().includes(q)
         || (e.category || "").toLowerCase().includes(q);
+
       var entityType = String(e.type || e.entity_type || "");
-      var matchType = !type || entityType === type;
-      return matchText && matchType;
+      var isKnown = entityType === "known";
+      var state = getActivityState(e);
+      var openInc = parseInt(e.open_incident_count, 10) || 0;
+
+      var matchQF = true;
+      switch (_activeQuickFilter) {
+        case "active":    matchQF = state === "active"; break;
+        case "incidents": matchQF = openInc > 0; break;
+        case "unknown":   matchQF = !isKnown; break;
+        case "known":     matchQF = isKnown; break;
+        default:          matchQF = true;
+      }
+
+      return matchText && matchQF;
     });
 
     renderGrid(filtered);
@@ -172,6 +207,7 @@
       _currentProfile = profile;
       renderHeader(profile.entity || {}, profile.linked_person || {});
       renderStats(profile);
+      renderActivityGraph(profile.timeline || []);
       renderTimeline(profile.timeline || []);
       renderIncidents(profile.incidents || []);
     });
@@ -184,8 +220,27 @@
     var nameEl = $("entity-display-name");
     if (nameEl) nameEl.textContent = entity.name || entity.entity_id || "—";
 
+    // Legacy status span (hidden, for compat)
     var statusEl = $("entity-status");
     if (statusEl) statusEl.textContent = String(entity.status || "active").toUpperCase();
+
+    // ── FIX 4: Dominant status badge ──────────────────────────────────────
+    var statusBadge = $("entity-status-badge");
+    if (statusBadge) {
+      var open = parseInt(entity.open_incident_count, 10) || 0;
+      var rawStatus = String(entity.status || "active").toLowerCase();
+      var state = open > 0 ? "flagged" : getActivityState(entity);
+      var badgeConfigs = {
+        flagged: { text: "⚠ FLAGGED",      bg: "rgba(255,107,107,0.1)", border: "rgba(255,107,107,0.5)", color: "#ff6b6b" },
+        active:  { text: "● ACTIVE",        bg: "rgba(74,222,128,0.07)", border: "rgba(74,222,128,0.4)", color: "#4ade80" },
+        idle:    { text: "◌ INACTIVE",      bg: "transparent",           border: "rgba(145,145,145,0.3)", color: "#919191" },
+      };
+      var cfg = badgeConfigs[state] || badgeConfigs.idle;
+      statusBadge.textContent = cfg.text;
+      statusBadge.style.background = cfg.bg;
+      statusBadge.style.borderColor = cfg.border;
+      statusBadge.style.color = cfg.color;
+    }
 
     var typeEl = $("entity-type");
     if (typeEl) typeEl.textContent = String(entity.category || entity.entity_type || "—").toUpperCase();
@@ -195,8 +250,8 @@
       var open = parseInt(entity.open_incident_count, 10) || 0;
       sevEl.textContent = open > 0 ? open + " OPEN" : "NONE";
       sevEl.className   = open > 0
-        ? "text-[0.875rem] text-error uppercase font-medium"
-        : "text-[0.875rem] text-on-surface-variant uppercase font-medium";
+        ? "text-[0.8rem] text-error uppercase font-semibold"
+        : "text-[0.8rem] text-outline uppercase font-semibold";
     }
 
     // ── Watchlist Priority (enrolled severity) ───────────────────────────────
@@ -241,19 +296,322 @@
   }
 
   function renderStats(profile) {
-    var stats = profile.stats || {};
+    var stats   = profile.stats || {};
+    var entity  = profile.entity || {};
 
     var a = $("stat-appearances");    if (a) a.textContent = String(stats.detection_count || 0);
     var i = $("stat-incident-count"); if (i) i.textContent = String(stats.incident_count || 0);
     var r = $("stat-avg-conf");       if (r) r.textContent = String(stats.recent_alert_count || 0);
 
+    // FIX 6: Narrative last-activity text
+    var actEl = $("stat-last-activity");
+    if (actEl) {
+      var lastSeen = entity.last_seen_at;
+      actEl.textContent = lastSeen
+        ? "Last activity: " + TraceClient.formatTime(lastSeen)
+        : "Last activity: unknown";
+    }
+
+    // Show "—" when score is null OR effectively zero (not yet meaningful)
     var score = (profile.linked_person && typeof profile.linked_person.enrollment_score === "number")
       ? profile.linked_person.enrollment_score : null;
+    var scoreValid = score !== null && score > 0.001;
     var confEl = $("entity-confidence");
-    if (confEl) confEl.textContent = score !== null ? (score * 100).toFixed(1) + "%" : "—";
+    if (confEl) confEl.textContent = scoreValid ? (score * 100).toFixed(1) + "%" : "—";
     var bar = $("entity-confidence-bar");
-    if (bar) bar.style.width = score !== null ? (score * 100).toFixed(1) + "%" : "0%";
+    if (bar) bar.style.width = scoreValid ? (score * 100).toFixed(1) + "%" : "0%";
   }
+
+  // ── Entity Activity Graph ─────────────────────────────────────────────
+  // Decision-support visualization: behavior over time.
+  // Computes pattern label, draws minimal area+line SVG, marks alert moments.
+
+  function _eagSmooth(ps) {
+    if (ps.length < 2) return "";
+    var d = "M " + ps[0].x.toFixed(1) + " " + ps[0].y.toFixed(1);
+    for (var i = 0; i < ps.length - 1; i++) {
+      var mx = ((ps[i].x + ps[i+1].x) / 2).toFixed(1);
+      d += " C " + mx + " " + ps[i].y.toFixed(1) +
+           " "   + mx + " " + ps[i+1].y.toFixed(1) +
+           " "   + ps[i+1].x.toFixed(1) + " " + ps[i+1].y.toFixed(1);
+    }
+    return d;
+  }
+
+  function _eagPattern(buckets, maxC) {
+    if (!maxC) return { key: "low", label: "Low Activity" };
+    var avg = buckets.reduce(function(s, v) { return s + v; }, 0) / buckets.length;
+    // Variance for spread
+    var variance = buckets.reduce(function(s, v) {
+      return s + (v - avg) * (v - avg);
+    }, 0) / buckets.length;
+    var cv = avg > 0 ? Math.sqrt(variance) / avg : 0; // coefficient of variation
+    if (maxC / Math.max(avg, 0.001) > 3 || cv > 1.2) {
+      return { key: "burst",      label: "Burst Activity" };
+    }
+    if (avg > 0.3) {
+      return { key: "continuous", label: "Continuous Presence" };
+    }
+    return { key: "low",         label: "Low Activity" };
+  }
+
+  function renderActivityGraph(timeline) {
+    var panel   = $("entity-activity-panel");
+    var wrap    = $("entity-activity-graph");
+    var patEl   = $("eag-pattern-label");
+    var rangeEl = $("eag-range-label");
+    if (!panel || !wrap) return;
+
+    // Hide panel if no data
+    if (!timeline || timeline.length === 0) {
+      panel.style.display = "none";
+      return;
+    }
+    panel.style.display = "";
+
+    var BUCKETS = 30;
+    var ML = 10, MR = 16, MT = 10, MB = 24;
+    var CH = 130;
+    var CW = wrap.offsetWidth || 800;
+    var pW = CW - ML - MR;
+    var pH = CH - MT - MB;
+
+    // Compute time range from all items
+    var timestamps = timeline.map(function(it) {
+      return new Date(it.timestamp_utc).getTime();
+    });
+    var minT  = Math.min.apply(null, timestamps);
+    var maxT  = Math.max.apply(null, timestamps);
+    var range = maxT - minT || 1;
+
+    // Bucket event counts
+    var buckets = new Array(BUCKETS).fill(0);
+    var bucketTimes = [];
+    for (var bi = 0; bi < BUCKETS; bi++) {
+      bucketTimes.push(minT + (bi / (BUCKETS - 1)) * range);
+    }
+    timeline.forEach(function(it) {
+      var t  = new Date(it.timestamp_utc).getTime();
+      var b  = Math.min(BUCKETS - 1, Math.floor(((t - minT) / range) * (BUCKETS - 1)));
+      buckets[b] += 1;
+    });
+
+    var maxC = Math.max.apply(null, buckets) || 1;
+
+    // Points
+    var pts = buckets.map(function(c, i) {
+      return {
+        x:     ML + (i / (BUCKETS - 1)) * pW,
+        y:     MT + pH - (c / maxC) * pH * 0.85,
+        count: c,
+        time:  bucketTimes[i]
+      };
+    });
+
+    var baseY    = (MT + pH).toFixed(1);
+    var linePath = _eagSmooth(pts);
+    var areaPath = linePath +
+      " L " + pts[pts.length-1].x.toFixed(1) + " " + baseY +
+      " L " + pts[0].x.toFixed(1) + " " + baseY + " Z";
+
+    // Identify alert/incident timestamps
+    var alertTimes = [];
+    timeline.forEach(function(it) {
+      var k = String(it.kind || "").toLowerCase();
+      if (k === "alert" || k === "incident") {
+        alertTimes.push(new Date(it.timestamp_utc).getTime());
+      }
+    });
+
+    // Time axis formatter
+    function fmtT(ms) {
+      var d = new Date(ms);
+      return String(d.getHours()).padStart(2,"0") + ":" + String(d.getMinutes()).padStart(2,"0");
+    }
+    function fmtRange(ms) {
+      var d = new Date(ms);
+      return ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][d.getMonth()]
+        + " " + d.getDate();
+    }
+
+    // Pattern detection
+    var pattern = _eagPattern(buckets, maxC);
+    if (patEl) {
+      patEl.textContent = pattern.label;
+      patEl.className = "eag-header__pattern eag-header__pattern--" + pattern.key;
+    }
+    if (rangeEl) {
+      var sameDay = fmtRange(minT) === fmtRange(maxT);
+      rangeEl.textContent = sameDay
+        ? fmtRange(minT) + " · " + fmtT(minT) + " – " + fmtT(maxT)
+        : fmtRange(minT) + " – " + fmtRange(maxT);
+    }
+
+    // Build SVG
+    var o = [];
+    o.push('<svg id="eag-svg" viewBox="0 0 ' + CW + ' ' + CH + '" width="100%" height="' + CH + '" xmlns="http://www.w3.org/2000/svg" style="display:block;overflow:visible;">');
+
+    // Gradient fill
+    o.push('<defs><linearGradient id="eag-fill" x1="0" y1="0" x2="0" y2="1">');
+    o.push('<stop offset="0%" stop-color="rgba(255,255,255,0.07)"/>');
+    o.push('<stop offset="100%" stop-color="rgba(255,255,255,0.00)"/>');
+    o.push('</linearGradient></defs>');
+
+    // Minimal grid: 2 horizontal dashed lines
+    [0.33, 0.66].forEach(function(ratio) {
+      var gy = (MT + ratio * pH).toFixed(1);
+      o.push('<line x1="' + ML + '" y1="' + gy + '" x2="' + (ML+pW) + '" y2="' + gy +
+        '" stroke="rgba(255,255,255,0.04)" stroke-width="1" stroke-dasharray="3,5"/>');
+    });
+
+    // Baseline
+    o.push('<line x1="' + ML + '" y1="' + baseY + '" x2="' + (ML+pW) + '" y2="' + baseY +
+      '" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>');
+
+    // Area fill
+    o.push('<path d="' + areaPath + '" fill="url(#eag-fill)"/>');
+
+    // Line
+    o.push('<path d="' + linePath + '" fill="none" stroke="rgba(255,255,255,0.55)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>');
+
+    // Alert dot markers ON the curve
+    alertTimes.forEach(function(at) {
+      var b = Math.min(BUCKETS - 1, Math.floor(((at - minT) / range) * (BUCKETS - 1)));
+      var pt = pts[b];
+      if (!pt) return;
+      // Outer ring + filled dot
+      o.push('<circle cx="' + pt.x.toFixed(1) + '" cy="' + pt.y.toFixed(1) +
+        '" r="4.5" fill="none" stroke="rgba(255,107,107,0.35)" stroke-width="1"/>');
+      o.push('<circle cx="' + pt.x.toFixed(1) + '" cy="' + pt.y.toFixed(1) +
+        '" r="2" fill="rgba(255,107,107,0.7)"/>');
+    });
+
+    // Crosshair + hover indicators (hidden initially)
+    o.push('<line id="eag-xhair" x1="0" y1="' + MT + '" x2="0" y2="' + baseY +
+      '" stroke="rgba(255,255,255,0.15)" stroke-width="1" stroke-dasharray="3,3" display="none"/>');
+    o.push('<circle id="eag-hover-dot" cx="0" cy="0" r="3" fill="rgba(255,255,255,0.8)" display="none"/>');
+
+    // X-axis time labels (3 pts: start, mid, end)
+    var xLY = (MT + pH + 17).toFixed(1);
+    o.push('<text x="' + ML + '" y="' + xLY + '" fill="rgba(255,255,255,0.18)" font-family="\'JetBrains Mono\',monospace" font-size="8" text-anchor="start">' + fmtT(minT) + '</text>');
+    o.push('<text x="' + (ML + pW/2).toFixed(1) + '" y="' + xLY + '" fill="rgba(255,255,255,0.12)" font-family="\'JetBrains Mono\',monospace" font-size="8" text-anchor="middle">' + fmtT((minT+maxT)/2) + '</text>');
+    o.push('<text x="' + (ML + pW).toFixed(1) + '" y="' + xLY + '" fill="rgba(255,255,255,0.18)" font-family="\'JetBrains Mono\',monospace" font-size="8" text-anchor="end">' + fmtT(maxT) + '</text>');
+
+    // Invisible hit rect for mouse events
+    o.push('<rect id="eag-hit" x="' + ML + '" y="' + MT + '" width="' + pW + '" height="' + pH + '" fill="transparent" style="cursor:crosshair;"/>');
+    o.push('</svg>');
+
+    // Tooltip element
+    o.push('<div id="eag-tooltip" style="display:none;"></div>');
+
+    wrap.innerHTML = o.join("");
+
+    // ── Hover wiring ────────────────────────────────────────────────────
+    var svgEl  = wrap.querySelector("#eag-svg");
+    var xhair  = wrap.querySelector("#eag-xhair");
+    var hDot   = wrap.querySelector("#eag-hover-dot");
+    var tipEl  = wrap.querySelector("#eag-tooltip");
+    var hitEl  = wrap.querySelector("#eag-hit");
+    if (!hitEl || !svgEl) return;
+
+    hitEl.addEventListener("mousemove", function(e) {
+      var svgRect = svgEl.getBoundingClientRect();
+      var mouseX  = e.clientX - svgRect.left;
+      var relX    = mouseX - ML;
+      var idx     = Math.max(0, Math.min(BUCKETS - 1, Math.round((relX / pW) * (BUCKETS - 1))));
+      var pt      = pts[idx];
+
+      xhair.setAttribute("x1", pt.x.toFixed(1));
+      xhair.setAttribute("x2", pt.x.toFixed(1));
+      xhair.removeAttribute("display");
+
+      hDot.setAttribute("cx", pt.x.toFixed(1));
+      hDot.setAttribute("cy", pt.y.toFixed(1));
+      hDot.removeAttribute("display");
+
+      // Tooltip
+      var d = new Date(pt.time);
+      var timeStr = String(d.getHours()).padStart(2,"0") + ":" +
+                    String(d.getMinutes()).padStart(2,"0") + ":" +
+                    String(d.getSeconds()).padStart(2,"0");
+      tipEl.innerHTML =
+        '<div style="font-family:\'JetBrains Mono\',monospace;font-size:0.52rem;color:#555;margin-bottom:3px;">' + timeStr + '</div>' +
+        '<div style="font-family:\'JetBrains Mono\',monospace;font-size:0.9rem;font-weight:700;color:#fff;line-height:1;">' + pt.count + '</div>' +
+        '<div style="font-family:\'JetBrains Mono\',monospace;font-size:0.5rem;color:#444;margin-top:2px;text-transform:uppercase;">events</div>';
+
+      var tX = (mouseX / CW * wrap.offsetWidth) + 12;
+      var tY = Math.max(4, (pt.y / CH * wrap.offsetHeight) - 40);
+      if (tX + 90 > wrap.offsetWidth) tX -= 100;
+      tipEl.style.left    = tX + "px";
+      tipEl.style.top     = tY + "px";
+      tipEl.style.display = "block";
+    });
+
+    hitEl.addEventListener("mouseleave", function() {
+      xhair.setAttribute("display", "none");
+      hDot.setAttribute("display", "none");
+      tipEl.style.display = "none";
+    });
+
+    // ── Click: scroll timeline to that time bucket ──────────────────────
+    hitEl.addEventListener("click", function(e) {
+      var svgRect = svgEl.getBoundingClientRect();
+      var relX    = (e.clientX - svgRect.left) - ML;
+      var idx     = Math.max(0, Math.min(BUCKETS - 1, Math.round((relX / pW) * (BUCKETS - 1))));
+      var targetTime = bucketTimes[idx];
+
+      // Find the first timeline row whose timestamp is nearest to targetTime
+      var timelineRoot = $("entity-timeline-root");
+      if (!timelineRoot) return;
+      var rows = timelineRoot.querySelectorAll(".tl-header-row, .tl-event-row");
+      var best = null, bestDiff = Infinity;
+      rows.forEach(function(row) {
+        var ts = parseInt(row.getAttribute("data-ts") || "0", 10);
+        if (!ts) return;
+        var diff = Math.abs(ts - targetTime);
+        if (diff < bestDiff) { bestDiff = diff; best = row; }
+      });
+      if (best) {
+        best.scrollIntoView({ behavior: "smooth", block: "center" });
+        // Brief flash highlight
+        best.style.background = "rgba(255,255,255,0.07)";
+        setTimeout(function() { best.style.background = ""; }, 800);
+      }
+    });
+  }
+
+  // Timeline kind config ──────────────────────────────────────────────────────
+  // "header" kinds render as prominent section-header rows.
+  // Everything else renders as a compact indented event sub-row.
+  var _TL_HEADER_KINDS = { "alert": true, "incident": true };
+
+  function _buildHeaderRow(item) {
+    var kind    = String(item.kind || "alert").toLowerCase();
+    var time    = TraceClient.escapeHtml(TraceClient.formatTime(item.timestamp_utc));
+    var summary = TraceClient.escapeHtml(item.summary || item.title || "");
+    var modCls  = kind === "incident" ? "incident" : "alert";
+    var lblCls  = kind === "incident" ? "incident" : "alert";
+    var label   = kind === "incident" ? "INCIDENT" : "ALERT";
+    var ts      = new Date(item.timestamp_utc).getTime();
+    return '<div class="tl-header-row tl-header-row--' + modCls + '" data-ts="' + ts + '">'
+      + '<span class="tl-header-row__time">' + time + '</span>'
+      + '<span class="tl-header-row__label tl-header-row__label--' + lblCls + '">' + label + '</span>'
+      + '<span class="tl-header-row__title">' + summary + '</span>'
+      + '</div>';
+  }
+
+  function _buildEventRow(item) {
+    var time    = TraceClient.escapeHtml(TraceClient.formatTime(item.timestamp_utc));
+    var summary = TraceClient.escapeHtml(item.summary || item.title || "");
+    var ts      = new Date(item.timestamp_utc).getTime();
+    return '<div class="tl-event-row" data-ts="' + ts + '">'
+      + '<span class="tl-event-row__time">' + time + '</span>'
+      + '<span class="tl-event-row__dot"></span>'
+      + '<span class="tl-event-row__text">' + summary + '</span>'
+      + '</div>';
+  }
+
+  var _TIMELINE_INITIAL = 20; // rows in first render (header + events count equally)
 
   function renderTimeline(timeline) {
     var root = $("entity-timeline-root");
@@ -262,19 +620,60 @@
       root.innerHTML = TraceRender.emptyState("No timeline events");
       return;
     }
-    var sorted = timeline.slice().reverse().slice(0, 25);
-    root.innerHTML = sorted.map(function (item) {
-      var kindLabel = String(item.kind || "event").toUpperCase();
-      var badgeKind = item.kind === "incident" ? "filled" : (item.kind === "alert" ? "error" : "ghost");
-      var badgeHtml = TraceRender.badge(badgeKind, kindLabel);
-      var time      = TraceClient.formatTime(item.timestamp_utc);
-      var summary   = TraceClient.escapeHtml(item.summary || item.title || "");
-      return '<div class="flex items-start gap-4 p-3 hover:bg-surface-high transition-colors">'
-        + '<span class="font-mono text-[0.6rem] text-outline whitespace-nowrap mt-0.5">' + TraceClient.escapeHtml(time) + '</span>'
-        + badgeHtml
-        + '<div><span class="text-[0.75rem] text-on-surface">' + summary + '</span></div>'
-        + '</div>';
-    }).join("");
+
+    var sorted = timeline.slice().reverse(); // newest first
+
+    // Split into visible + hidden
+    var visible = sorted.slice(0, _TIMELINE_INITIAL);
+    var hidden  = sorted.slice(_TIMELINE_INITIAL);
+    var total   = sorted.length;
+
+    function buildRows(items) {
+      return items.map(function (item) {
+        var kind = String(item.kind || "event").toLowerCase();
+        return _TL_HEADER_KINDS[kind] ? _buildHeaderRow(item) : _buildEventRow(item);
+      }).join("");
+    }
+
+    var visibleHtml = buildRows(visible);
+
+    // Count label
+    var countLabel = total + " event" + (total !== 1 ? "s" : "");
+
+    var overflowHtml = "";
+    var loadMoreHtml = "";
+    if (hidden.length > 0) {
+      overflowHtml = '<div id="tl-overflow" class="hidden">' + buildRows(hidden) + '</div>';
+      loadMoreHtml = '<button id="tl-load-more" class="tl-load-more">'
+        + '<span class="material-symbols-outlined" style="font-size:13px">expand_more</span>'
+        + hidden.length + ' more events'
+        + '</button>';
+    }
+
+    root.innerHTML =
+      // Panel header bar
+      '<div class="tl-panel">'
+      + '<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 14px;border-bottom:1px solid rgba(255,255,255,0.05);flex-shrink:0;">'
+      +   '<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.55rem;text-transform:uppercase;letter-spacing:0.12em;color:#555;">' + countLabel + '</span>'
+      +   '<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.52rem;text-transform:uppercase;letter-spacing:0.1em;color:#333;">Newest first</span>'
+      + '</div>'
+      // Scrollable rows area
+      + '<div class="tl-scroll">'
+      +   visibleHtml
+      +   overflowHtml
+      + '</div>'
+      // Load more (outside scroll so it doesn't scroll away)
+      + loadMoreHtml
+      + '</div>';
+
+    var loadBtn = $("tl-load-more");
+    if (loadBtn) {
+      loadBtn.addEventListener("click", function () {
+        var overflow = $("tl-overflow");
+        if (overflow) overflow.classList.remove("hidden");
+        loadBtn.style.display = "none";
+      });
+    }
   }
 
   function renderIncidents(incidents) {
@@ -785,11 +1184,38 @@
       showOverview();
     }
 
-    // Search + filter wiring
+    // Search wiring
     var searchEl = $("entity-search");
     if (searchEl) searchEl.addEventListener("input", applyFilters);
-    var filterEl = $("entity-filter");
-    if (filterEl) filterEl.addEventListener("change", applyFilters);
+
+    // Quick filter chips
+    document.querySelectorAll(".quick-filter-chip").forEach(function (chip) {
+      chip.addEventListener("click", function () {
+        _activeQuickFilter = chip.getAttribute("data-qf") || "all";
+        document.querySelectorAll(".quick-filter-chip").forEach(function (c) {
+          c.classList.toggle("active", c === chip);
+        });
+        applyFilters();
+      });
+    });
+
+    // Stat bar click-to-filter (FIX 3)
+    var statMappings = [
+      { id: "stat-btn-total",     qf: "all" },
+      { id: "stat-btn-known",     qf: "known" },
+      { id: "stat-btn-unknown",   qf: "unknown" },
+      { id: "stat-btn-incidents", qf: "incidents" },
+    ];
+    statMappings.forEach(function (m) {
+      var btn = $(m.id);
+      if (btn) btn.addEventListener("click", function () {
+        _activeQuickFilter = m.qf;
+        document.querySelectorAll(".quick-filter-chip").forEach(function (c) {
+          c.classList.toggle("active", c.getAttribute("data-qf") === m.qf);
+        });
+        applyFilters();
+      });
+    });
 
     // Back button
     var backBtn = $("btn-back");
