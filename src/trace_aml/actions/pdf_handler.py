@@ -63,7 +63,11 @@ body {
   font-family: 'Inter', -apple-system, sans-serif;
   font-size: 10px;
   line-height: 1.5;
-  -webkit-print-color-adjust: exact;
+  /* ── Print: preserve dark theme exactly as-is ────────────── */
+}
+
+@media print {
+  body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }
 
 /* ── Page setup ───────────────────────────────────────────── */
@@ -308,21 +312,9 @@ tr.alt td { background: rgba(31, 31, 31, 0.3); }
   letter-spacing: 0.1em;
 }
 
-/* ── Print / light-mode override ────────────────────────── */
+/* ── Print: force exact colours — do NOT invert to light theme ── */
 @media print {
-  body { background: #ffffff; color: #1a1c1c; }
-  .card, .rpt-header, .gallery-item { background: #ffffff; border-color: #e2e2e2; }
-  th { background: #f5f5f5; color: #757575; border-bottom-color: #e2e2e2; }
-  td { color: #1a1c1c; border-bottom-color: #f5f5f5; }
-  .field__k { color: #757575; }
-  .field__v { color: #1a1c1c; }
-  .field { border-bottom-color: #f5f5f5; }
-  h2 { color: #757575; border-bottom-color: #e2e2e2; }
-  .portrait-placeholder { border-color: #e2e2e2; color: #bdbdbd; background: #fafafa; }
-  .rpt-footer { border-top-color: #e2e2e2; color: #bdbdbd; }
-  .mono, .field__k, .card__label, h2, th, .rpt-header__brand, .rpt-header__sub, .badge, .rpt-footer, figcaption {
-    font-family: 'JetBrains Mono', monospace !important;
-  }
+  body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }
 """
 
@@ -1042,15 +1034,21 @@ class PdfReportHandler(BaseActionHandler):
 
         with sync_playwright() as pw:
             browser = pw.chromium.launch()
-            page = browser.new_page()
-            # Load HTML directly as content; use a base URL for any relative assets
-            page.set_content(html_str, wait_until="domcontentloaded")
-            page.emulate_media(media="print")
+            # A4 at 96 dpi = 794 px wide. Set tall viewport so content isn't clipped.
+            ctx = browser.new_context(
+                viewport={"width": 794, "height": 1123},
+                color_scheme="dark",
+            )
+            page = ctx.new_page()
+            # Wait for networkidle so Google Fonts CDN finishes loading.
+            page.set_content(html_str, wait_until="networkidle")
+            # Render in screen mode — do NOT call emulate_media('print') because
+            # that activates the @media print block which inverts to white background.
             page.pdf(
                 path=str(pdf_path),
                 format="A4",
                 print_background=True,
-                margin={"top": "16mm", "bottom": "18mm", "left": "13mm", "right": "13mm"},
+                margin={"top": "15mm", "bottom": "18mm", "left": "12mm", "right": "12mm"},
             )
             browser.close()
 

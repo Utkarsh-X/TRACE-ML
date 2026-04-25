@@ -127,9 +127,12 @@ class ActionEngine:
 
         trigger_value = ActionTrigger(str(trigger))
         if not self._cooldown_allows(incident):
-            logger.debug(
-                "[ActionEngine] cooldown active for incident {} — skipping",
+            logger.info(
+                "[ActionEngine] cooldown active for {} (sev={} last_action={}) — skipping {} actions",
                 incident.incident_id[-8:],
+                getattr(incident.severity, "value", incident.severity),
+                incident.last_action_at or "never",
+                len(actions),
             )
             return []
 

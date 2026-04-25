@@ -372,4 +372,21 @@ def load_settings(config_path: str | Path | None = None) -> Settings:
     except Exception as exc:  # pragma: no cover - pydantic supplies details.
         raise ConfigError(str(exc)) from exc
     settings.runtime_config_path = str(path.resolve())
+
+    # Decrypt ENC:-prefixed SMTP password stored by the settings persist endpoint.
+    # This makes the plaintext available to email handlers without any code changes.
+    stored_pw: str = settings.notifications.email.smtp_password or ""
+    if stored_pw.startswith("ENC:"):
+        try:
+            import base64
+            from trace_aml.store.data_vault import _load_key, _decrypt
+            key = _load_key()
+            if key:
+                blob = base64.urlsafe_b64decode(stored_pw[4:])
+                result = _decrypt(blob, key)
+                if result:
+                    settings.notifications.email.smtp_password = result.decode("utf-8")
+        except Exception:
+            pass  # leave as ENC: token; will be caught by email handler
+
     return settings

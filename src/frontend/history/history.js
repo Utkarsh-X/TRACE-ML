@@ -53,8 +53,40 @@
 
   function loadTimeline() {
     var filters = getFilters();
+
+    /* ── Loading feedback ── */
+    var goBtn = $("filter-go");
+    if (goBtn) {
+      goBtn.disabled    = true;
+      goBtn.textContent = "Loading…";
+    }
+    var root = $("timeline-results");
+    if (root) {
+      root.innerHTML =
+        '<div style="padding:20px 24px 0;"><div style="display:flex;align-items:center;gap:16px;margin-bottom:10px;">' +
+        '<div style="width:160px;height:28px;background:#111;" class="tl-skeleton-bar"></div>' +
+        '<div style="flex:1;height:1px;background:#111;"></div></div></div>' +
+        '<div class="tl-skeleton-bar" style="margin:0 0 1px;"></div>' +
+        '<div class="tl-skeleton-bar" style="margin:0 0 1px;opacity:0.7"></div>' +
+        '<div class="tl-skeleton-bar" style="margin:0 0 1px;opacity:0.5"></div>' +
+        '<div class="tl-skeleton-bar" style="margin:0 0 1px;opacity:0.35"></div>';
+    }
+
     TraceClient.globalTimeline(filters).then(function (items) {
       renderAll(items);
+      /* restore button */
+      if (goBtn) {
+        goBtn.disabled    = false;
+        goBtn.textContent = "Apply Filters";
+        goBtn.style.outline = "none";
+      }
+      /* inline count confirmation */
+      var count = (items || []).length;
+      var kindVal = filters.kinds ? filters.kinds[0] : "all";
+      var label = count + " result" + (count !== 1 ? "s" : "") + (kindVal !== "all" ? " [" + kindVal + "]" : "");
+      if (goBtn) {
+        goBtn.title = "Last fetch: " + label;
+      }
     });
   }
 
@@ -759,24 +791,44 @@
 
   /* ─── Init ─────────────────────────────────────────────────── */
 
+  /* ── Dirty-state indicator on Apply Filters button ─────────── */
+
+  function markFiltersDirty() {
+    var btn = $("filter-go");
+    if (!btn) return;
+    btn.textContent = "Apply Filters ●";
+    btn.style.outline = "1.5px solid rgba(255,255,255,0.35)";
+    btn.style.outlineOffset = "2px";
+  }
+
+  function clearFiltersDirty() {
+    var btn = $("filter-go");
+    if (!btn) return;
+    btn.textContent = "Apply Filters";
+    btn.style.outline = "none";
+  }
+
   function init() {
     var mainContent = document.querySelector("main");
     TraceRender.initOfflineUI(mainContent);
 
-    /* Primary action */
+    /* Primary action — sole commit point for all filter changes */
     var goBtn = $("filter-go");
-    if (goBtn) goBtn.addEventListener("click", loadTimeline);
+    if (goBtn) goBtn.addEventListener("click", function() {
+      clearFiltersDirty();
+      loadTimeline();
+    });
 
     /* Export (secondary) */
     var exportBtn = $("export-log-btn");
     if (exportBtn) exportBtn.addEventListener("click", exportLog);
 
-    /* Filters auto-apply */
+    /* Dropdowns mark button as pending — no longer auto-reload */
     var suppressSelect = $("filter-suppress");
-    if (suppressSelect) suppressSelect.addEventListener("change", loadTimeline);
+    if (suppressSelect) suppressSelect.addEventListener("change", markFiltersDirty);
 
     var kindSelect = $("filter-kind");
-    if (kindSelect) kindSelect.addEventListener("change", loadTimeline);
+    if (kindSelect) kindSelect.addEventListener("change", markFiltersDirty);
 
     /* Timeline card click — selection state + panel */
     var tlResults = $("timeline-results");

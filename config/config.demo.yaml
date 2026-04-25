@@ -1,197 +1,123 @@
-app:
-  environment: demo
-
-# ── GPU / Execution-Provider Configuration ────────────────────────────────────
-# TRACE-AML will automatically probe for GPU providers at startup and select
-# the best available one (CUDA > DirectML > ROCm > OpenVINO > CPU fallback).
-#
-# To enable CUDA acceleration:
-#   1. pip uninstall onnxruntime
-#   2. pip install onnxruntime-gpu
-#   Then restart the service — CUDA will be detected automatically.
-#
-# To force CPU-only mode, set:  gpu.enabled: false
-# To force a specific backend:  gpu.preferred_provider: "DmlExecutionProvider"
-gpu:
-  enabled: true
-  preferred_provider: ""      # leave empty for auto-detection
-  cuda_device_id: 0           # GPU index (only relevant when multiple GPUs present)
-  log_provider_selection: true
-
-
-camera:
-  device_index: 0
-  width: 1280
-  height: 720
-  fps: 30
-
-# ── Pipeline CPU-offload Controls ─────────────────────────────────────────────
-# These three knobs are the primary levers for balancing CPU load vs accuracy.
-#
-# inference_skip_frames
-#   0 = run ML on every camera frame (30 FPS inference, high CPU ~85%)
-#   1 = every other frame            (15 FPS inference, ~50% CPU reduction)
-#   2 = every 3rd frame              (10 FPS inference, ~66% CPU reduction)  ← recommended
-#   Camera capture, display & SSE overlay always run at full camera FPS;
-#   only the ONNX detector + ArcFace embedder + gallery search are throttled.
-#
-# inference_resolution_scale
-#   Scale factor applied to the frame BEFORE it is sent to InsightFace.
-#   Lower = fewer GPU texture uploads + faster SCRFD decode.
-#   0.75 → 960×540 inference on a 1280×720 source (44% fewer pixels)
-#   The full-res frame is kept in the packet for display and screenshots.
-#
-# live_state_publish_hz
-#   SSE push rate for session.state (FPS counter, queue depths, etc.).
-#   Previously fired on every inference result (~30/s), which meant
-#   30× JSON-serialise-and-push per second even with no entities visible.
-#   5 Hz is more than enough for the dashboard latency widgets.
-pipeline:
-  inference_skip_frames: 2
-  inference_resolution_scale: 0.75
-  live_state_publish_hz: 5.0
-
-recognition:
-  model_name: buffalo_l
-  accept_threshold: 0.60
-  review_threshold: 0.45
-  active_gallery_search_k: 96
-  log_cooldown_seconds: 2
-  persist_unknown: true
-  persist_review: true
-  robust_matching: true
-  enable_preprocess_fallback: true
-  low_quality_threshold: 0.40
-  threshold_relaxation: 0.12
-  # buffalo_l + best-of-8 calibration: same-person sim ~0.45-0.85, different-person ~0.25-0.44
-  unknown_reuse_threshold: 0.45
-  min_unknown_surface_threshold: 12.0
-  min_unknown_detector_score: 0.62
-
-# ── Composite Quality Gate ────────────────────────────────────────────────────
-# Pre-embedding gate: composite = 0.50*det + 0.30*blur + 0.20*pose
-# Faces below min_composite_score are dropped BEFORE ArcFace runs.
-# Prevents blurry / side-on faces from polluting unknown entity embeddings.
-quality:
-  min_detector_score: 0.55
-  composite_gate_enabled: true
-  min_composite_score: 0.42
-  blur_lap_saturation: 500.0
-  # ── Enrollment image quality thresholds ────────────────────────────────────
-  # min_sharpness is Laplacian variance on the face crop.
-  # Webcam captures (1280×720 @ 5 FPS) typically produce values of 10–25.
-  # Phone photos produce 80–400+. Default 55 was calibrated for phone photos
-  # and rejects all webcam captures. Lower to 8 to accept webcam-quality images
-  # while still rejecting blank / solid-colour frames (sharpness < 3).
-  min_sharpness: 8.0
-  # Allow slightly lower overall quality for webcam captures — face_ratio,
-  # detector_score, and pose_score are already good; sharpness was the blocker.
-  min_quality_score: 0.25
-  # Lifecycle: require fewer embeddings so small galleries (5–10 photos) still
-  # become ACTIVE instead of DRAFT/BLOCKED.
-  min_valid_images: 2
-  min_embeddings_ready: 1
-  min_embeddings_active: 2
-temporal:
-  decision_window: 6
-  smoothing_alpha: 0.6
-  min_accept_votes: 1
-  track_ttl_seconds: 1.8
-  max_track_distance_px: 120
-  min_track_iou: 0.08
-  track_reuse_min_score: 0.35
-
-rules:
-  cooldown_sec: 12
-  reappearance:
-    window_sec: 10
-    min_events: 3
-  unknown:
-    window_sec: 10
-    min_events: 3
-  instability:
-    window_sec: 10
-    std_threshold: 0.16
-
 actions:
+  cooldown_sec: 20
   enabled: true
   on_create:
-    low: []
-    medium: [log]
-    # pdf_report runs first so email/whatsapp can attach the generated PDF
-    high: [log, pdf_report, email, whatsapp]
+    high:
+    - log
+    - pdf_report
+    - email
+    - whatsapp
+    low:
+    - log
+    - pdf_report
+    - email
+    - whatsapp
+    medium:
+    - log
+    - pdf_report
+    - email
+    - whatsapp
   on_update:
+    high:
+    - log
+    - pdf_report
     low: []
-    medium: [log]
-    high: [log, pdf_report]
-  cooldown_sec: 20
-
-# ── Notification Channels ─────────────────────────────────────────────────────
-# Credentials for sensitive fields (smtp_password, api_key) should be set via
-# environment variables:
-#   TRACE_AML_SMTP_PASSWORD=your-password
-#   TRACE_AML_WA_API_KEY=your-evolution-api-key
-# Never commit real credentials to this file.
+    medium:
+    - log
+app:
+  environment: demo
+camera:
+  device_index: 0
+  fps: 30
+  height: 720
+  width: 1280
+gpu:
+  cuda_device_id: 0
+  enabled: true
+  log_provider_selection: true
+  preferred_provider: ''
+liveness:
+  enabled: false
+  model_path: models/2.7_80x80_MiniFASNetV2.onnx
+  provider: minifas
+  strict_reject: false
+  threshold: 0.6
 notifications:
-
   email:
-    enabled: false
-    smtp_host: "smtp.gmail.com"
-    smtp_port: 587          # 587 = STARTTLS | 465 = SSL
-    smtp_user: ""           # e.g. alerts@your-org.com
-    smtp_password: ""       # Use env var TRACE_AML_SMTP_PASSWORD instead
-    sender_address: ""
-    sender_name: "TRACE-AML Security"
-    recipient_addresses: []
-    use_tls: true
-    attach_pdf: true
-
-  whatsapp:
-    enabled: false
-    mode: "evolution_api"         # Self-hosted Evolution API (REST over Baileys)
-    base_url: "http://localhost:8081"  # Evolution API on port 8081 (TRACE-AML uses 8080)
-    api_key: ""                   # Use env var TRACE_AML_WA_API_KEY instead
-    instance: ""                  # Your WhatsApp number@c.us instance name
-    recipient_numbers: []         # E.164 format, e.g. "+919876543210"
-    send_pdf: true
-    send_text: true
-
+    attach_pdf: false
+    enabled: true
+    recipient_addresses:
+    - utkarshchandra170@gmail.com
+    sender_address: utkarshchandra170@gmail.com
+    sender_name: TRACE-AML Security
+    smtp_host: smtp.gmail.com
+    smtp_password: ENC:AQGartDFdyGfVx2DuoLTfHnaULLS5IQGV8J3sYmCKdhFQ1ValPWzCehK2vhNoNltew==
+    smtp_port: 587
+    smtp_user: utkarshchandra170@gmail.com
+    use_tls: false
   pdf_report:
     enabled: true
-    library: "fpdf2"
-    output_dir: "data/exports"
-    include_screenshots: true
-    include_entity_portrait: true
-    max_detection_rows: 20
+    include_entity_portrait: false
+    include_screenshots: false
     max_alert_rows: 50
-
-
-# ── Unknown Entity Deduplication ──────────────────────────────────────────────
-# Background clusterer that retroactively merges duplicate UNK entities.
-# Runs every interval_minutes. Uses global best-of-N embedding comparison
-# (one BLAS matmul over all stored embeddings — < 2ms for 100 unknowns).
-#
-# merge_threshold: Two entities merge if ANY embedding pair scores >= this.
-#   Slightly LOWER than unknown_reuse_threshold (0.55) so the cluster pass
-#   catches session-restart near-misses the real-time gate may have missed.
-# interval_minutes: How often the pass runs. 3m is a good balance.
+    max_detection_rows: 20
+  whatsapp:
+    bridge_url: http://localhost:3001
+    enabled: true
+    recipient_numbers:
+    - '917007111506'
+    send_pdf: false
+    send_text: false
+pipeline:
+  inference_resolution_scale: 0.75
+  inference_skip_frames: 2
+  live_state_publish_hz: 5.0
+quality:
+  blur_lap_saturation: 500.0
+  composite_gate_enabled: true
+  min_composite_score: 0.42
+  min_detector_score: 0.55
+  min_embeddings_active: 2
+  min_embeddings_ready: 1
+  min_quality_score: 0.25
+  min_sharpness: 8.0
+  min_valid_images: 2
+recognition:
+  accept_threshold: 0.6
+  active_gallery_search_k: 96
+  enable_preprocess_fallback: true
+  log_cooldown_seconds: 2
+  low_quality_threshold: 0.4
+  min_unknown_detector_score: 0.62
+  min_unknown_surface_threshold: 12.0
+  model_name: buffalo_l
+  persist_review: true
+  persist_unknown: true
+  review_threshold: 0.45
+  robust_matching: true
+  threshold_relaxation: 0.12
+  unknown_reuse_threshold: 0.45
+rules:
+  cooldown_sec: 12
+  instability:
+    std_threshold: 0.16
+    window_sec: 10
+  reappearance:
+    min_events: 3
+    window_sec: 10
+  unknown:
+    min_events: 3
+    window_sec: 10
+temporal:
+  decision_window: 6
+  max_track_distance_px: 120
+  min_accept_votes: 1
+  min_track_iou: 0.08
+  smoothing_alpha: 0.6
+  track_reuse_min_score: 0.35
+  track_ttl_seconds: 1.8
 unknown_clustering:
   enabled: true
   interval_minutes: 3.0
   merge_threshold: 0.42
   min_embeddings_to_cluster: 1
-
-# ── Liveness / Anti-Spoofing ──────────────────────────────────────────────────
-# MiniFASNetV2 model gates unknown entities against photo/screen replay attacks.
-# If the model file is absent the system logs a warning and passes all faces
-# through — no crash, no behaviour change until the model is present.
-#
-# Model download (run once from project root):
-#   Invoke-WebRequest -Uri "https://github.com/otroshi/face-anti-spoofing-onnx/releases/download/v1.0/2.7_80x80_MiniFASNetV2.onnx" -OutFile "models\2.7_80x80_MiniFASNetV2.onnx"
-#   OR manually place it at:  models/2.7_80x80_MiniFASNetV2.onnx
-liveness:
-  enabled: false
-  provider: minifas
-  threshold: 0.60
-  model_path: models/2.7_80x80_MiniFASNetV2.onnx
-  strict_reject: false

@@ -6,6 +6,7 @@ from pathlib import Path
 from queue import Empty, Full, Queue
 from typing import Any
 import os
+import base64
 
 from fastapi import Query, Request
 from fastapi.responses import FileResponse
@@ -218,8 +219,23 @@ def create_service_app(
 
     @app.get("/api/v1/config")
     def get_config() -> dict[str, Any]:
-        """Get current live configuration."""
-        return settings.model_dump(mode="json")
+        """Get current live configuration, with encrypted secrets decrypted for the UI."""
+        dump = settings.model_dump(mode="json")
+        # Decrypt SMTP password so the settings page can pre-populate the field
+        stored_pw = dump.get("notifications", {}).get("email", {}).get("smtp_password", "")
+        if stored_pw and stored_pw.startswith("ENC:"):
+            try:
+                from trace_aml.store.data_vault import _load_key, _decrypt
+                key = _load_key()
+                if key:
+                    import base64 as _b64
+                    blob = _b64.urlsafe_b64decode(stored_pw[4:])
+                    result = _decrypt(blob, key)
+                    if result:
+                        dump["notifications"]["email"]["smtp_password"] = result.decode("utf-8")
+            except Exception:
+                dump["notifications"]["email"]["smtp_password"] = ""  # hide on failure
+        return dump
 
     @app.patch("/api/v1/config")
     def patch_config(payload: dict[str, Any]) -> dict[str, Any]:
@@ -266,39 +282,210 @@ def create_service_app(
             if "email" in notif:
                 em = notif["email"]
                 email_cfg = settings.notifications.email
-                for k in ("enabled", "smtp_host", "smtp_port", "smtp_user",
+                for k in ("smtp_host", "smtp_port", "smtp_user",
                           "sender_address", "sender_name", "use_tls", "attach_pdf",
                           "recipient_addresses"):
                     if k in em:
                         setattr(email_cfg, k, em[k])
-                # Password from config file (for testing; env var takes precedence at runtime)
-                if "smtp_password" in em:
+                # Password from config file (env var takes precedence at runtime)
+                if "smtp_password" in em and em["smtp_password"]:
                     email_cfg.smtp_password = em["smtp_password"]
+                # Auto-enable: channel is active when minimum required fields are present
+                # Explicit "enabled" override is still accepted from the payload
+                if "enabled" in em:
+                    email_cfg.enabled = bool(em["enabled"])
+                else:
+                    email_cfg.enabled = bool(
+                        email_cfg.smtp_host
+                        and email_cfg.smtp_user
+                        and email_cfg.recipient_addresses
+                    )
             # WhatsApp channel
             if "whatsapp" in notif:
                 wa = notif["whatsapp"]
                 wa_cfg = settings.notifications.whatsapp
-                for k in ("enabled", "bridge_url", "recipient_numbers",
-                          "send_pdf", "send_text"):
+                for k in ("bridge_url", "recipient_numbers", "send_pdf", "send_text"):
                     if k in wa:
                         setattr(wa_cfg, k, wa[k])
-            # PDF reports
+                # Auto-enable: bridge_url + at least one recipient
+                if "enabled" in wa:
+                    wa_cfg.enabled = bool(wa["enabled"])
+                else:
+                    wa_cfg.enabled = bool(
+                        wa_cfg.bridge_url
+                        and wa_cfg.recipient_numbers
+                    )
+            # PDF reports — always enabled (no network deps)
             if "pdf_report" in notif:
                 pdf = notif["pdf_report"]
                 pdf_cfg = settings.notifications.pdf_report
-                for k in ("enabled", "include_screenshots", "include_entity_portrait",
+                for k in ("include_screenshots", "include_entity_portrait",
                           "max_detection_rows", "max_alert_rows"):
                     if k in pdf:
                         setattr(pdf_cfg, k, pdf[k])
+                pdf_cfg.enabled = True  # PDF reports are always enabled
 
-        # Return config (password included for testing; env var takes precedence at runtime)
+        # Return config with password decrypted for UI
         cfg_dump = settings.model_dump(mode="json")
+        stored_pw = cfg_dump.get("notifications", {}).get("email", {}).get("smtp_password", "")
+        if stored_pw and stored_pw.startswith("ENC:"):
+            cfg_dump["notifications"]["email"]["smtp_password"] = ""
         return cfg_dump
 
     @app.patch("/api/v1/config/notifications")
     def patch_notifications(payload: dict[str, Any]) -> dict[str, Any]:
         """Shorthand for patching only the notifications block."""
         return patch_config({"notifications": payload})
+
+    # ── Helpers for config persistence ─────────────────────────────────────────
+
+    def _encrypt_secret(plaintext: str) -> str:
+        """Encrypt a short secret string using the vault key (ChaCha20-Poly1305).
+
+        Returns a base64url-encoded blob: b64(version[1] + algo[1] + nonce[12] + ciphertext+tag[N+16]).
+        Falls back to returning the plaintext unchanged if the vault key is not set
+        (dev/passthrough mode).
+        """
+        from trace_aml.store.data_vault import _load_key, _encrypt
+        key = _load_key()
+        if key is None or not plaintext:
+            return plaintext  # no key → store as-is (dev mode)
+        blob = _encrypt(plaintext.encode("utf-8"), key)
+        return "ENC:" + base64.urlsafe_b64encode(blob).decode("ascii")
+
+    def _decrypt_secret(stored: str) -> str:
+        """Inverse of _encrypt_secret. Returns plaintext, or the stored value on failure."""
+        if not stored or not stored.startswith("ENC:"):
+            return stored  # not encrypted (dev mode or legacy)
+        from trace_aml.store.data_vault import _load_key, _decrypt
+        key = _load_key()
+        if key is None:
+            return stored  # can't decrypt without key
+        try:
+            blob = base64.urlsafe_b64decode(stored[4:])
+            result = _decrypt(blob, key)
+            return result.decode("utf-8") if result else stored
+        except Exception:
+            return stored
+
+    def _save_notifications_to_yaml() -> None:
+        """Persist the current in-memory notification + action policy settings to YAML.
+
+        Writes two top-level blocks:
+        - ``notifications``: email/WA/PDF credentials (SMTP password encrypted)
+        - ``actions``:       policy matrix (on_create/on_update/cooldown) so the
+                            matrix survives service restarts.
+        """
+        import yaml  # already a dep via core.config
+        cfg_path = Path(settings.runtime_config_path or "config/config.yaml")
+        try:
+            existing = yaml.safe_load(cfg_path.read_text(encoding="utf-8")) or {} if cfg_path.exists() else {}
+        except Exception:
+            existing = {}
+
+        em  = settings.notifications.email
+        wa  = settings.notifications.whatsapp
+        pdf = settings.notifications.pdf_report
+        act = settings.actions
+
+        # Encrypt SMTP password before writing to disk
+        stored_password = _encrypt_secret(em.smtp_password) if em.smtp_password else ""
+
+        existing["notifications"] = {
+            "email": {
+                "enabled":            em.enabled,
+                "smtp_host":          em.smtp_host,
+                "smtp_port":          em.smtp_port,
+                "smtp_user":          em.smtp_user,
+                "smtp_password":      stored_password,
+                "sender_address":     em.sender_address,
+                "sender_name":        em.sender_name,
+                "recipient_addresses": list(em.recipient_addresses),
+                "use_tls":            em.use_tls,
+                "attach_pdf":         em.attach_pdf,
+            },
+            "whatsapp": {
+                "enabled":          wa.enabled,
+                "bridge_url":       wa.bridge_url,
+                "recipient_numbers": list(wa.recipient_numbers),
+                "send_pdf":         wa.send_pdf,
+                "send_text":        wa.send_text,
+            },
+            "pdf_report": {
+                "enabled":                  pdf.enabled,
+                "include_screenshots":      pdf.include_screenshots,
+                "include_entity_portrait":  pdf.include_entity_portrait,
+                "max_detection_rows":       pdf.max_detection_rows,
+                "max_alert_rows":           pdf.max_alert_rows,
+            },
+        }
+
+        # Persist the policy matrix so checkbox selections survive restarts
+        existing["actions"] = {
+            "enabled":     act.enabled,
+            "cooldown_sec": act.cooldown_sec,
+            "on_create": {
+                "low":    list(act.on_create.low),
+                "medium": list(act.on_create.medium),
+                "high":   list(act.on_create.high),
+            },
+            "on_update": {
+                "low":    list(act.on_update.low),
+                "medium": list(act.on_update.medium),
+                "high":   list(act.on_update.high),
+            },
+        }
+
+        tmp = cfg_path.with_suffix(".tmp")
+        tmp.write_text(yaml.dump(existing, default_flow_style=False, allow_unicode=True), encoding="utf-8")
+        os.replace(tmp, cfg_path)
+        logger.info("[Settings] Config (notifications + actions) persisted to {}", cfg_path)
+
+    def _get_config_with_decrypted_password() -> dict[str, Any]:
+        """Return settings dump with the SMTP password decrypted for the UI."""
+        dump = settings.model_dump(mode="json")
+        # Decrypt the stored password so the UI can pre-populate the field
+        stored = dump.get("notifications", {}).get("email", {}).get("smtp_password", "")
+        if stored and stored.startswith("ENC:"):
+            dump["notifications"]["email"]["smtp_password"] = _decrypt_secret(stored)
+        return dump
+
+    @app.post("/api/v1/config/notifications/save")
+    def save_notifications() -> dict[str, Any]:
+        """Persist current notification settings to config.yaml (survives restarts).
+
+        The SMTP password is encrypted with the vault key before writing.
+        """
+        try:
+            _save_notifications_to_yaml()
+            return {"status": "saved", "notifications": _get_config_with_decrypted_password()["notifications"]}
+        except Exception as exc:
+            logger.error("[Settings] Failed to persist notification settings: {}", exc)
+            raise HTTPException(status_code=500, detail=f"Failed to save settings: {exc}") from exc
+
+    @app.post("/api/v1/config/notifications/reset")
+    def reset_notifications() -> dict[str, Any]:
+        """Reset notification settings to defaults and wipe them from config.yaml."""
+        import yaml
+        from trace_aml.core.config import EmailSettings, WhatsAppSettings, PdfReportSettings, NotificationsSettings
+
+        # Reset in-memory settings to defaults
+        settings.notifications = NotificationsSettings()
+
+        # Wipe notifications block from yaml
+        cfg_path = Path(settings.runtime_config_path or "config/config.yaml")
+        try:
+            if cfg_path.exists():
+                existing = yaml.safe_load(cfg_path.read_text(encoding="utf-8")) or {}
+                existing.pop("notifications", None)
+                tmp = cfg_path.with_suffix(".tmp")
+                tmp.write_text(yaml.dump(existing, default_flow_style=False, allow_unicode=True), encoding="utf-8")
+                os.replace(tmp, cfg_path)
+                logger.info("[Settings] Notification settings reset and removed from {}", cfg_path)
+        except Exception as exc:
+            logger.warning("[Settings] Could not wipe notifications from yaml: {}", exc)
+
+        return {"status": "reset", "notifications": settings.model_dump(mode="json")["notifications"]}
 
     # ── Camera Control Endpoints (Frontend-driven) ────────────────────────────
     @app.get("/api/v1/camera/status")
@@ -1018,12 +1205,24 @@ def create_service_app(
             resp = httpx.get(f"{wa.bridge_url.rstrip('/')}/status", timeout=5.0)
             bridge_status = resp.json()
         except Exception as exc:
-            logger.error("[WA-TEST] Bridge unreachable at {}: {}", wa.bridge_url, exc)
-            return {"status": "failed", "reason": f"bridge_unreachable: {exc}"}
+            logger.warning("[WA-TEST] Bridge unreachable at {}: {}", wa.bridge_url, exc)
+            return {
+                "status": "failed",
+                "reason": (
+                    f"bridge_not_running: The WhatsApp bridge is not started. "
+                    f"Open a terminal in the whatsapp-bridge/ folder and run: "
+                    f"npm install && node server.js — then scan the QR at "
+                    f"{wa.bridge_url.rstrip('/')}/qr"
+                ),
+            }
 
         if not bridge_status.get("ready"):
-            qr_hint = " Scan QR at http://localhost:3001/qr" if bridge_status.get("hasQr") else ""
-            return {"status": "failed", "reason": f"whatsapp_not_ready:{qr_hint}"}
+            if bridge_status.get("hasQr"):
+                return {
+                    "status": "failed",
+                    "reason": f"whatsapp_needs_qr_scan: Bridge is running but WhatsApp is not linked. Open {wa.bridge_url.rstrip('/')}/qr and scan with your phone.",
+                }
+            return {"status": "failed", "reason": "whatsapp_not_ready: Bridge is initialising, try again in a few seconds."}
 
         from trace_aml.actions.whatsapp_handler import WhatsAppHandler
         from trace_aml.core.models import (
@@ -1100,25 +1299,39 @@ def create_service_app(
 
     @app.get("/api/v1/whatsapp/status")
     def whatsapp_status() -> dict[str, Any]:
-        """Get local WhatsApp bridge connection status and QR code."""
+        """Get WhatsApp bridge status + inline QR for the settings UI.
+
+        Returns a normalized object:
+          state: 'bridge_down' | 'initializing' | 'qr_ready' | 'connected'
+          qr:    base64 PNG data-URL when state=='qr_ready', else null
+          phone: linked phone number when state=='connected', else null
+        """
         import httpx
         wa = settings.notifications.whatsapp
-        if not wa.enabled:
-            return {"enabled": False, "ready": False, "qr": None}
+        bridge_url = (wa.bridge_url or "http://localhost:3001").rstrip("/")
         try:
-            resp = httpx.get(f"{wa.bridge_url.rstrip('/')}/status", timeout=5.0)
+            resp = httpx.get(f"{bridge_url}/qr-image", timeout=5.0)
             data = resp.json()
-            qr_resp = None
-            if data.get("hasQr"):
-                try:
-                    qr_resp = httpx.get(f"{wa.bridge_url.rstrip('/')}/qr", timeout=5.0)
-                    qr_data = qr_resp.json()
-                    data["qr"] = qr_data.get("qrDataUrl")
-                except Exception:
-                    data["qr"] = None
-            return data
+            return {
+                "state": data.get("state", "initializing"),
+                "qr":    data.get("qr"),
+                "phone": data.get("phone"),
+            }
+        except Exception:
+            return {"state": "bridge_down", "qr": None, "phone": None}
+
+    @app.post("/api/v1/whatsapp/logout")
+    def whatsapp_logout() -> dict[str, Any]:
+        """Disconnect WhatsApp session — next status poll will show QR again."""
+        import httpx
+        wa = settings.notifications.whatsapp
+        bridge_url = (wa.bridge_url or "http://localhost:3001").rstrip("/")
+        try:
+            resp = httpx.post(f"{bridge_url}/logout", timeout=8.0)
+            return resp.json()
         except Exception as exc:
-            return {"enabled": True, "ready": False, "error": str(exc), "qr": None}
+            return {"success": False, "error": str(exc)}
+
 
     @app.get("/api/v1/events/stream")
     async def stream_events(

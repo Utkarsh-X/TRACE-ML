@@ -179,10 +179,35 @@
     wireTestButton('btn-test-wa',      '/api/v1/notifications/test/whatsapp');
     wireTestButton('btn-test-pdf',     '/api/v1/notifications/test/pdf');
 
-    // Save all notification settings
+    // WhatsApp connection manager — start polling when settings page loads
+    wa_startPolling();
+
+    // Save & persist notification settings
     var btnSave = document.getElementById('btn-save-notifications');
     if (btnSave) {
-      btnSave.addEventListener('click', saveNotificationSettings);
+      btnSave.addEventListener('click', function() { saveNotificationSettings(true, null); });
+    }
+    // Reset notification settings
+    var btnReset = document.getElementById('btn-reset-notifications');
+    if (btnReset) {
+      btnReset.addEventListener('click', function() {
+        TraceDialog.confirm(
+          'Reset Notification Settings',
+          'This will wipe all saved notification credentials and restore defaults. Are you sure?',
+          { type: 'error', confirmText: 'Reset' }
+        ).then(function(ok) {
+          if (!ok) return;
+          fetch('/api/v1/config/notifications/reset', { method: 'POST' })
+          .then(function(r) { return r.json(); })
+          .then(function(data) {
+            if (data.notifications) currentConfig.notifications = data.notifications;
+            TraceToast.success('Reset', 'Notification settings cleared.');
+            // Re-render to show empty fields
+            renderConfig();
+          })
+          .catch(function() { TraceToast.error('Reset Failed', 'Check backend logs.'); });
+        });
+      });
     }
   }
 
@@ -300,14 +325,23 @@
         class="w-full bg-surface-high font-mono text-[0.75rem] text-on-surface border border-outline-variant/20
                px-3 py-2 focus:outline-none focus:border-primary/60 transition-colors placeholder:text-outline/40">`;
     }
-    function channelCard(icon, title, enabledKey, enabledVal, bodyHtml, testId, testLabel) {
+    function channelCard(icon, title, readyFn, bodyHtml, testId, testLabel) {
+      // readyFn: function() -> bool, called to compute badge state at render time
+      var isReady = readyFn();
+      var badge = isReady
+        ? `<span class="flex items-center gap-1 font-mono text-[0.6rem] text-success bg-success/10 border border-success/20 px-2 py-0.5">
+             <span class="w-1.5 h-1.5 rounded-full bg-success inline-block"></span>READY
+           </span>`
+        : `<span class="flex items-center gap-1 font-mono text-[0.6rem] text-outline bg-surface-high border border-outline-variant/20 px-2 py-0.5">
+             <span class="w-1.5 h-1.5 rounded-full bg-outline/40 inline-block"></span>CONFIGURE
+           </span>`;
       return `
         <div class="mb-6 border border-outline-variant/10 bg-surface-container/20">
           <div class="flex items-center justify-between px-5 py-3 border-b border-outline-variant/10 bg-surface-high/20">
             <span class="flex items-center gap-2 font-mono text-[0.7rem] text-on-surface uppercase tracking-wider">
               <span class="material-symbols-outlined text-primary text-[16px]">${icon}</span>${title}
             </span>
-            ${renderToggle(enabledKey, enabledVal)}
+            ${badge}
           </div>
           <div class="px-5 py-5">
             ${bodyHtml}
@@ -348,10 +382,10 @@
     var waBody = `
       <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6">
         ${field('Bridge URL', inp('notif-wa-url', wa.bridge_url || '', 'http://localhost:3001'),
-                 'Local Node.js bridge running whatsapp-web.js')}
+                 'Local Node.js bridge — run: npm start in whatsapp-bridge/')}
         ${field('Recipients (comma-sep, E.164)', listInp('notif-wa-numbers', wa.recipient_numbers, '+919876543210, +1234567890'))}
       </div>
-      <div class="flex items-center gap-6 mt-4">
+      <div class="flex items-center gap-6 mt-4 mb-5">
         <label class="flex items-center gap-2 cursor-pointer">
           ${renderToggle('notif-wa-send-pdf', wa.send_pdf)}
           <span class="font-mono text-[0.65rem] text-on-surface">Send PDF Document</span>
@@ -361,10 +395,68 @@
           <span class="font-mono text-[0.65rem] text-on-surface">Send Text Alert</span>
         </label>
       </div>
-      <div id="wa-qr-container" class="mt-4 p-4 border border-outline-variant/10 bg-surface-container/20 rounded hidden">
-        <p class="font-mono text-[0.65rem] text-outline mb-2">Scan this QR code with WhatsApp (Settings → Linked Devices → Link a Device)</p>
-        <img id="wa-qr-img" src="" alt="WhatsApp QR Code" class="w-64 h-64 mx-auto" />
-        <p id="wa-qr-status" class="font-mono text-[0.6rem] text-center mt-2 text-outline"></p>
+
+      <!-- WhatsApp Connection Manager -->
+      <div id="wa-manager" class="border border-outline-variant/15 bg-surface-container/30 p-5 mt-2">
+        <div class="flex items-center justify-between mb-4">
+          <div class="flex items-center gap-2">
+            <span class="material-symbols-outlined text-[16px] text-primary">smartphone</span>
+            <span class="font-mono text-[0.7rem] text-on-surface uppercase tracking-wider">WhatsApp Connection</span>
+          </div>
+          <div id="wa-state-badge" class="flex items-center gap-1.5 font-mono text-[0.6rem] px-2 py-0.5 border">
+            <span id="wa-state-dot" class="w-1.5 h-1.5 rounded-full bg-outline inline-block"></span>
+            <span id="wa-state-text">Checking...</span>
+          </div>
+        </div>
+
+        <!-- QR zone -->
+        <div id="wa-qr-zone" class="hidden text-center py-4">
+          <p class="font-mono text-[0.6rem] text-outline mb-3 uppercase tracking-wider">Scan with WhatsApp → Settings → Linked Devices → Link a Device</p>
+          <div class="inline-block p-2 bg-white rounded-sm shadow-lg mb-3">
+            <img id="wa-qr-img" src="" alt="WhatsApp QR" class="w-52 h-52 block" />
+          </div>
+          <p class="font-mono text-[0.55rem] text-outline italic">QR refreshes automatically. Session is saved after scan — no repeat needed.</p>
+        </div>
+
+        <!-- Connected state -->
+        <div id="wa-connected-zone" class="hidden py-3">
+          <div class="flex items-center gap-3 p-3 bg-success/5 border border-success/20">
+            <span class="material-symbols-outlined text-success text-[20px]">check_circle</span>
+            <div>
+              <span class="block font-mono text-[0.7rem] text-success">WhatsApp Linked</span>
+              <span id="wa-phone-label" class="block font-mono text-[0.55rem] text-outline mt-0.5"></span>
+            </div>
+            <button id="wa-disconnect-btn" class="ml-auto font-mono text-[0.6rem] text-error border border-error/30 px-3 py-1 hover:bg-error/10 transition-colors">
+              Disconnect
+            </button>
+          </div>
+        </div>
+
+        <!-- Bridge down state -->
+        <div id="wa-down-zone" class="hidden py-2">
+          <div class="flex items-center gap-2 p-3 bg-error/5 border border-error/15 mb-2">
+            <span class="material-symbols-outlined text-error text-[16px]">warning</span>
+            <div>
+              <span class="block font-mono text-[0.65rem] text-error">Bridge Not Running</span>
+              <span class="block font-mono text-[0.55rem] text-outline mt-0.5">Open a terminal in <code class="text-primary">whatsapp-bridge/</code> and run:</span>
+              <code class="block font-mono text-[0.6rem] text-on-surface bg-surface-high/50 px-2 py-1 mt-1">npm start</code>
+            </div>
+          </div>
+        </div>
+
+        <!-- Initializing state -->
+        <div id="wa-init-zone" class="hidden py-2">
+          <div class="flex items-center gap-2 p-3 bg-warn/5 border border-warn/15">
+            <span class="material-symbols-outlined text-warn text-[16px] animate-spin" style="animation:spin 1.5s linear infinite">autorenew</span>
+            <span class="font-mono text-[0.65rem] text-warn">Bridge initializing — please wait...</span>
+          </div>
+        </div>
+
+        <div class="flex gap-2 mt-4">
+          <button id="wa-refresh-btn" class="font-mono text-[0.6rem] text-primary border border-primary/30 px-3 py-1.5 hover:bg-primary/10 transition-colors flex items-center gap-1">
+            <span class="material-symbols-outlined text-[13px]">refresh</span>Refresh Status
+          </button>
+        </div>
       </div>`;
 
     var pdfBody = `
@@ -388,19 +480,26 @@
         <h3 class="font-mono text-[0.8rem] text-primary uppercase tracking-widest mb-6 border-b border-outline-variant/10 pb-2">
           Notification Channels
         </h3>
+        <p class="font-mono text-[0.6rem] text-outline italic mb-6 -mt-3">
+          Channels activate automatically when sufficient details are entered. Click <strong class="text-on-surface">Save &amp; Persist</strong> to store settings across restarts.
+        </p>
 
-        ${channelCard('mail', 'Email / SMTP', 'notifications.email.enabled', email.enabled, emailBody,
-                      'btn-test-email', 'Send Test Email')}
+        ${channelCard('mail', 'Email / SMTP',
+          function() { return !!(email.smtp_host && email.smtp_user && (email.recipient_addresses||[]).length); },
+          emailBody, 'btn-test-email', 'Send Test Email')}
 
-        ${channelCard('chat', 'WhatsApp (Evolution API)', 'notifications.whatsapp.enabled', wa.enabled, waBody,
-                      'btn-test-wa', 'Send Test WhatsApp')}
+        ${channelCard('chat', 'WhatsApp (Evolution API)',
+          function() { return !!(wa.bridge_url && (wa.recipient_numbers||[]).length); },
+          waBody, 'btn-test-wa', 'Send Test WhatsApp')}
 
         <div class="border border-outline-variant/10 bg-surface-container/20">
           <div class="flex items-center justify-between px-5 py-3 border-b border-outline-variant/10 bg-surface-high/20">
             <span class="flex items-center gap-2 font-mono text-[0.7rem] text-on-surface uppercase tracking-wider">
               <span class="material-symbols-outlined text-primary text-[16px]">picture_as_pdf</span>PDF REPORTS
             </span>
-            ${renderToggle('notifications.pdf_report.enabled', pdf.enabled)}
+            <span class="flex items-center gap-1 font-mono text-[0.6rem] text-success bg-success/10 border border-success/20 px-2 py-0.5">
+              <span class="w-1.5 h-1.5 rounded-full bg-success inline-block"></span>ALWAYS ON
+            </span>
           </div>
           <div class="px-5 py-5">
             ${pdfBody}
@@ -418,14 +517,23 @@
               </button>
             </div>
             <div id="btn-test-pdf-status" class="font-mono text-[0.55rem] text-outline mt-2 text-right h-4"></div>
-            <div class="mt-5 pt-4 border-t border-outline-variant/5">
-              <button id="btn-save-notifications"
-                class="flex items-center gap-1.5 px-4 py-2 bg-primary hover:bg-primary/90
-                       text-white font-mono text-[0.65rem] uppercase transition-colors">
-                <span class="material-symbols-outlined text-[14px]">save</span>Save All Notification Settings
-              </button>
-            </div>
           </div>
+        </div>
+
+        <!-- Persistent Save / Reset Bar -->
+        <div class="mt-6 flex items-center gap-3 p-4 bg-surface-container/40 border border-outline-variant/10">
+          <button id="btn-save-notifications"
+            class="flex items-center gap-1.5 px-5 py-2.5 bg-primary hover:bg-primary/90
+                   text-white font-mono text-[0.65rem] uppercase tracking-wider transition-colors shadow-sm">
+            <span class="material-symbols-outlined text-[16px]">save</span>Save &amp; Persist Settings
+          </button>
+          <button id="btn-reset-notifications"
+            class="flex items-center gap-1.5 px-4 py-2.5 bg-surface-high hover:bg-error/10
+                   text-outline hover:text-error border border-outline-variant/20 hover:border-error/30
+                   font-mono text-[0.65rem] uppercase tracking-wider transition-colors">
+            <span class="material-symbols-outlined text-[14px]">restart_alt</span>Reset to Defaults
+          </button>
+          <span id="notif-save-status" class="font-mono text-[0.6rem] text-outline ml-auto"></span>
         </div>
       </div>`;
   }
@@ -470,9 +578,112 @@
         if (matrix.on_create[sev]) matrix.on_create[sev].push(type);
       }
     });
+    // PATCH in-memory first, then immediately persist to disk
     TraceClient.updateConfig({ actions: matrix }).then(function(newCfg) {
       if (newCfg) { currentConfig = newCfg; }
+      // Auto-save so policy matrix survives restarts
+      return fetch('/api/v1/config/notifications/save', { method: 'POST' });
+    }).then(function(resp) {
+      if (!resp || !resp.ok) return;
+      // Show brief "✓ Saved" next to the section heading
+      var statusEl = document.getElementById('notif-save-status');
+      if (statusEl) {
+        statusEl.textContent = '✓ Policy saved';
+        statusEl.style.color = 'var(--success, #4ade80)';
+        setTimeout(function() { statusEl.textContent = ''; }, 2500);
+      }
+    }).catch(function() { /* silent — PATCH already applied in-memory */ });
+  }
+
+  // ── WhatsApp Connection Manager ──────────────────────────────────────────────
+
+  var _waPollTimer = null;
+
+  function wa_applyState(data) {
+    var state   = (data && data.state) || 'bridge_down';
+    var qr      = data && data.qr;
+    var phone   = data && data.phone;
+
+    // Hide all zones
+    ['wa-qr-zone','wa-connected-zone','wa-down-zone','wa-init-zone'].forEach(function(id) {
+      var el = document.getElementById(id); if (el) el.classList.add('hidden');
     });
+
+    var dotEl  = document.getElementById('wa-state-dot');
+    var textEl = document.getElementById('wa-state-text');
+    var badge  = document.getElementById('wa-state-badge');
+
+    if (state === 'connected') {
+      var z = document.getElementById('wa-connected-zone');
+      if (z) z.classList.remove('hidden');
+      var ph = document.getElementById('wa-phone-label');
+      if (ph) ph.textContent = phone ? 'Phone: +' + phone : 'Session active';
+      if (dotEl)  { dotEl.className  = 'w-1.5 h-1.5 rounded-full bg-success inline-block'; }
+      if (textEl) { textEl.textContent = 'Connected'; textEl.style.color = 'var(--success,#4ade80)'; }
+      if (badge)  { badge.className = 'flex items-center gap-1.5 font-mono text-[0.6rem] px-2 py-0.5 border border-success/30 bg-success/5'; }
+
+    } else if (state === 'qr_ready') {
+      var z = document.getElementById('wa-qr-zone');
+      if (z) z.classList.remove('hidden');
+      var img = document.getElementById('wa-qr-img');
+      if (img && qr) img.src = qr;
+      if (dotEl)  { dotEl.className  = 'w-1.5 h-1.5 rounded-full bg-warn inline-block'; }
+      if (textEl) { textEl.textContent = 'Scan QR'; textEl.style.color = 'var(--warn,#eab308)'; }
+      if (badge)  { badge.className = 'flex items-center gap-1.5 font-mono text-[0.6rem] px-2 py-0.5 border border-warn/30 bg-warn/5'; }
+
+    } else if (state === 'initializing') {
+      var z = document.getElementById('wa-init-zone');
+      if (z) z.classList.remove('hidden');
+      if (dotEl)  { dotEl.className  = 'w-1.5 h-1.5 rounded-full bg-warn inline-block animate-pulse'; }
+      if (textEl) { textEl.textContent = 'Initializing'; textEl.style.color = 'var(--warn,#eab308)'; }
+      if (badge)  { badge.className = 'flex items-center gap-1.5 font-mono text-[0.6rem] px-2 py-0.5 border border-warn/20'; }
+
+    } else { // bridge_down
+      var z = document.getElementById('wa-down-zone');
+      if (z) z.classList.remove('hidden');
+      if (dotEl)  { dotEl.className  = 'w-1.5 h-1.5 rounded-full bg-error inline-block'; }
+      if (textEl) { textEl.textContent = 'Bridge Offline'; textEl.style.color = 'var(--error,#ef4444)'; }
+      if (badge)  { badge.className = 'flex items-center gap-1.5 font-mono text-[0.6rem] px-2 py-0.5 border border-error/30 bg-error/5'; }
+    }
+  }
+
+  function wa_poll() {
+    fetch('/api/v1/whatsapp/status', { cache: 'no-store' })
+      .then(function(r) { return r.ok ? r.json() : null; })
+      .then(function(data) {
+        wa_applyState(data);
+        // Keep polling while QR is shown or initializing; slow down when connected/down
+        var interval = (data && (data.state === 'qr_ready' || data.state === 'initializing')) ? 3000 : 8000;
+        _waPollTimer = setTimeout(wa_poll, interval);
+      })
+      .catch(function() {
+        wa_applyState({state: 'bridge_down'});
+        _waPollTimer = setTimeout(wa_poll, 8000);
+      });
+  }
+
+  function wa_startPolling() {
+    if (_waPollTimer) { clearTimeout(_waPollTimer); _waPollTimer = null; }
+    // Wire Refresh button
+    var refreshBtn = document.getElementById('wa-refresh-btn');
+    if (refreshBtn) {
+      refreshBtn.addEventListener('click', function() {
+        if (_waPollTimer) { clearTimeout(_waPollTimer); }
+        wa_poll();
+      });
+    }
+    // Wire Disconnect button
+    var discBtn = document.getElementById('wa-disconnect-btn');
+    if (discBtn) {
+      discBtn.addEventListener('click', function() {
+        fetch('/api/v1/whatsapp/logout', { method: 'POST' })
+          .then(function() {
+            wa_applyState({state: 'initializing'});
+            setTimeout(wa_poll, 2000);
+          });
+      });
+    }
+    wa_poll(); // Start immediately
   }
 
   function wireTestButton(btnId, url) {
@@ -480,29 +691,23 @@
     var statusEl = document.getElementById(btnId + '-status');
     if (!btn) return;
     btn.addEventListener('click', function() {
-      // Check if email is enabled for email test button
+      // Validate required fields before testing (channels are auto-enabled by field presence)
       if (btnId === 'btn-test-email') {
-        var emailToggle = document.querySelector('[data-key="notifications.email.enabled"]');
-        var isEnabled = emailToggle ? emailToggle.checked : false;
-        if (!isEnabled) {
-          if (statusEl) {
-            statusEl.textContent = '✗ Enable email first (toggle switch above)';
-            statusEl.style.color = 'var(--error)';
-          }
-          TraceToast.warning('Email Not Enabled', 'Please toggle the Email/SMTP switch ON and click Save before testing.');
+        var host = (document.getElementById('notif-smtp-host')||{}).value || '';
+        var user = (document.getElementById('notif-smtp-user')||{}).value || '';
+        var recip = (document.getElementById('notif-email-recipients')||{}).value || '';
+        if (!host || !user || !recip.trim()) {
+          if (statusEl) { statusEl.textContent = '✗ Fill in SMTP Host, Username, and Recipients first'; statusEl.style.color = 'var(--error)'; }
+          TraceToast.warning('Email Not Configured', 'Enter SMTP Host, Username, and at least one Recipient before testing.');
           return;
         }
       }
-      // Check if WhatsApp is enabled for WhatsApp test button
       if (btnId === 'btn-test-wa') {
-        var waToggle = document.querySelector('[data-key="notifications.whatsapp.enabled"]');
-        var waEnabled = waToggle ? waToggle.checked : false;
-        if (!waEnabled) {
-          if (statusEl) {
-            statusEl.textContent = '✗ Enable WhatsApp first (toggle switch above)';
-            statusEl.style.color = 'var(--error)';
-          }
-          TraceToast.warning('WhatsApp Not Enabled', 'Please toggle the WhatsApp switch ON and click Save before testing.');
+        var bridgeUrl = (document.getElementById('notif-wa-url')||{}).value || '';
+        var waRecip = (document.getElementById('notif-wa-numbers')||{}).value || '';
+        if (!bridgeUrl || !waRecip.trim()) {
+          if (statusEl) { statusEl.textContent = '✗ Fill in Bridge URL and Recipients first'; statusEl.style.color = 'var(--error)'; }
+          TraceToast.warning('WhatsApp Not Configured', 'Enter the Bridge URL and at least one recipient number before testing.');
           return;
         }
       }
@@ -548,101 +753,43 @@
     });
   }
 
-  function saveNotificationSettings() {
+  function _buildNotifPayload() {
     function v(id) { var el = document.getElementById(id); return el ? el.value.trim() : ''; }
     function cb(id) { var el = document.getElementById(id); return el ? el.checked : false; }
     function nums(id) { return v(id).split(',').map(function(s){return s.trim();}).filter(Boolean); }
-    // Read toggles that use data-key instead of id (the channel enabled toggles)
-    function dkey(key) {
-      var el = document.querySelector('[data-key="' + key + '"]');
-      return el ? el.checked : false;
-    }
-
     var payload = {
       email: {
-        enabled:              dkey('notifications.email.enabled'),
-        smtp_host:            v('notif-smtp-host'),
-        smtp_port:            parseInt(v('notif-smtp-port'), 10) || 587,
-        smtp_user:            v('notif-smtp-user'),
-        smtp_password:        v('notif-smtp-pass') || undefined,
-        sender_address:       v('notif-sender'),
-        recipient_addresses:  nums('notif-email-recipients'),
-        attach_pdf:           cb('notif-email-attach-pdf'),
-        use_tls:              cb('notif-email-tls'),
+        smtp_host:           v('notif-smtp-host'),
+        smtp_port:           parseInt(v('notif-smtp-port'), 10) || 587,
+        smtp_user:           v('notif-smtp-user'),
+        sender_address:      v('notif-sender'),
+        recipient_addresses: nums('notif-email-recipients'),
+        attach_pdf:          cb('notif-email-attach-pdf'),
+        use_tls:             cb('notif-email-tls'),
       },
       whatsapp: {
-        enabled:              dkey('notifications.whatsapp.enabled'),
-        bridge_url:           v('notif-wa-url'),
-        recipient_numbers:    nums('notif-wa-numbers'),
-        send_pdf:             cb('notif-wa-send-pdf'),
-        send_text:            cb('notif-wa-send-text'),
+        bridge_url:       v('notif-wa-url'),
+        recipient_numbers: nums('notif-wa-numbers'),
+        send_pdf:         cb('notif-wa-send-pdf'),
+        send_text:        cb('notif-wa-send-text'),
       },
       pdf_report: {
-        enabled:              dkey('notifications.pdf_report.enabled'),
         include_entity_portrait: cb('notif-pdf-portrait'),
         include_screenshots:     cb('notif-pdf-screenshots'),
-        max_detection_rows: parseInt(document.getElementById('notif-pdf-det-rows') ? document.getElementById('notif-pdf-det-rows').value : 20, 10),
-        max_alert_rows:     parseInt(document.getElementById('notif-pdf-alert-rows') ? document.getElementById('notif-pdf-alert-rows').value : 50, 10),
+        max_detection_rows: parseInt((document.getElementById('notif-pdf-det-rows')||{value:20}).value, 10),
+        max_alert_rows:     parseInt((document.getElementById('notif-pdf-alert-rows')||{value:50}).value, 10),
       }
     };
-
-    // Remove undefined (don't send blank passwords)
-    if (!payload.email.smtp_password)    delete payload.email.smtp_password;
-    if (!payload.whatsapp.api_key)       delete payload.whatsapp.api_key;
-
-    fetch('/api/v1/config/notifications', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    })
-    .then(function(r) { return r.json(); })
-    .then(function(data) {
-      TraceToast.success('Saved', 'Notification settings updated.');
-      if (data.notifications) currentConfig.notifications = data.notifications;
-    })
-    .catch(function() { TraceToast.error('Save Failed', 'Check backend logs.'); });
+    var pw = v('notif-smtp-pass');
+    if (pw) payload.email.smtp_password = pw;
+    return payload;
   }
 
-  function saveNotificationSettingsThen(callback) {
-    // Same as saveNotificationSettings but executes callback after successful save
-    function v(id) { var el = document.getElementById(id); return el ? el.value.trim() : ''; }
-    function cb(id) { var el = document.getElementById(id); return el ? el.checked : false; }
-    function nums(id) { return v(id).split(',').map(function(s){return s.trim();}).filter(Boolean); }
-    function dkey(key) {
-      var el = document.querySelector('[data-key="' + key + '"]');
-      return el ? el.checked : false;
-    }
-
-    var payload = {
-      email: {
-        enabled:              dkey('notifications.email.enabled'),
-        smtp_host:            v('notif-smtp-host'),
-        smtp_port:            parseInt(v('notif-smtp-port'), 10) || 587,
-        smtp_user:            v('notif-smtp-user'),
-        smtp_password:        v('notif-smtp-pass') || undefined,
-        sender_address:       v('notif-sender'),
-        recipient_addresses:  nums('notif-email-recipients'),
-        attach_pdf:           cb('notif-email-attach-pdf'),
-        use_tls:              cb('notif-email-tls'),
-      },
-      whatsapp: {
-        enabled:              dkey('notifications.whatsapp.enabled'),
-        bridge_url:           v('notif-wa-url'),
-        recipient_numbers:    nums('notif-wa-numbers'),
-        send_pdf:             cb('notif-wa-send-pdf'),
-        send_text:            cb('notif-wa-send-text'),
-      },
-      pdf_report: {
-        enabled:              dkey('notifications.pdf_report.enabled'),
-        include_entity_portrait: cb('notif-pdf-portrait'),
-        include_screenshots:     cb('notif-pdf-screenshots'),
-        max_detection_rows: parseInt(document.getElementById('notif-pdf-det-rows') ? document.getElementById('notif-pdf-det-rows').value : 20, 10),
-        max_alert_rows:     parseInt(document.getElementById('notif-pdf-alert-rows') ? document.getElementById('notif-pdf-alert-rows').value : 50, 10),
-      }
-    };
-
-    if (!payload.email.smtp_password)    delete payload.email.smtp_password;
-    if (!payload.whatsapp.api_key)       delete payload.whatsapp.api_key;
+  // Patches live config (in-memory) then optionally persists to disk.
+  function saveNotificationSettings(persist, callback) {
+    var payload = _buildNotifPayload();
+    var statusEl = document.getElementById('notif-save-status');
+    if (statusEl) statusEl.textContent = 'Applying...';
 
     fetch('/api/v1/config/notifications', {
       method: 'PATCH',
@@ -652,11 +799,29 @@
     .then(function(r) { return r.json(); })
     .then(function(data) {
       if (data.notifications) currentConfig.notifications = data.notifications;
-      callback();
+      if (persist) {
+        return fetch('/api/v1/config/notifications/save', { method: 'POST' })
+          .then(function(r) { return r.json(); })
+          .then(function(saved) {
+            if (statusEl) { statusEl.textContent = '✓ Saved to disk'; statusEl.style.color = 'var(--success)'; }
+            TraceToast.success('Persisted', 'Settings saved — will reload on next restart.');
+            if (saved.notifications) currentConfig.notifications = saved.notifications;
+            if (callback) callback();
+          });
+      } else {
+        if (statusEl) { statusEl.textContent = '✓ Applied'; statusEl.style.color = 'var(--success)'; }
+        if (callback) callback();
+      }
     })
-    .catch(function() { 
-      TraceToast.error('Save Failed', 'Check backend logs.'); 
+    .catch(function() {
+      if (statusEl) { statusEl.textContent = '✗ Failed'; statusEl.style.color = 'var(--error)'; }
+      TraceToast.error('Save Failed', 'Check backend logs.');
     });
+  }
+
+  // Alias used by wireTestButton (applies live, then calls callback)
+  function saveNotificationSettingsThen(callback) {
+    saveNotificationSettings(false, callback);
   }
 
   function initSidebar() {
