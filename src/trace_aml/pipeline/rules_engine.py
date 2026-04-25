@@ -88,8 +88,34 @@ class RulesEngine:
         self.cache[key] = now
         return True
 
-    @staticmethod
-    def _map_severity(event: EventRecord, alert_type: AlertType, count: int) -> AlertSeverity:
+    def _map_severity(self, event: EventRecord, alert_type: AlertType, count: int) -> AlertSeverity:
+        """Determine alert severity.
+
+        Priority order:
+          1. Person's enrolled severity (low/medium/high from Watchlist Priority field).
+             This is the INTENDED severity — a Level-3 Criminal should ALWAYS generate
+             a high-severity alert regardless of event count.
+          2. Fallback for unknowns or persons with no severity set: count-based heuristic.
+        """
+        # Try to look up the enrolled person's severity
+        if not event.is_unknown:
+            try:
+                entity = self.store.get_entity(event.entity_id)
+                if entity:
+                    person_id = entity.get("source_person_id")
+                    if person_id:
+                        person = self.store.get_person(person_id)
+                        if person:
+                            raw = str(person.get("severity") or "").strip().lower()
+                            # Normalise legacy "1-low"/"2-medium"/"3-high" values
+                            # stored by old enrollment form — extract the word after "-"
+                            raw = raw.split("-")[-1]
+                            if raw in ("low", "medium", "high"):
+                                return AlertSeverity(raw)
+            except Exception:
+                pass  # never crash the rules engine
+
+        # Fallback: unknown entity or person has no severity set
         if alert_type == AlertType.unknown_recurrence:
             return AlertSeverity.high
         if count >= 5:

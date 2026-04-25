@@ -530,6 +530,10 @@
               <span class="font-mono text-[0.6rem] text-neutral-500 uppercase tracking-widest">Open Cases</span>
               <span class="text-[0.875rem] uppercase font-medium" id="entity-severity">—</span>
             </div>
+            <div class="flex flex-col pl-6 border-l border-outline-variant/30" id="entity-watchlist-col" style="display:none;">
+              <span class="font-mono text-[0.6rem] text-neutral-500 uppercase tracking-widest">Watchlist Priority</span>
+              <span class="text-[0.875rem] uppercase font-medium" id="entity-watchlist">—</span>
+            </div>
           </div>
         </div>
         <div class="text-right flex flex-col items-end gap-3">
@@ -694,9 +698,9 @@
             <label class="stat-label mb-2 block">Watchlist Priority</label>
             <select id="edit-entity-severity" class="enroll-input font-mono text-[0.75rem] appearance-none cursor-pointer">
               <option value="">-- NONE --</option>
-              <option value="low">LEVEL 1 - ROUTINE</option>
-              <option value="medium">LEVEL 2 - ELEVATED</option>
-              <option value="high">LEVEL 3 - CRITICAL</option>
+              <option value="low">LEVEL 1 - ROUTINE (Low)</option>
+              <option value="medium">LEVEL 2 - ELEVATED (Medium)</option>
+              <option value="high">LEVEL 3 - CRITICAL (High)</option>
             </select>
           </div>
         </div>

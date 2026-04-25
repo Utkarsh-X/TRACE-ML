@@ -352,19 +352,7 @@
       <!-- Controls & Response (Compact Horizontal Layout) - MOVED UP FOR ACCESSIBILITY -->
       <div class="px-4 py-3 border-b border-outline-variant/10" style="background: linear-gradient(180deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.02) 100%);">
         <div class="space-y-3">
-          <!-- Severity Control Row -->
-          <div class="flex items-center gap-3">
-            <select id="sev-select" class="flex-1 bg-surface-high text-on-surface font-mono text-[0.65rem] border border-outline-variant/40 px-3 py-2 cursor-pointer focus:ring-1 focus:ring-primary focus:border-primary transition-all hover:border-outline-variant/60 rounded h-8">
-              <option value="low">Low</option>
-              <option value="medium">Medium</option>
-              <option value="high">High</option>
-            </select>
-            <button type="button" id="btn-apply-sev" class="flex-1 px-4 py-2 bg-primary hover:bg-primary/90 border border-primary/60 text-on-primary font-mono font-semibold text-[0.70rem] uppercase tracking-wider rounded transition-all hover:shadow-md cursor-pointer h-8 flex items-center justify-center gap-2 active:scale-95" title="Apply severity level to incident">
-              <span class="material-symbols-outlined" style="font-size:16px;">flag</span>
-              <span>Apply</span>
-            </button>
-          </div>
-          
+
           <!-- Action Buttons Row -->
           <div class="flex items-center gap-2">
             <button type="button" id="btn-close-inc" class="flex-1 px-3 py-2 bg-red-900/40 hover:bg-red-900/60 border border-red-700/50 hover:border-red-600/70 text-red-200 font-mono font-semibold text-[0.65rem] uppercase tracking-wider rounded transition-all hover:shadow-sm cursor-pointer h-8 flex items-center justify-center gap-1.5 active:scale-95" title="Close incident (no longer active)">

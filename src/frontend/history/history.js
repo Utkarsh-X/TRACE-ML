@@ -96,7 +96,7 @@
       var n  = it.count || 1;
       total += n;
       var k  = (ev.kind || "").toLowerCase();
-      if (k.indexOf("alert")    !== -1) alerts    += n;
+      if (k === "action")   alerts    += 1;   /* actions dispatched (log/pdf/email/wa) */
       if (k.indexOf("incident") !== -1) incidents += n;
       var t  = it.startTime || new Date(ev.timestamp_utc).getTime();
       var bi = Math.min(BUCKETS - 1, Math.floor(((t - minT) / range) * (BUCKETS - 1)));

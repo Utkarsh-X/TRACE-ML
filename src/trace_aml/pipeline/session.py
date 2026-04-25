@@ -640,7 +640,7 @@ class RecognitionSession:
         # Rules engine window is 10 s with min_events = 3, so a 1-second
         # cooldown still delivers ≥ 10 events per window — well above threshold.
         event_key = f"evt:{resolution.entity_id}"
-        if self._should_log_event(event_key):
+        if self._should_log_event(event_key, cooldown=3.0):
             core_event = self.entity_resolver.create_event_record(
                 resolution=resolution,
                 match=match,

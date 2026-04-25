@@ -199,6 +199,23 @@
         : "text-[0.875rem] text-on-surface-variant uppercase font-medium";
     }
 
+    // ── Watchlist Priority (enrolled severity) ───────────────────────────────
+    var watchlistCol = $("entity-watchlist-col");
+    var watchlistEl  = $("entity-watchlist");
+    var enrolledSev  = String(person.severity || "").toLowerCase().trim();
+    var sevMap = {
+      "low":    { label: "L1 · ROUTINE",   color: "#62c6ef" },
+      "medium": { label: "L2 · ELEVATED",  color: "#f5a623" },
+      "high":   { label: "L3 · CRITICAL",  color: "#ff453a" },
+    };
+    if (watchlistCol && watchlistEl && enrolledSev && sevMap[enrolledSev]) {
+      watchlistCol.style.display = "";
+      watchlistEl.textContent    = sevMap[enrolledSev].label;
+      watchlistEl.style.color    = sevMap[enrolledSev].color;
+    } else if (watchlistCol) {
+      watchlistCol.style.display = "none";
+    }
+
     var clockEl = $("entity-clock");
     if (clockEl) clockEl.textContent = TraceClient.formatDateTime(entity.last_seen_at) || "—";
 

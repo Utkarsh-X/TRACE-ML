@@ -495,6 +495,10 @@ def create_service_app(
         name: str | None = None
         category: str | None = None
         severity: str | None = None
+        dob: str | None = None
+        gender: str | None = None
+        city: str | None = None
+        country: str | None = None
         notes: str | None = None
 
     @app.patch("/api/v1/entities/{entity_id}")
@@ -518,10 +522,10 @@ def create_service_app(
                 name=payload.name if payload.name is not None else current.get("name", ""),
                 category=PersonCategory(cat),
                 severity=payload.severity if payload.severity is not None else current.get("severity", ""),
-                dob=current.get("dob", ""),
-                gender=current.get("gender", ""),
-                last_seen_city=current.get("last_seen_city", ""),
-                last_seen_country=current.get("last_seen_country", ""),
+                dob=payload.dob if payload.dob is not None else current.get("dob", ""),
+                gender=payload.gender if payload.gender is not None else current.get("gender", ""),
+                last_seen_city=payload.city if payload.city is not None else current.get("last_seen_city", ""),
+                last_seen_country=payload.country if payload.country is not None else current.get("last_seen_country", ""),
                 notes=payload.notes if payload.notes is not None else current.get("notes", ""),
                 lifecycle_state=PersonLifecycleStatus(current.get("lifecycle_state", "draft")),
                 lifecycle_reason=current.get("lifecycle_reason", ""),
@@ -587,7 +591,77 @@ def create_service_app(
                     ))
                 store.replace_person_embeddings(new_person_id, records)
                 
+                # ── Unified ID: entity_id === person_id for all known entities ───
+                # The old design kept entity_id="UNK001" and created person_id="PRM002"
+                # as separate records, causing the Enrollment page to show "PRM002"
+                # while the Entities page showed "Entity // UNK001".
+                #
+                # Fix: create a new entity record with entity_id = new_person_id,
+                # then merge the old UNK entity into it (re-pointing all events,
+                # alerts, and incidents), then delete the old UNK record.
+                # After this operation entity_id === person_id across all tables.
+                from trace_aml.core.models import EntityType, EntityStatus
+                old_entity_row = store.get_entity(entity_id) or {}
+                
+                # Step 1: Create the new canonical entity record (entity_id = person_id)
+                store.ensure_entity(
+                    entity_id=new_person_id,
+                    entity_type=EntityType.known,
+                    status=EntityStatus.active,
+                    source_person_id=new_person_id,
+                    last_seen_at=old_entity_row.get("last_seen_at"),
+                )
+                
+                # Step 2: Transfer portrait from old entity_id to new entity_id.
+                # IMPORTANT: DataVault is content-addressed (SHA-256 blobs).
+                # put_portrait writes the same blob file for both entity IDs.
+                # Calling delete_portrait(old_id) would physically unlink that
+                # shared blob, making the new entity's portrait unreachable (404).
+                # Fix: copy to the new key, then remove ONLY the old index entry
+                # (leave the blob file intact). The orphaned UNK index entry is
+                # harmless — the entity is removed from the DB by merge_entities.
+                try:
+                    portrait_bytes = _portrait_store.get_portrait_bytes(entity_id)
+                    if portrait_bytes:
+                        portrait_score = _portrait_store.vault.get_portrait_score(entity_id) or 0.9
+                        _portrait_store.vault.put_portrait(new_person_id, portrait_bytes, score=portrait_score)
+                        # Remove old index entry only (NOT the blob file)
+                        with _portrait_store.vault._index_lock:
+                            _portrait_store.vault._portraits_idx.pop(entity_id, None)
+                            from trace_aml.store.data_vault import _atomic_json_write
+                            _atomic_json_write(
+                                _portrait_store.vault._portraits_idx_path,
+                                _portrait_store.vault._portraits_idx,
+                            )
+                except Exception:
+                    pass  # portrait will regenerate on next camera sighting
+
+                # Step 3: Re-point all events / alerts / incidents to new entity_id.
+                # merge_entities now succeeds because the target entity was created above.
+                # It also deletes the old UNK entity record and cleans unknown_profiles.
                 store.merge_entities(entity_id, new_person_id)
+
+                # Step 4: Backfill open incident severity to the enrolled severity.
+                # Incidents created while the entity was still UNK used count-based
+                # heuristics (usually LOW).  Now that we know the enrolled severity,
+                # update every open incident for this entity to reflect it.
+                enrolled_sev = (payload.severity or "").strip().lower()
+                if enrolled_sev in ("low", "medium", "high"):
+                    try:
+                        open_incs = [
+                            i for i in store.list_incidents(limit=10_000)
+                            if str(i.get("entity_id", "")) == new_person_id
+                            and str(i.get("status", "")).lower() == "open"
+                        ]
+                        for inc in open_incs:
+                            inc_id = str(inc.get("incident_id", ""))
+                            if inc_id:
+                                store.set_incident_severity(inc_id, enrolled_sev)
+                    except Exception:
+                        pass  # best-effort; incidents will correct on next rules-engine cycle
+
+                # Return the canonical new entity_id (= person_id) so the frontend
+                # reloads the correct record. Both IDs are now identical.
                 return {"status": "promoted", "old_entity_id": entity_id, "new_entity_id": new_person_id}
             else:
                 raise HTTPException(status_code=400, detail="Cannot edit unknown entity without providing a name to promote it.")

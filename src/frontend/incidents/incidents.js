@@ -666,8 +666,6 @@
   }
 
   function syncControls(inc) {
-    var el = $("sev-select");
-    if (el) el.value = inc.severity || "low";
     setText("ctrl-status", "");
   }
 
@@ -823,16 +821,6 @@
   ════════════════════════════════════════════════ */
 
   function wireControls() {
-    var applyBtn = $("btn-apply-sev");
-    if (applyBtn) applyBtn.addEventListener("click", function () {
-      if (!_currentId) return;
-      var sev = ($("sev-select") || {}).value || "low";
-      setText("ctrl-status", "Updating…");
-      TraceClient.setSeverity(_currentId, sev).then(function (result) {
-        setText("ctrl-status", result ? ("Severity → " + sev) : "Failed — offline");
-      });
-    });
-
     var closeBtn = $("btn-close-inc");
     if (closeBtn) closeBtn.addEventListener("click", function () {
       if (!_currentId) return;
