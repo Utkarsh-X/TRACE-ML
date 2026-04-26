@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+import contextlib
 from collections import defaultdict
+import io
+import os
 from typing import Any
 
 import cv2
@@ -26,6 +29,26 @@ class ArcFaceRecognizer:
 
     def set_liveness_checker(self, checker: BaseLivenessChecker | None) -> None:
         self._liveness = checker or PassThroughLiveness()
+
+    @staticmethod
+    @contextlib.contextmanager
+    def _suppress_startup_output():
+        """Silence noisy InsightFace/ORT startup output during model load."""
+        sink = io.StringIO()
+        devnull_fd = os.open(os.devnull, os.O_WRONLY)
+        old_stdout_fd = os.dup(1)
+        old_stderr_fd = os.dup(2)
+        try:
+            with contextlib.redirect_stdout(sink), contextlib.redirect_stderr(sink):
+                os.dup2(devnull_fd, 1)
+                os.dup2(devnull_fd, 2)
+                yield
+        finally:
+            os.dup2(old_stdout_fd, 1)
+            os.dup2(old_stderr_fd, 2)
+            os.close(old_stdout_fd)
+            os.close(old_stderr_fd)
+            os.close(devnull_fd)
 
     def _ensure_app(self) -> None:
         if self._app is not None:
@@ -61,14 +84,15 @@ class ArcFaceRecognizer:
         # ─────────────────────────────────────────────────────────────────────
 
         try:
-            self._app = insightface.app.FaceAnalysis(
-                name=self.settings.recognition.model_name,
-                providers=providers,
-            )
-            self._app.prepare(
-                ctx_id=self.settings.gpu.cuda_device_id,
-                det_size=tuple(self.settings.recognition.det_size),
-            )
+            with self._suppress_startup_output():
+                self._app = insightface.app.FaceAnalysis(
+                    name=self.settings.recognition.model_name,
+                    providers=providers,
+                )
+                self._app.prepare(
+                    ctx_id=self.settings.gpu.cuda_device_id,
+                    det_size=tuple(self.settings.recognition.det_size),
+                )
         except Exception as exc:
             raise RecognitionError(f"Failed to initialize InsightFace: {exc}") from exc
 

@@ -231,14 +231,12 @@ class EmailHandler(BaseActionHandler):
         else:
             sev_badge = f'<span class="badge badge--ghost">{sev_label}</span>'
 
-        pdf_note = ""
-        if pdf_path:
-            import os as _os
-            fname = _os.path.basename(pdf_path)
-            pdf_note = (
-                f'<tr><td class="k">REPORT</td>'
-                f'<td><span style="color:#ffffff; font-family:monospace; font-size:11px;">ATTACHED: {fname}</span></td></tr>'
-            )
+        # NAME row — only rendered if a name is present on the incident
+        entity_name = getattr(incident, "entity_name", None) or ""
+        name_row = (
+            f'<tr><td class="k">NAME</td><td class="v">{entity_name}</td></tr>'
+            if entity_name else ""
+        )
 
         return f"""<!DOCTYPE html>
 <html lang="en">
@@ -271,13 +269,13 @@ class EmailHandler(BaseActionHandler):
   <div style="margin-bottom:20px;">{sev_badge}</div>
 
   <table>
-    <tr><td class="k">INCIDENT ID</td><td class="v mono">{inc_short}</td></tr>
+    {name_row}
     <tr><td class="k">ENTITY</td><td class="v mono">{ent_id}</td></tr>
+    <tr><td class="k">INCIDENT ID</td><td class="v mono">{inc_short}</td></tr>
     <tr><td class="k">STATUS</td><td class="v"><span class="badge badge--ghost">{status}</span></td></tr>
     <tr><td class="k">STARTED</td><td class="v mono">{start}</td></tr>
     <tr><td class="k">LAST SEEN</td><td class="v mono">{last_seen}</td></tr>
     <tr><td class="k">SUMMARY</td><td class="v">{summary}</td></tr>
-    {pdf_note}
   </table>
 
   <div class="footer">

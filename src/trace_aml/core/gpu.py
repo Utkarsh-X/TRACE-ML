@@ -32,6 +32,9 @@ Usage::
 
 from __future__ import annotations
 
+import io
+import os
+from pathlib import Path
 import subprocess
 import sys
 from dataclasses import dataclass, field
@@ -49,7 +52,10 @@ _GPU_PROVIDER_PRIORITY: list[str] = [
     "ROCmExecutionProvider",
     "OpenVINOExecutionProvider",
     "CoreMLExecutionProvider",
-    "TensorrtExecutionProvider",  # inserted after CUDA if present
+    # TensorrtExecutionProvider intentionally omitted: requires a full TensorRT SDK
+    # install separate from onnxruntime-gpu. Without it, ONNX Runtime prints a
+    # verbose fail/retry block for every model load. Users who have TensorRT can
+    # force it via the preferred_provider config field.
 ]
 
 _CPU_PROVIDER = "CPUExecutionProvider"
@@ -109,13 +115,126 @@ def _probe_cuda() -> tuple[bool, int, list[str]]:
     return False, 0, []
 
 
+_CUDA_REQUIRED_DLLS = [
+    "cublasLt64_12.dll",   # required by onnxruntime_providers_cuda.dll
+    "cublas64_12.dll",     # required by onnxruntime_providers_tensorrt.dll
+]
+
+_PROVIDER_REQUIRED_DLLS: dict[str, list[str]] = {
+    "CUDAExecutionProvider": _CUDA_REQUIRED_DLLS,
+    "TensorrtExecutionProvider": _CUDA_REQUIRED_DLLS,
+}
+
+
+def _windows_cuda_bin_dirs() -> list[Path]:
+    """Return existing CUDA bin directories likely to contain runtime DLLs."""
+    if os.name != "nt":
+        return []
+
+    candidates: list[Path] = []
+    for key, value in os.environ.items():
+        if key.startswith("CUDA_PATH") and value:
+            base = Path(value)
+            candidates.append(base / "bin")
+            candidates.append(base / "bin" / "x64")
+
+    root = Path(r"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA")
+    if root.exists():
+        for version_dir in sorted(root.glob("v*"), reverse=True):
+            candidates.append(version_dir / "bin")
+            candidates.append(version_dir / "bin" / "x64")
+
+    # Pip-installed NVIDIA runtime wheels (nvidia-*-cu12) place DLLs here.
+    site_nvidia_root = Path(sys.prefix) / "Lib" / "site-packages" / "nvidia"
+    if site_nvidia_root.exists():
+        for package_dir in site_nvidia_root.glob("*"):
+            candidates.append(package_dir / "bin")
+
+    seen: set[str] = set()
+    resolved: list[Path] = []
+    for path in candidates:
+        key = str(path).lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        if path.exists():
+            resolved.append(path)
+    return resolved
+
+
+def _load_windows_dll(dll_name: str) -> bool:
+    """Try loading a DLL by name, then via known CUDA directories."""
+    if os.name != "nt":
+        return True
+
+    import ctypes
+
+    try:
+        ctypes.WinDLL(dll_name)
+        return True
+    except OSError:
+        pass
+
+    for directory in _windows_cuda_bin_dirs():
+        full_path = directory / dll_name
+        if not full_path.exists():
+            continue
+        try:
+            dll_dir_handle = os.add_dll_directory(str(directory))
+            try:
+                ctypes.WinDLL(str(full_path))
+                return True
+            finally:
+                dll_dir_handle.close()
+        except Exception:
+            continue
+    return False
+
+
+def _verify_provider(provider: str, cuda_device_id: int = 0) -> bool:
+    """Confirm the given EP is usable before handing the list to ONNX Runtime."""
+    if os.name == "nt" and provider in _PROVIDER_REQUIRED_DLLS:
+        for dll in _PROVIDER_REQUIRED_DLLS[provider]:
+            if not _load_windows_dll(dll):
+                return False
+
+        try:
+            import ctypes
+            import onnxruntime as ort
+
+            capi_dir = Path(ort.__file__).resolve().parent / "capi"
+            provider_dll = {
+                "CUDAExecutionProvider": "onnxruntime_providers_cuda.dll",
+                "TensorrtExecutionProvider": "onnxruntime_providers_tensorrt.dll",
+            }.get(provider)
+            if not provider_dll:
+                return True
+
+            target = capi_dir / provider_dll
+            if not target.exists():
+                return False
+
+            handles = [os.add_dll_directory(str(d)) for d in _windows_cuda_bin_dirs()]
+            try:
+                ctypes.WinDLL(str(target))
+            finally:
+                for h in handles:
+                    h.close()
+            return True
+        except Exception:
+            return False
+
+    # Non-Windows or providers without explicit runtime DLL requirements.
+    # If ORT reports them as available, defer final execution checks to runtime.
+    return True
+
 def _build_provider_list(
     preferred: str,
     allow_gpu: bool,
     cuda_device_id: int,
     available_providers: list[str],
 ) -> list[str]:
-    """Build the final ranked provider list."""
+    """Build the final ranked provider list, verifying each GPU EP actually loads."""
     if not allow_gpu:
         return [_CPU_PROVIDER]
 
@@ -123,12 +242,26 @@ def _build_provider_list(
 
     # 1. User-forced preferred provider (only if available in this install)
     if preferred and preferred in available_providers:
-        ranked.append(preferred)
+        if _verify_provider(preferred, cuda_device_id):
+            ranked.append(preferred)
+        else:
+            logger.warning(
+                "[GPU] preferred_provider '{}' is listed by onnxruntime but failed "
+                "to load (missing DLL?). Falling back to auto-detection.",
+                preferred,
+            )
 
-    # 2. Walk GPU priority list
+    # 2. Walk GPU priority list — probe each candidate before accepting it
     for candidate in _GPU_PROVIDER_PRIORITY:
         if candidate in available_providers and candidate not in ranked:
-            ranked.append(candidate)
+            if _verify_provider(candidate, cuda_device_id):
+                ranked.append(candidate)
+            else:
+                logger.warning(
+                    "[GPU] {} is installed but its DLL failed to load "
+                    "(likely missing CUDA/cuBLAS runtime). Skipping.",
+                    candidate,
+                )
 
     # 3. CPU always last
     if _CPU_PROVIDER not in ranked:
@@ -252,7 +385,9 @@ def _log_selection(result: _ProviderResult, cuda_device_id: int) -> None:
                 "no GPU execution providers installed in onnxruntime "
                 "(hint: pip install onnxruntime-gpu)"
             )
-        reason_str = "; ".join(reasons) if reasons else "GPU disabled in config"
+        reason_str = "; ".join(reasons) if reasons else (
+            "no functional GPU execution provider could be initialized"
+        )
         logger.info(
             "[GPU] Running on CPU  ·  reason: {reason}  ·  "
             "available_providers={available}",

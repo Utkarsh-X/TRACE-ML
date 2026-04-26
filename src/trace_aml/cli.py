@@ -922,6 +922,25 @@ def service_run(
             border_style="cyan",
         )
     )
+    # Suppress harmless WinError 10054 noise from the ProactorEventLoop.
+    # This fires when a browser abruptly drops a keep-alive/polling connection
+    # after the 200 OK is already delivered — purely a Windows asyncio quirk.
+    import asyncio
+    import sys
+
+    def _suppress_win_connection_reset(loop: asyncio.AbstractEventLoop, context: dict) -> None:
+        exc = context.get("exception")
+        if isinstance(exc, ConnectionResetError):
+            return  # benign — remote host closed the socket mid-cleanup
+        loop.default_exception_handler(context)
+
+    if sys.platform == "win32":
+        try:
+            loop = asyncio.get_event_loop()
+            loop.set_exception_handler(_suppress_win_connection_reset)
+        except RuntimeError:
+            pass  # no running loop yet — uvicorn will create its own; handled below
+
     uvicorn.run(api, host=host, port=port, log_level="info")
 
 
