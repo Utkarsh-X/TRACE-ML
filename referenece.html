@@ -1,403 +1,130 @@
 <!DOCTYPE html>
 
-<html class="dark" lang="en">
-
-<head>
-    <meta charset="utf-8" />
-    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
-    <title>TRACE-AML | Global History Timeline</title>
-    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-    <link
-        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;family=JetBrains+Mono:wght@400;500&amp;family=Space+Grotesk:wght@400;500;700&amp;display=swap"
-        rel="stylesheet" />
-    <link
-        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
-        rel="stylesheet" />
-    <link
-        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
-        rel="stylesheet" />
-    <script id="tailwind-config">
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>TRACE-AML | SYSTEM_OFFLINE</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100;300;400;500;600;700&amp;family=JetBrains+Mono:wght@400;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
         tailwind.config = {
-            darkMode: "class",
-            theme: {
-                extend: {
-                    "colors": {
-                        "on-error": "#690005",
-                        "primary-container": "#d4d4d4",
-                        "on-tertiary-container": "#000000",
-                        "error-container": "#93000a",
-                        "tertiary-container": "#919090",
-                        "on-surface": "#e2e2e2",
-                        "error": "#ffb4ab",
-                        "surface-container": "#1f1f1f",
-                        "on-primary-fixed": "#ffffff",
-                        "background": "#000000",
-                        "on-primary-container": "#000000",
-                        "on-primary": "#1a1c1c",
-                        "surface-bright": "#393939",
-                        "on-surface-variant": "#c6c6c6",
-                        "primary": "#ffffff",
-                        "secondary-fixed-dim": "#acabaa",
-                        "surface-container-low": "#1b1b1b",
-                        "surface-container-highest": "#353535",
-                        "on-tertiary-fixed-variant": "#e4e2e2",
-                        "surface": "#000000",
-                        "on-tertiary": "#1b1c1c",
-                        "on-error-container": "#ffdad6",
-                        "surface-tint": "#c6c6c7",
-                        "surface-container-lowest": "#0e0e0e",
-                        "secondary-container": "#474747",
-                        "outline": "#919191",
-                        "surface-dim": "#131313",
-                        "tertiary-fixed": "#5e5e5e",
-                        "surface-variant": "#353535",
-                        "on-secondary-container": "#e4e2e1",
-                        "secondary-fixed": "#c8c6c6",
-                        "secondary": "#c8c6c6",
-                        "surface-container-high": "#2a2a2a",
-                        "on-background": "#e2e2e2",
-                        "on-tertiary-fixed": "#ffffff",
-                        "on-secondary-fixed": "#1b1c1c",
-                        "inverse-on-surface": "#303030",
-                        "on-secondary": "#1b1c1c",
-                        "on-primary-fixed-variant": "#e2e2e2",
-                        "tertiary": "#e4e2e2",
-                        "on-secondary-fixed-variant": "#3b3b3b",
-                        "primary-fixed-dim": "#454747",
-                        "outline-variant": "#474747",
-                        "tertiary-fixed-dim": "#464747",
-                        "primary-fixed": "#5d5f5f",
-                        "inverse-primary": "#5d5f5f",
-                        "inverse-surface": "#e2e2e2"
-                    },
-                    "borderRadius": {
-                        "DEFAULT": "0px",
-                        "lg": "0px",
-                        "xl": "0px",
-                        "full": "9999px"
-                    },
-                    "fontFamily": {
-                        "headline": ["Inter", "sans-serif"],
-                        "display": ["Inter", "sans-serif"],
-                        "body": ["Inter", "sans-serif"],
-                        "label": ["JetBrains Mono", "monospace"]
-                    }
-                },
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "on-tertiary": "#1b1c1c",
+                      "on-secondary-fixed-variant": "#3a3b42",
+                      "surface-tint": "#c6c6c7",
+                      "on-surface": "#e2e2e2",
+                      "tertiary": "#e4e2e1",
+                      "surface-container-lowest": "#0a0a0a",
+                      "surface-container-high": "#1a1a1a",
+                      "on-primary": "#000000",
+                      "inverse-on-surface": "#303030",
+                      "surface-dim": "#080808",
+                      "secondary": "#c6c6cf",
+                      "outline": "#444444",
+                      "on-tertiary-container": "#000000",
+                      "on-background": "#e2e2e2",
+                      "on-primary-fixed": "#ffffff",
+                      "on-primary-container": "#000000",
+                      "on-error-container": "#ffdad6",
+                      "on-secondary": "#1a1b22",
+                      "surface-variant": "#121212",
+                      "on-tertiary-fixed": "#ffffff",
+                      "surface": "#0a0a0a",
+                      "secondary-fixed-dim": "#aaaab3",
+                      "outline-variant": "#222222",
+                      "on-secondary-fixed": "#1a1b22",
+                      "tertiary-container": "#929090",
+                      "on-secondary-container": "#e2e1eb",
+                      "surface-container": "#0e0e0e",
+                      "inverse-primary": "#5d5f5f",
+                      "background": "#080808",
+                      "on-tertiary-fixed-variant": "#e4e2e1",
+                      "error-container": "#93000a",
+                      "secondary-fixed": "#c6c6cf",
+                      "surface-bright": "#222222",
+                      "primary-fixed-dim": "#454747",
+                      "on-error": "#690005",
+                      "tertiary-fixed": "#5f5e5e",
+                      "surface-container-low": "#0c0c0c",
+                      "primary-fixed": "#5d5f5f",
+                      "surface-container-highest": "#1a1a1a",
+                      "tertiary-fixed-dim": "#474746",
+                      "on-primary-fixed-variant": "#e2e2e2",
+                      "inverse-surface": "#e2e2e2",
+                      "on-surface-variant": "#666666",
+                      "primary-container": "#ffffff",
+                      "primary": "#ffffff",
+                      "secondary-container": "#2a2b2f",
+                      "error": "#ffb4ab"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0px",
+                      "lg": "0px",
+                      "xl": "0px",
+                      "full": "0px"
+              },
+              "fontFamily": {
+                      "headline": ["Inter"],
+                      "body": ["Inter"],
+                      "label": ["Inter"],
+                      "mono": ["JetBrains Mono"]
+              }
             },
+          },
         }
     </script>
-    <style>
-        body {
-            background-color: #000000;
-            color: #e2e2e2;
-        }
-
+<style>
         .material-symbols-outlined {
-            font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+            font-variation-settings: 'FILL' 0, 'wght' 200, 'GRAD' 0, 'opsz' 20;
         }
-
-        ::-webkit-scrollbar {
-            width: 4px;
-            height: 4px;
-        }
-
-        ::-webkit-scrollbar-track {
-            background: #000000;
-        }
-
-        ::-webkit-scrollbar-thumb {
-            background: #353535;
-        }
-
-        .diagnostic-grid {
-            background-image: linear-gradient(#474747 0.5px, transparent 0.5px), linear-gradient(90deg, #474747 0.5px, transparent 0.5px);
-            background-size: 40px 40px;
-            opacity: 0.05;
+        body {
+            background-color: #080808;
+            color: #e2e2e2;
+            overflow: hidden;
         }
     </style>
 </head>
-
-<body class="font-body selection:bg-primary selection:text-on-primary">
-    <!-- Diagnostic Grid Background -->
-    <div class="fixed inset-0 diagnostic-grid pointer-events-none"></div>
-    <!-- TopNavBar -->
-    <nav
-        class="fixed top-0 w-full z-50 bg-black text-white font-sans tracking-tighter uppercase flex justify-between items-center px-8 h-20 w-full">
-        <div class="text-4xl font-bold tracking-tighter text-white uppercase">TRACE-AML</div>
-        <div class="hidden md:flex items-center space-x-12">
-            <a class="text-white border-b-0 hover:text-white transition-colors duration-150" href="#">Intelligence</a>
-            <a class="text-neutral-500 hover:text-white transition-colors duration-150" href="#">Network</a>
-            <a class="text-neutral-500 hover:text-white transition-colors duration-150" href="#">Archive</a>
-            <a class="text-neutral-500 hover:text-white transition-colors duration-150" href="#">Analysis</a>
-            <a class="text-neutral-500 hover:text-white transition-colors duration-150" href="#">Terminal</a>
-        </div>
-        <div class="flex items-center space-x-6">
-            <span class="material-symbols-outlined cursor-pointer hover:text-primary transition-colors">settings</span>
-            <span
-                class="material-symbols-outlined cursor-pointer hover:text-primary transition-colors">notifications</span>
-            <div class="w-8 h-8 bg-surface-container-highest"></div>
-        </div>
-    </nav>
-    <!-- SideNavBar -->
-    <aside class="fixed left-0 top-20 h-full w-20 bg-neutral-950 flex flex-col items-center py-6 space-y-8 z-40">
-        <div
-            class="group cursor-pointer flex flex-col items-center justify-center w-full py-4 bg-neutral-800 text-white">
-            <span class="material-symbols-outlined text-xl">radar</span>
-            <span class="font-mono text-[10px] tracking-widest uppercase mt-1">Intelligence</span>
-        </div>
-        <div
-            class="group cursor-pointer flex flex-col items-center justify-center w-full py-4 text-neutral-600 hover:bg-neutral-900 hover:text-neutral-200">
-            <span class="material-symbols-outlined text-xl">hub</span>
-            <span class="font-mono text-[10px] tracking-widest uppercase mt-1">Network</span>
-        </div>
-        <div
-            class="group cursor-pointer flex flex-col items-center justify-center w-full py-4 text-neutral-600 hover:bg-neutral-900 hover:text-neutral-200">
-            <span class="material-symbols-outlined text-xl">folder_open</span>
-            <span class="font-mono text-[10px] tracking-widest uppercase mt-1">Archive</span>
-        </div>
-        <div
-            class="group cursor-pointer flex flex-col items-center justify-center w-full py-4 text-neutral-600 hover:bg-neutral-900 hover:text-neutral-200">
-            <span class="material-symbols-outlined text-xl">analytics</span>
-            <span class="font-mono text-[10px] tracking-widest uppercase mt-1">Analysis</span>
-        </div>
-        <div
-            class="group cursor-pointer flex flex-col items-center justify-center w-full py-4 text-neutral-600 hover:bg-neutral-900 hover:text-neutral-200">
-            <span class="material-symbols-outlined text-xl">terminal</span>
-            <span class="font-mono text-[10px] tracking-widest uppercase mt-1">Terminal</span>
-        </div>
-    </aside>
-    <!-- Main Canvas -->
-    <main class="pl-20 pt-20 min-h-screen flex flex-col">
-        <!-- Tactical Filter Bar -->
-        <section class="h-16 bg-surface-container-low flex items-center px-10 space-x-8">
-            <div class="flex flex-col">
-                <label class="font-label text-[10px] text-outline uppercase tracking-widest">Entity ID</label>
-                <input
-                    class="bg-transparent border-0 border-b border-outline-variant/40 focus:ring-0 focus:border-primary p-0 text-sm font-label w-48 transition-colors"
-                    placeholder="ENT_00_TRX_*" type="text" />
-            </div>
-            <div class="flex flex-col">
-                <label class="font-label text-[10px] text-outline uppercase tracking-widest">Event Kind</label>
-                <select
-                    class="bg-transparent border-0 border-b border-outline-variant/40 focus:ring-0 focus:border-primary p-0 text-sm font-label w-40 transition-colors cursor-pointer">
-                    <option>ALL_CHANNELS</option>
-                    <option>TRANSFERS</option>
-                    <option>SUSPICIOUS_ACT</option>
-                    <option>NODE_DISCOVERY</option>
-                </select>
-            </div>
-            <div class="flex flex-col">
-                <label class="font-label text-[10px] text-outline uppercase tracking-widest">Time Range</label>
-                <div class="flex items-center text-sm font-label space-x-2 text-primary">
-                    <span>2023.10.01</span>
-                    <span class="material-symbols-outlined text-xs">arrow_forward</span>
-                    <span>PRESENT</span>
-                </div>
-            </div>
-            <div class="flex-grow"></div>
-            <button
-                class="bg-primary text-on-primary px-6 h-10 font-bold text-xs uppercase tracking-widest hover:bg-primary-container transition-colors">Export_Log</button>
-        </section>
-        <!-- Activity Graph -->
-        <section class="p-10 bg-black">
-            <div class="flex justify-between items-end mb-4">
-                <div>
-                    <h2 class="text-3xl font-bold tracking-tighter uppercase">Global_Density</h2>
-                    <p class="font-label text-[10px] text-outline uppercase tracking-widest">Aggregate frequency over
-                        selected temporal window</p>
-                </div>
-                <div class="text-right">
-                    <div class="font-label text-2xl text-primary">48,291.00</div>
-                    <div class="font-label text-[10px] text-outline uppercase tracking-widest">Total Events</div>
-                </div>
-            </div>
-            <div class="h-32 bg-surface-container-low flex items-end px-4 space-x-1 py-4">
-                <!-- Bar chart generator simulation -->
-                <div class="flex-1 bg-surface-container-highest h-[20%]"></div>
-                <div class="flex-1 bg-surface-container-highest h-[35%]"></div>
-                <div class="flex-1 bg-surface-container-highest h-[45%]"></div>
-                <div class="flex-1 bg-surface-container-highest h-[65%]"></div>
-                <div class="flex-1 bg-primary h-[90%]"></div>
-                <div class="flex-1 bg-surface-container-highest h-[75%]"></div>
-                <div class="flex-1 bg-surface-container-highest h-[55%]"></div>
-                <div class="flex-1 bg-surface-container-highest h-[30%]"></div>
-                <div class="flex-1 bg-surface-container-highest h-[15%]"></div>
-                <div class="flex-1 bg-surface-container-highest h-[25%]"></div>
-                <div class="flex-1 bg-surface-container-highest h-[40%]"></div>
-                <div class="flex-1 bg-surface-container-highest h-[60%]"></div>
-                <div class="flex-1 bg-surface-container-highest h-[80%]"></div>
-                <div class="flex-1 bg-primary h-[100%]"></div>
-                <div class="flex-1 bg-surface-container-highest h-[85%]"></div>
-                <div class="flex-1 bg-surface-container-highest h-[65%]"></div>
-                <div class="flex-1 bg-surface-container-highest h-[45%]"></div>
-                <div class="flex-1 bg-surface-container-highest h-[25%]"></div>
-                <div class="flex-1 bg-surface-container-highest h-[15%]"></div>
-                <div class="flex-1 bg-surface-container-highest h-[35%]"></div>
-                <div class="flex-1 bg-surface-container-highest h-[55%]"></div>
-                <div class="flex-1 bg-surface-container-highest h-[75%]"></div>
-                <div class="flex-1 bg-primary h-[95%]"></div>
-                <div class="flex-1 bg-surface-container-highest h-[80%]"></div>
-                <div class="flex-1 bg-surface-container-highest h-[60%]"></div>
-                <div class="flex-1 bg-surface-container-highest h-[40%]"></div>
-                <div class="flex-1 bg-surface-container-highest h-[30%]"></div>
-                <div class="flex-1 bg-surface-container-highest h-[50%]"></div>
-                <div class="flex-1 bg-surface-container-highest h-[70%]"></div>
-                <div class="flex-1 bg-surface-container-highest h-[90%]"></div>
-                <div class="flex-1 bg-primary h-[40%]"></div>
-                <div class="flex-1 bg-surface-container-highest h-[30%]"></div>
-                <div class="flex-1 bg-surface-container-highest h-[20%]"></div>
-                <div class="flex-1 bg-surface-container-highest h-[10%]"></div>
-                <div class="flex-1 bg-surface-container-highest h-[45%]"></div>
-                <div class="flex-1 bg-surface-container-highest h-[65%]"></div>
-                <div class="flex-1 bg-surface-container-highest h-[85%]"></div>
-                <div class="flex-1 bg-surface-container-highest h-[75%]"></div>
-                <div class="flex-1 bg-surface-container-highest h-[55%]"></div>
-                <div class="flex-1 bg-surface-container-highest h-[35%]"></div>
-            </div>
-        </section>
-        <!-- Unified Event Timeline -->
-        <section class="px-10 pb-20 flex-grow">
-            <!-- Timeline Day Group -->
-            <div class="mb-12">
-                <div class="flex items-center mb-6 space-x-4">
-                    <h3 class="font-display font-extrabold text-5xl tracking-tighter uppercase">24_OCT_23</h3>
-                    <div class="flex-grow h-[1px] bg-outline-variant/20"></div>
-                    <span class="font-label text-xs text-outline tracking-widest uppercase">142 Events Detected</span>
-                </div>
-                <div class="grid grid-cols-1 gap-1">
-                    <!-- Event Card 1 -->
-                    <div
-                        class="group bg-surface-container-low hover:bg-surface-container-high transition-colors flex items-center p-4 cursor-pointer">
-                        <div class="w-20 font-label text-xs text-outline">14:22:09</div>
-                        <div class="w-48">
-                            <span
-                                class="font-label text-[10px] bg-primary text-on-primary px-2 py-0.5 uppercase">Transfer_Out</span>
-                        </div>
-                        <div class="w-64 font-label text-xs text-primary">ID: 0x921...F2E</div>
-                        <div class="flex-grow text-sm text-on-surface-variant font-medium">Large volume outbound from
-                            high-risk jurisdiction 'KY-01'</div>
-                        <div class="w-12 text-right">
-                            <span
-                                class="material-symbols-outlined text-outline group-hover:text-primary transition-colors">chevron_right</span>
-                        </div>
-                    </div>
-                    <!-- Event Card 2 (Alert) -->
-                    <div
-                        class="group bg-surface-container-low hover:bg-surface-container-high transition-colors flex items-center p-4 border-l-4 border-error cursor-pointer">
-                        <div class="w-20 font-label text-xs text-error font-bold">12:10:55</div>
-                        <div class="w-48">
-                            <span
-                                class="font-label text-[10px] bg-error text-on-error-container px-2 py-0.5 uppercase">Flagged_Pattern</span>
-                        </div>
-                        <div class="w-64 font-label text-xs text-error">ID: 0x442...A10</div>
-                        <div class="flex-grow text-sm text-on-surface-variant font-medium">Rapid layering detected
-                            across multiple shell entities in sector 7</div>
-                        <div class="w-12 text-right">
-                            <span
-                                class="material-symbols-outlined text-error group-hover:text-primary transition-colors"
-                                style="font-variation-settings: 'FILL' 1;">warning</span>
-                        </div>
-                    </div>
-                    <!-- Event Card 3 -->
-                    <div
-                        class="group bg-surface-container-low hover:bg-surface-container-high transition-colors flex items-center p-4 cursor-pointer">
-                        <div class="w-20 font-label text-xs text-outline">09:44:12</div>
-                        <div class="w-48">
-                            <span
-                                class="font-label text-[10px] bg-surface-container-highest text-on-surface px-2 py-0.5 uppercase">Node_Link</span>
-                        </div>
-                        <div class="w-64 font-label text-xs text-primary">ID: 0x118...B88</div>
-                        <div class="flex-grow text-sm text-on-surface-variant font-medium">New relationship established
-                            with blacklisted provider 'CRYP-V'</div>
-                        <div class="w-12 text-right">
-                            <span
-                                class="material-symbols-outlined text-outline group-hover:text-primary transition-colors">chevron_right</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <!-- Timeline Day Group 2 -->
-            <div class="mb-12">
-                <div class="flex items-center mb-6 space-x-4">
-                    <h3 class="font-display font-extrabold text-5xl tracking-tighter uppercase text-neutral-600">
-                        23_OCT_23</h3>
-                    <div class="flex-grow h-[1px] bg-outline-variant/20"></div>
-                    <span class="font-label text-xs text-outline tracking-widest uppercase">98 Events Detected</span>
-                </div>
-                <div class="grid grid-cols-1 gap-1 opacity-60 hover:opacity-100 transition-opacity">
-                    <!-- Event Card 4 -->
-                    <div
-                        class="group bg-surface-container-low hover:bg-surface-container-high transition-colors flex items-center p-4 cursor-pointer">
-                        <div class="w-20 font-label text-xs text-outline">21:05:00</div>
-                        <div class="w-48">
-                            <span
-                                class="font-label text-[10px] bg-surface-container-highest text-on-surface px-2 py-0.5 uppercase">System_Sync</span>
-                        </div>
-                        <div class="w-64 font-label text-xs text-primary">ID: NODE_CORE_0</div>
-                        <div class="flex-grow text-sm text-on-surface-variant font-medium">Archive synchronization
-                            complete. No anomalies detected during batch processing.</div>
-                        <div class="w-12 text-right">
-                            <span
-                                class="material-symbols-outlined text-outline group-hover:text-primary transition-colors">chevron_right</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
-        <!-- Time-Synced Map (Footer/Corner) -->
-        <footer class="fixed bottom-0 right-0 w-80 h-48 bg-surface-container-highest/90 backdrop-blur-md p-4 z-30">
-            <div class="flex justify-between items-center mb-2">
-                <span class="font-label text-[10px] text-primary uppercase tracking-widest">Global_Hotspots</span>
-                <span class="material-symbols-outlined text-xs">fullscreen</span>
-            </div>
-            <div class="w-full h-32 bg-black overflow-hidden relative">
-                <img alt="abstract world map" class="w-full h-full object-cover opacity-40 grayscale contrast-150"
-                    data-alt="abstract minimalist world map on black background with glowing white data points highlighting global financial centers"
-                    src="https://lh3.googleusercontent.com/aida-public/AB6AXuAgForbnNzxKY9u_RP7BDWQDj-tPdpfEjNBRhKazAdTc3bRFSkCVMYLYTmXVFd-poV4mY7-OReEP0L20TtvORlBbQmkfMAWu9_HdfXXj1ZmVmJ7u7bKD5XKKvzwrrt8N5tWO4tb7M4mN3KCeilNrGRh6fd_AJzDQ4AABjIKqiurQDgNNS66ey94iPqDT-2UGuKxlFnktwOoHMbqve0GcW_SCD-hocTkX6OylHEW-B7KOpZZMz_P60bU60r7PxZ9FQymJ-2oyC7-X44" />
-                <!-- Simulated hotspot pings -->
-                <div
-                    class="absolute top-1/4 left-1/4 w-2 h-2 bg-primary rounded-full animate-pulse shadow-[0_0_8px_white]">
-                </div>
-                <div
-                    class="absolute bottom-1/3 left-1/2 w-1.5 h-1.5 bg-error rounded-full animate-pulse shadow-[0_0_8px_red]">
-                </div>
-                <div
-                    class="absolute top-1/2 right-1/4 w-2 h-2 bg-primary rounded-full animate-pulse shadow-[0_0_8px_white]">
-                </div>
-            </div>
-            <div class="mt-2 flex justify-between">
-                <span class="font-label text-[8px] text-outline">LAT: 51.5074 N</span>
-                <span class="font-label text-[8px] text-outline">LNG: 0.1278 W</span>
-            </div>
-        </footer>
-    </main>
-    <!-- Detail Side Panel (Hidden by default - structure only) -->
-    <div
-        class="fixed right-0 top-20 h-full w-[450px] bg-surface-container transform translate-x-full transition-transform duration-300 z-50 p-10 flex flex-col">
-        <div class="flex justify-between items-start mb-10">
-            <h4 class="text-4xl font-bold tracking-tighter uppercase">Event_Details</h4>
-            <button class="material-symbols-outlined text-primary">close</button>
-        </div>
-        <div class="space-y-8">
-            <div>
-                <label
-                    class="font-label text-[10px] text-outline uppercase tracking-widest block mb-2">Internal_Reference</label>
-                <div class="text-2xl font-label text-primary">TRX-7749-ALPHA</div>
-            </div>
-            <div>
-                <label
-                    class="font-label text-[10px] text-outline uppercase tracking-widest block mb-2">Metadata_Payload</label>
-                <pre class="bg-black p-4 font-label text-xs text-on-surface-variant overflow-x-auto">{
-  "source": "SWIFT_NODE_09",
-  "auth_token": "bearer_92ksj...",
-  "risk_score": 0.89,
-  "velocity": "HIGH",
-  "flags": ["cross_border", "new_account"]
-}
-                </pre>
-            </div>
-        </div>
-    </div>
-</body>
-
-</html>
+<body class="font-body selection:bg-white selection:text-black">
+<main class="h-screen w-screen flex flex-col relative bg-background">
+<!-- Centered Error Message -->
+<div class="flex-1 flex flex-col items-center justify-center p-6 text-center select-none">
+<div class="flex flex-col items-center gap-12 max-w-md">
+<div class="space-y-4">
+<h1 class="text-2xl md:text-3xl font-extralight tracking-[0.2em] text-white opacity-90 uppercase">
+                        Connection Lost
+                    </h1>
+<p class="font-mono text-[11px] text-on-surface-variant tracking-wider opacity-60">
+                        Re-establishing link to secure node...
+                    </p>
+</div>
+<button class="px-10 py-3 bg-white text-black font-mono text-[10px] font-bold tracking-[0.3em] hover:bg-zinc-200 transition-all active:scale-95">
+                    RETRY
+                </button>
+</div>
+</div>
+<!-- Minimal Diagnostics & Metadata -->
+<div class="p-8 flex flex-col md:flex-row justify-between items-end gap-6 bg-surface-container-low/30">
+<!-- Diagnostic Logs (Bottom Left) -->
+<div class="font-mono text-[9px] text-on-surface-variant leading-relaxed opacity-40 max-w-sm">
+<p>SESSION_ID: TR-8842-X</p>
+<p>STATUS: ERR_SIGNAL_LOSS</p>
+</div>
+<!-- System State (Bottom Right) -->
+<div class="flex flex-col items-end gap-2">
+<div class="flex items-center gap-3">
+<div class="flex items-center gap-2">
+<span class="w-1 h-1 rounded-full bg-error"></span>
+<span class="font-mono text-[9px] text-on-surface-variant tracking-widest uppercase">Node_01: Offline</span>
+</div>
+<span class="font-mono text-[9px] text-on-surface-variant/30 tracking-tighter">V4.2.0-STABLE</span>
+</div>
+</div>
+</div>
+<!-- Pure Tonal Depth -->
+<div class="absolute inset-0 pointer-events-none bg-gradient-to-t from-black/40 via-transparent to-transparent"></div>
+</main>
+</body></html>

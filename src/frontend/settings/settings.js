@@ -951,13 +951,48 @@
     var btnRefresh = $("btn-refresh-health");
     if (btnRefresh) {
       btnRefresh.addEventListener("click", function () {
-        btnRefresh.classList.add("animate-spin");
+        if (isRefreshing) return;
+
+        var icon = btnRefresh.querySelector(".material-symbols-outlined");
+        var label = btnRefresh.querySelector("span:last-child");
+        var originalLabel = label ? label.textContent : "";
+
         isRefreshing = true;
-        loadHealth();
-        setTimeout(function () {
-          btnRefresh.classList.remove("animate-spin");
+        btnRefresh.disabled = true;
+        btnRefresh.style.opacity = "0.75";
+        btnRefresh.style.cursor = "wait";
+        if (icon) icon.classList.add("animate-spin");
+        if (label) label.textContent = "Refreshing...";
+
+        Promise.allSettled([
+          TraceClient.probe(),
+          TraceClient.health()
+        ]).then(function (results) {
+          var probeResult = results[0];
+          var healthResult = results[1];
+          var info = probeResult && probeResult.status === "fulfilled" ? probeResult.value : null;
+          var health = healthResult && healthResult.status === "fulfilled" ? healthResult.value : null;
+
+          if (info) {
+            if ($("core-version")) $("core-version").textContent = "7.0.0";
+            if ($("core-env")) $("core-env").textContent = normalizeEnvironmentLabel(info.environment);
+          }
+
+          if (health) {
+            // Reuse existing rendering path for diagnostics cards/status.
+            loadHealth();
+            if (window.TraceToast) TraceToast.success("Diagnostics Updated", "System health checks refreshed.");
+          } else if (window.TraceToast) {
+            TraceToast.warning("Diagnostics Unavailable", "Could not refresh diagnostics. Please verify backend connection.");
+          }
+        }).finally(function () {
           isRefreshing = false;
-        }, 1000);
+          btnRefresh.disabled = false;
+          btnRefresh.style.opacity = "";
+          btnRefresh.style.cursor = "";
+          if (icon) icon.classList.remove("animate-spin");
+          if (label) label.textContent = originalLabel || "Re-run Diagnostics";
+        });
       });
     }
 

@@ -22,6 +22,132 @@
       gap: 0;
     }
 
+    /* Page rhythm and readability */
+    #settings-scroll-container {
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.01) 0%, rgba(255, 255, 255, 0) 180px), var(--md-surface);
+    }
+
+    #settings-scroll-container .max-w-4xl {
+      max-width: 68rem;
+    }
+
+    /* Left rail polish */
+    #settings-nav .nav-pill {
+      border-radius: 4px;
+      border-left-width: 2px;
+      border-left-color: transparent;
+      transition: background-color 0.15s, color 0.15s, border-color 0.15s;
+    }
+
+    #settings-nav .nav-pill:hover {
+      background: rgba(255, 255, 255, 0.05);
+      color: #e8e8e8;
+    }
+
+    #settings-nav .nav-pill.active {
+      background: rgba(255, 255, 255, 0.08);
+      border-left-color: #fff;
+      color: #fff;
+    }
+
+    /* Section headers */
+    #settings-scroll-container h3 {
+      letter-spacing: 0.14em;
+    }
+
+    /* Generic card treatment for settings blocks */
+    #settings-scroll-container .bg-surface-container\/30,
+    #settings-scroll-container .bg-surface-container\/20,
+    #settings-scroll-container .bg-surface-container\/50,
+    #settings-scroll-container .bg-surface-high\/30,
+    #settings-scroll-container .bg-surface-high\/50 {
+      border-radius: 4px;
+      backdrop-filter: saturate(105%);
+    }
+
+    #settings-scroll-container .border-outline-variant\/10 {
+      border-color: rgba(255, 255, 255, 0.09) !important;
+    }
+
+    #settings-scroll-container .border-outline-variant\/5 {
+      border-color: rgba(255, 255, 255, 0.06) !important;
+    }
+
+    /* Refined buttons across page */
+    #settings-scroll-container button {
+      border-radius: 4px;
+      transition: background-color 0.15s, border-color 0.15s, color 0.15s, box-shadow 0.15s, transform 0.15s;
+    }
+
+    #settings-scroll-container button:active {
+      transform: translateY(0.5px);
+    }
+
+    /* Inputs and selects (including dynamic notification fields) */
+    #settings-scroll-container input[type="text"],
+    #settings-scroll-container input[type="password"],
+    #settings-scroll-container input[type="number"],
+    #settings-scroll-container select,
+    #settings-scroll-container textarea {
+      border-radius: 4px;
+      min-height: 38px;
+      transition: border-color 0.15s, box-shadow 0.15s, background-color 0.15s;
+    }
+
+    #settings-scroll-container input[type="text"]:focus,
+    #settings-scroll-container input[type="password"]:focus,
+    #settings-scroll-container input[type="number"]:focus,
+    #settings-scroll-container select:focus,
+    #settings-scroll-container textarea:focus {
+      border-color: rgba(255, 255, 255, 0.35) !important;
+      box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.06);
+      outline: none;
+    }
+
+    /* Slider refinement for tuning sections */
+    #config-sections-root input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      height: 4px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.18);
+    }
+
+    #config-sections-root input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #fff;
+      border: 1px solid rgba(0, 0, 0, 0.35);
+      box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.1);
+      cursor: pointer;
+    }
+
+    #config-sections-root input[type="range"]::-moz-range-thumb {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #fff;
+      border: 1px solid rgba(0, 0, 0, 0.35);
+      box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.1);
+      cursor: pointer;
+    }
+
+    /* Small value tags near sliders */
+    #config-sections-root [id^="val-"] {
+      border-radius: 4px;
+      min-width: 48px;
+      text-align: center;
+    }
+
+    /* Toggle controls look cleaner */
+    #config-sections-root .peer + div,
+    #settings-scroll-container .peer + div {
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
     /* Refined timezone select */
     #tz-select {
       appearance: none;
@@ -46,6 +172,139 @@
     #tz-select:focus {
       border-color: rgba(255, 255, 255, 0.42);
       box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.06);
+    }
+
+    /* Stable switch for diagnostics toggle */
+    .settings-switch {
+      position: relative;
+      display: inline-flex;
+      width: 34px;
+      height: 18px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.16);
+      border: 1px solid rgba(255, 255, 255, 0.24);
+      transition: background-color 0.15s, border-color 0.15s;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+
+    .settings-switch-input {
+      position: absolute;
+      opacity: 0;
+      width: 0;
+      height: 0;
+      pointer-events: none;
+    }
+
+    .settings-switch::after {
+      content: "";
+      position: absolute;
+      top: 1px;
+      left: 1px;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: #fff;
+      transition: transform 0.15s;
+    }
+
+    #auto-refresh-toggle:checked + .settings-switch {
+      background: rgba(var(--primary-rgb), 0.75);
+      border-color: rgba(var(--primary-rgb), 0.9);
+    }
+
+    #auto-refresh-toggle:checked + .settings-switch::after {
+      transform: translateX(16px);
+    }
+
+    /* Scrollbar consistency */
+    #settings-scroll-container::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    #settings-scroll-container::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    #settings-scroll-container::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.12);
+      border-radius: 999px;
+    }
+
+    #settings-scroll-container::-webkit-scrollbar-thumb:hover {
+      background: rgba(255, 255, 255, 0.2);
+    }
+
+    /* Notification action buttons: force clear rendering */
+    #wa-refresh-btn {
+      background: rgba(255, 255, 255, 0.06) !important;
+      color: #f3f3f3 !important;
+      border: 1px solid rgba(255, 255, 255, 0.22) !important;
+      border-radius: 4px !important;
+      font-weight: 500;
+    }
+
+    #wa-refresh-btn:hover {
+      background: rgba(255, 255, 255, 0.12) !important;
+      border-color: rgba(255, 255, 255, 0.35) !important;
+      color: #ffffff !important;
+    }
+
+    #btn-test-pdf {
+      background: rgba(255, 255, 255, 0.08) !important;
+      color: #ffffff !important;
+      border: 1px solid rgba(255, 255, 255, 0.28) !important;
+      border-radius: 4px !important;
+      font-weight: 500;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    #btn-test-pdf:hover {
+      background: rgba(255, 255, 255, 0.16) !important;
+      border-color: rgba(255, 255, 255, 0.44) !important;
+    }
+
+    #btn-save-notifications {
+      background: #ffffff !important;
+      color: #0f0f0f !important;
+      border: 1px solid rgba(255, 255, 255, 0.92) !important;
+      border-radius: 4px !important;
+      font-weight: 500;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      min-width: 240px;
+      justify-content: center;
+    }
+
+    #btn-save-notifications:hover {
+      background: #f1f1f1 !important;
+      border-color: #ffffff !important;
+      color: #000000 !important;
+      box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.3);
+    }
+
+    #btn-save-notifications:disabled,
+    #btn-test-pdf:disabled,
+    #wa-refresh-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    /* Typography consistency: major settings actions use medium mono weight */
+    #settings-scroll-container .fbar-btn,
+    #settings-scroll-container #btn-deduplicate-db,
+    #settings-scroll-container #btn-factory-reset,
+    #settings-scroll-container #btn-save-notifications,
+    #settings-scroll-container #btn-reset-notifications,
+    #settings-scroll-container #btn-test-pdf,
+    #settings-scroll-container #wa-refresh-btn,
+    #settings-scroll-container #btn-test-email,
+    #settings-scroll-container #btn-test-wa,
+    #settings-scroll-container #btn-refresh-health {
+      font-weight: 500 !important;
+      letter-spacing: 0.08em !important;
+      text-transform: uppercase;
     }
   </style>
 </head>
@@ -193,9 +452,9 @@
                 <span class="flex items-center gap-2 mb-2">
                   <span
                     class="w-1.5 h-1.5 bg-primary rounded-full shadow-[0_0_8px_rgba(var(--primary-rgb),0.6)]"></span>
-                  <span class="font-mono text-[0.7rem] uppercase tracking-[0.3em] text-outline">System Control</span>
+                  <span class="font-mono text-[0.6875rem] uppercase tracking-[0.2em] text-outline">System Control</span>
                 </span>
-                <h1 class="text-4xl font-headline font-bold text-white tracking-tight uppercase">Configuration</h1>
+                <h1 class="text-3xl font-headline font-bold text-white tracking-tight uppercase">Configuration</h1>
               </div>
               <div class="flex gap-3">
                 <button id="btn-refresh-health"
@@ -238,10 +497,8 @@
                     class="flex items-center justify-between p-3 bg-surface-high/50 border border-outline-variant/10 rounded-sm">
                     <span class="font-mono text-[0.65rem] text-on-surface">Auto-Refresh Diagnostics</span>
                     <label class="relative inline-flex items-center cursor-pointer">
-                      <input type="checkbox" id="auto-refresh-toggle" class="sr-only peer" checked>
-                      <div
-                        class="w-8 h-4 bg-surface-container-high rounded-full peer peer-checked:bg-primary after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:after:translate-x-4">
-                      </div>
+                      <input type="checkbox" id="auto-refresh-toggle" class="settings-switch-input peer" checked>
+                      <span class="settings-switch"></span>
                     </label>
                   </div>
                 </div>

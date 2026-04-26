@@ -402,7 +402,8 @@
 
 
   /**
-   * Show or hide the offline banner.
+   * Show or hide the offline showcase overlay.
+   * Inspired by the reference style: centered status + retry action.
    */
   function updateOfflineBanner(state) {
     var bannerId = "offline-banner";
@@ -411,16 +412,47 @@
       if (existing) existing.remove();
       return;
     }
-    if (existing) return; // already showing
     if (state !== "offline") return;
 
-    var banner = document.createElement("div");
-    banner.id = bannerId;
-    banner.className = "fixed top-14 left-20 right-0 z-30 bg-error-container/90 backdrop-blur-sm px-6 py-2 flex items-center gap-3";
-    banner.innerHTML =
-      '<span class="material-symbols-outlined text-error text-[16px]">cloud_off</span>'
-      + '<span class="font-mono text-[0.7rem] text-error">Backend disconnected — showing layout only</span>';
-    document.body.appendChild(banner);
+    if (!existing) {
+      var overlay = document.createElement("div");
+      overlay.id = bannerId;
+      overlay.style.position = "fixed";
+      overlay.style.inset = "0";
+      overlay.style.zIndex = "120";
+      overlay.style.display = "flex";
+      overlay.style.alignItems = "center";
+      overlay.style.justifyContent = "center";
+      overlay.style.background = "linear-gradient(to top, rgba(0,0,0,0.62), rgba(0,0,0,0.32) 45%, rgba(0,0,0,0.22))";
+      overlay.style.backdropFilter = "blur(2px)";
+      overlay.style.webkitBackdropFilter = "blur(2px)";
+      overlay.innerHTML =
+        '<div style="display:flex;flex-direction:column;align-items:center;gap:18px;text-align:center;padding:24px 28px;max-width:560px;">'
+        + '<span class="material-symbols-outlined" style="font-size:38px;color:#d8d8d8;opacity:0.88;">cloud_off</span>'
+        + '<div style="font-family:\'Inter\',sans-serif;font-size:1.25rem;letter-spacing:0.16em;text-transform:uppercase;color:#f2f2f2;font-weight:300;">Connection Lost</div>'
+        + '<div style="font-family:\'JetBrains Mono\',monospace;font-size:0.68rem;letter-spacing:0.08em;color:#a0a0a0;">Backend disconnected — showing layout only</div>'
+        + '<button id="offline-retry-btn" type="button" style="margin-top:6px;padding:10px 22px;border:1px solid rgba(255,255,255,0.3);background:#fff;color:#0f0f0f;font-family:\'JetBrains Mono\',monospace;font-size:0.62rem;letter-spacing:0.16em;text-transform:uppercase;cursor:pointer;border-radius:2px;">Retry</button>'
+        + "</div>";
+      document.body.appendChild(overlay);
+
+      var retryBtn = document.getElementById("offline-retry-btn");
+      if (retryBtn) {
+        retryBtn.addEventListener("click", function () {
+          retryBtn.textContent = "Retrying...";
+          retryBtn.setAttribute("disabled", "disabled");
+          retryBtn.style.opacity = "0.7";
+          retryBtn.style.cursor = "wait";
+          if (global.TraceClient && typeof global.TraceClient.probe === "function") {
+            global.TraceClient.probe().finally(function () {
+              retryBtn.textContent = "Retry";
+              retryBtn.removeAttribute("disabled");
+              retryBtn.style.opacity = "";
+              retryBtn.style.cursor = "pointer";
+            });
+          }
+        });
+      }
+    }
   }
 
   /**
@@ -429,7 +461,7 @@
    */
   function dimContent(rootEl) {
     if (!rootEl) return;
-    rootEl.style.opacity = "0.4";
+    rootEl.style.opacity = "0.33";
     rootEl.style.pointerEvents = "none";
   }
 
