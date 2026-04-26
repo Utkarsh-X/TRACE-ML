@@ -10,6 +10,7 @@ from typing import Any
 
 import cv2
 import numpy as np
+from loguru import logger
 
 from trace_aml.core.config import Settings
 from trace_aml.core.errors import DependencyError, RecognitionError
@@ -26,6 +27,9 @@ class ArcFaceRecognizer:
         self.settings = settings
         self._app: Any | None = None
         self._liveness: BaseLivenessChecker = PassThroughLiveness()
+        self._provider_chain: list[str] = []
+        self._active_provider: str = "CPUExecutionProvider"
+        self._has_fallen_back_to_cpu = False
 
     def set_liveness_checker(self, checker: BaseLivenessChecker | None) -> None:
         self._liveness = checker or PassThroughLiveness()
@@ -70,12 +74,16 @@ class ArcFaceRecognizer:
             allow_gpu=gpu_cfg.enabled,
             cuda_device_id=gpu_cfg.cuda_device_id,
         )
+        self._provider_chain = list(providers)
+        self._active_provider = next(
+            (provider for provider in self._provider_chain if provider != "CPUExecutionProvider"),
+            "CPUExecutionProvider",
+        )
 
         # Backwards-compat: warn if the legacy `recognition.provider` field was
         # explicitly overridden to a non-default value while GPU auto-detect is on.
         legacy_provider = self.settings.recognition.provider
         if gpu_cfg.enabled and legacy_provider not in ("", "CPUExecutionProvider"):
-            from loguru import logger
             logger.warning(
                 "[GPU] recognition.provider='{}' is ignored when gpu.enabled=True. "
                 "Use gpu.preferred_provider instead.",
@@ -95,6 +103,55 @@ class ArcFaceRecognizer:
                 )
         except Exception as exc:
             raise RecognitionError(f"Failed to initialize InsightFace: {exc}") from exc
+
+    @staticmethod
+    def _is_dml_runtime_failure(exc: Exception) -> bool:
+        msg = str(exc)
+        msg_lower = msg.lower()
+        return (
+            "dml" in msg_lower
+            or "dmlexecutionprovider" in msg_lower
+            or "dmlcommandrecorder" in msg_lower
+            or "onnxruntimeerror" in msg_lower
+        )
+
+    def _fallback_to_cpu(self) -> bool:
+        if self._has_fallen_back_to_cpu:
+            return False
+        if self._active_provider == "CPUExecutionProvider":
+            return False
+
+        try:
+            import insightface
+        except Exception:
+            return False
+
+        logger.warning(
+            "[GPU] Runtime failure on provider={} detected. Falling back to CPUExecutionProvider.",
+            self._active_provider,
+        )
+        try:
+            with self._suppress_startup_output():
+                app = insightface.app.FaceAnalysis(
+                    name=self.settings.recognition.model_name,
+                    providers=["CPUExecutionProvider"],
+                )
+                app.prepare(
+                    ctx_id=self.settings.gpu.cuda_device_id,
+                    det_size=tuple(self.settings.recognition.det_size),
+                )
+            self._app = app
+            self._provider_chain = ["CPUExecutionProvider"]
+            self._active_provider = "CPUExecutionProvider"
+            self._has_fallen_back_to_cpu = True
+            logger.info("[GPU] CPU fallback is now active for ArcFaceRecognizer.")
+            return True
+        except Exception as fallback_exc:
+            logger.exception(
+                "[GPU] CPU fallback initialization failed after provider crash: {}",
+                fallback_exc,
+            )
+            return False
 
     @staticmethod
     def _bbox_tuple(face_obj: Any) -> tuple[int, int, int, int]:
@@ -266,9 +323,20 @@ class ArcFaceRecognizer:
 
     def detect_faces(self, frame_bgr: np.ndarray) -> list[FaceCandidate]:
         self._ensure_app()
-        faces = self._app.get(frame_bgr)
-        if not faces and self.settings.recognition.enable_preprocess_fallback:
-            faces = self._app.get(self._enhance_low_light(frame_bgr))
+        try:
+            faces = self._app.get(frame_bgr)
+            if not faces and self.settings.recognition.enable_preprocess_fallback:
+                faces = self._app.get(self._enhance_low_light(frame_bgr))
+        except Exception as exc:
+            if self._is_dml_runtime_failure(exc) and self._fallback_to_cpu():
+                try:
+                    faces = self._app.get(frame_bgr)
+                    if not faces and self.settings.recognition.enable_preprocess_fallback:
+                        faces = self._app.get(self._enhance_low_light(frame_bgr))
+                except Exception:
+                    raise
+            else:
+                raise
         candidates: list[FaceCandidate] = []
         for face in faces:
             try:

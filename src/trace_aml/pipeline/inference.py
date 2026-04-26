@@ -9,6 +9,7 @@ from dataclasses import dataclass
 
 import cv2
 import numpy as np
+from loguru import logger
 
 from trace_aml.core.config import Settings
 from trace_aml.core.models import RecognitionMatch
@@ -92,7 +93,12 @@ class InferenceWorker:
                 )
             # ─────────────────────────────────────────────────────────────
 
-            recognized = self.recognizer.match(infer_frame, self.store)
+            try:
+                recognized = self.recognizer.match(infer_frame, self.store)
+            except Exception as exc:
+                # Keep pipeline alive even if a provider crashes at runtime.
+                logger.exception("Inference worker recovered from recognizer failure: {}", exc)
+                continue
             matches = [item[0] for item in recognized]
             embeddings = [item[1] for item in recognized]
             liveness = [item[2] for item in recognized]
