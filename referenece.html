@@ -3,128 +3,181 @@
 <html class="dark" lang="en"><head>
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-<title>TRACE-AML | SYSTEM_OFFLINE</title>
+<title>TRACE-AML | Initializing</title>
 <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100;300;400;500;600;700&amp;family=JetBrains+Mono:wght@400;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&amp;family=JetBrains+Mono:wght@400&amp;display=swap" rel="stylesheet"/>
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0e0e0e;
+            color: #ffffff;
+            margin: 0;
+            overflow: hidden;
+        }
+        .font-mono {
+            font-family: 'JetBrains Mono', monospace;
+        }
+        /* Custom progress bar width animation handled by inline style as per shared component logic */
+        .scanline {
+            width: 100%;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, #ffffff, transparent);
+            position: absolute;
+            top: 50%;
+            opacity: 0.3;
+        }
+    </style>
 <script id="tailwind-config">
         tailwind.config = {
           darkMode: "class",
           theme: {
             extend: {
               "colors": {
-                      "on-tertiary": "#1b1c1c",
-                      "on-secondary-fixed-variant": "#3a3b42",
-                      "surface-tint": "#c6c6c7",
-                      "on-surface": "#e2e2e2",
-                      "tertiary": "#e4e2e1",
-                      "surface-container-lowest": "#0a0a0a",
-                      "surface-container-high": "#1a1a1a",
-                      "on-primary": "#000000",
-                      "inverse-on-surface": "#303030",
-                      "surface-dim": "#080808",
-                      "secondary": "#c6c6cf",
-                      "outline": "#444444",
-                      "on-tertiary-container": "#000000",
-                      "on-background": "#e2e2e2",
-                      "on-primary-fixed": "#ffffff",
-                      "on-primary-container": "#000000",
-                      "on-error-container": "#ffdad6",
-                      "on-secondary": "#1a1b22",
-                      "surface-variant": "#121212",
-                      "on-tertiary-fixed": "#ffffff",
-                      "surface": "#0a0a0a",
-                      "secondary-fixed-dim": "#aaaab3",
-                      "outline-variant": "#222222",
-                      "on-secondary-fixed": "#1a1b22",
-                      "tertiary-container": "#929090",
-                      "on-secondary-container": "#e2e1eb",
-                      "surface-container": "#0e0e0e",
-                      "inverse-primary": "#5d5f5f",
-                      "background": "#080808",
-                      "on-tertiary-fixed-variant": "#e4e2e1",
-                      "error-container": "#93000a",
-                      "secondary-fixed": "#c6c6cf",
-                      "surface-bright": "#222222",
-                      "primary-fixed-dim": "#454747",
-                      "on-error": "#690005",
                       "tertiary-fixed": "#5f5e5e",
-                      "surface-container-low": "#0c0c0c",
-                      "primary-fixed": "#5d5f5f",
-                      "surface-container-highest": "#1a1a1a",
-                      "tertiary-fixed-dim": "#474746",
-                      "on-primary-fixed-variant": "#e2e2e2",
+                      "on-tertiary-fixed": "#ffffff",
+                      "error-container": "#93000a",
+                      "outline": "#919191",
+                      "surface-container-lowest": "#0e0e0e",
+                      "outline-variant": "#474747",
+                      "primary-fixed-dim": "#454747",
+                      "on-surface": "#e2e2e2",
                       "inverse-surface": "#e2e2e2",
-                      "on-surface-variant": "#666666",
-                      "primary-container": "#ffffff",
+                      "background": "#131313",
+                      "secondary-container": "#45464e",
+                      "on-tertiary-fixed-variant": "#e4e2e1",
+                      "tertiary": "#e4e2e1",
+                      "on-secondary-fixed-variant": "#3a3b42",
+                      "surface-container-high": "#2a2a2a",
+                      "surface-tint": "#c6c6c7",
+                      "surface-variant": "#353535",
+                      "inverse-on-surface": "#303030",
+                      "secondary-fixed": "#c6c6cf",
+                      "error": "#ffb4ab",
+                      "on-secondary-fixed": "#1a1b22",
+                      "inverse-primary": "#5d5f5f",
+                      "secondary": "#c6c6cf",
+                      "on-primary-container": "#000000",
+                      "on-secondary-container": "#e2e1eb",
+                      "on-surface-variant": "#c6c6c6",
+                      "on-primary-fixed-variant": "#e2e2e2",
+                      "on-background": "#e2e2e2",
                       "primary": "#ffffff",
-                      "secondary-container": "#2a2b2f",
-                      "error": "#ffb4ab"
+                      "surface": "#131313",
+                      "surface-bright": "#393939",
+                      "on-primary": "#1a1c1c",
+                      "surface-dim": "#131313",
+                      "on-tertiary": "#1b1c1c",
+                      "on-primary-fixed": "#ffffff",
+                      "on-secondary": "#1a1b22",
+                      "surface-container": "#1f1f1f",
+                      "surface-container-low": "#1b1b1b",
+                      "on-error": "#690005",
+                      "primary-container": "#d4d4d4",
+                      "surface-container-highest": "#353535",
+                      "on-error-container": "#ffdad6",
+                      "primary-fixed": "#5d5f5f",
+                      "tertiary-container": "#929090",
+                      "on-tertiary-container": "#000000",
+                      "secondary-fixed-dim": "#aaaab3",
+                      "tertiary-fixed-dim": "#474746"
               },
               "borderRadius": {
-                      "DEFAULT": "0px",
-                      "lg": "0px",
-                      "xl": "0px",
-                      "full": "0px"
+                      "DEFAULT": "0.125rem",
+                      "lg": "0.25rem",
+                      "xl": "0.5rem",
+                      "full": "0.75rem"
               },
               "fontFamily": {
                       "headline": ["Inter"],
                       "body": ["Inter"],
-                      "label": ["Inter"],
-                      "mono": ["JetBrains Mono"]
+                      "label": ["Inter"]
               }
             },
           },
         }
-    </script>
-<style>
-        .material-symbols-outlined {
-            font-variation-settings: 'FILL' 0, 'wght' 200, 'GRAD' 0, 'opsz' 20;
-        }
-        body {
-            background-color: #080808;
-            color: #e2e2e2;
-            overflow: hidden;
-        }
-    </style>
+      </script>
 </head>
-<body class="font-body selection:bg-white selection:text-black">
-<main class="h-screen w-screen flex flex-col relative bg-background">
-<!-- Centered Error Message -->
-<div class="flex-1 flex flex-col items-center justify-center p-6 text-center select-none">
-<div class="flex flex-col items-center gap-12 max-w-md">
-<div class="space-y-4">
-<h1 class="text-2xl md:text-3xl font-extralight tracking-[0.2em] text-white opacity-90 uppercase">
-                        Connection Lost
-                    </h1>
-<p class="font-mono text-[11px] text-on-surface-variant tracking-wider opacity-60">
-                        Re-establishing link to secure node...
-                    </p>
+<body class="bg-surface-container-lowest text-primary selection:bg-primary selection:text-on-primary h-screen w-screen flex flex-col overflow-hidden">
+<!-- Subtle Edge Gradient Overlay -->
+<div class="fixed inset-0 pointer-events-none bg-[radial-gradient(circle_at_center,transparent_0%,rgba(0,0,0,0.4)_100%)]"></div>
+<!-- Minimal System Status Top Bar -->
+<header class="flex justify-between items-center px-6 py-4 z-10">
+<div class="flex items-center gap-4">
+<span class="text-[10px] font-mono tracking-widest text-on-surface-variant opacity-50 uppercase">Session: 0xF429B</span>
+<div class="w-1 h-1 rounded-full bg-primary animate-pulse"></div>
 </div>
-<button class="px-10 py-3 bg-white text-black font-mono text-[10px] font-bold tracking-[0.3em] hover:bg-zinc-200 transition-all active:scale-95">
-                    RETRY
-                </button>
+<div class="flex items-center gap-6">
+<span class="text-[10px] font-mono text-on-surface-variant uppercase tracking-tighter">Node: US-EAST-1_V2</span>
+<span class="text-[10px] font-mono text-on-surface-variant uppercase tracking-tighter">Port: 443 [SECURE]</span>
 </div>
-</div>
-<!-- Minimal Diagnostics & Metadata -->
-<div class="p-8 flex flex-col md:flex-row justify-between items-end gap-6 bg-surface-container-low/30">
-<!-- Diagnostic Logs (Bottom Left) -->
-<div class="font-mono text-[9px] text-on-surface-variant leading-relaxed opacity-40 max-w-sm">
-<p>SESSION_ID: TR-8842-X</p>
-<p>STATUS: ERR_SIGNAL_LOSS</p>
-</div>
-<!-- System State (Bottom Right) -->
-<div class="flex flex-col items-end gap-2">
-<div class="flex items-center gap-3">
-<div class="flex items-center gap-2">
-<span class="w-1 h-1 rounded-full bg-error"></span>
-<span class="font-mono text-[9px] text-on-surface-variant tracking-widest uppercase">Node_01: Offline</span>
-</div>
-<span class="font-mono text-[9px] text-on-surface-variant/30 tracking-tighter">V4.2.0-STABLE</span>
+</header>
+<!-- Main Content Area -->
+<main class="flex-1 flex flex-col items-center justify-center relative px-10">
+<!-- Central Branding -->
+<div class="text-center z-10">
+<h1 class="text-6xl md:text-8xl font-black tracking-[-0.05em] leading-none mb-2 text-primary">
+                TRACE-AML
+            </h1>
+<div class="flex items-center justify-center gap-3">
+<span class="w-8 h-[1px] bg-outline-variant"></span>
+<p class="font-mono text-xs tracking-[0.4em] text-on-surface-variant uppercase">System Initializing</p>
+<span class="w-8 h-[1px] bg-outline-variant"></span>
 </div>
 </div>
+<!-- Progress Indicator -->
+<div class="w-full max-w-md mt-16 space-y-4">
+<div class="flex justify-between items-end mb-1">
+<span class="font-mono text-[10px] text-on-surface-variant tracking-wider uppercase">Loading Core Engine Components...</span>
+<span class="font-mono text-sm font-bold text-primary">64.2%</span>
 </div>
-<!-- Pure Tonal Depth -->
-<div class="absolute inset-0 pointer-events-none bg-gradient-to-t from-black/40 via-transparent to-transparent"></div>
+<!-- Forensic 1px Progress Line -->
+<div class="w-full h-px bg-surface-container-high relative overflow-hidden">
+<div class="absolute left-0 top-0 h-full bg-primary transition-all duration-700 ease-out" style="width: 64.2%;"></div>
+</div>
+<!-- Dynamic Module Status Grid -->
+<div class="grid grid-cols-3 gap-1 pt-4">
+<div class="flex flex-col gap-1">
+<span class="font-mono text-[9px] text-on-surface-variant opacity-40 uppercase">Auth_Stack</span>
+<span class="font-mono text-[10px] text-primary">SECURE</span>
+</div>
+<div class="flex flex-col gap-1">
+<span class="font-mono text-[9px] text-on-surface-variant opacity-40 uppercase">Db_Stream</span>
+<span class="font-mono text-[10px] text-primary">MOUNTING</span>
+</div>
+<div class="flex flex-col gap-1">
+<span class="font-mono text-[9px] text-on-surface-variant opacity-40 uppercase">Proxy_Tunnel</span>
+<span class="font-mono text-[10px] text-primary">PENDING</span>
+</div>
+</div>
+</div>
 </main>
+<!-- Footer Area / System Boot Log -->
+<footer class="p-8 flex justify-between items-end z-10">
+<!-- Forensic Log (Bottom Left) -->
+<div class="bg-surface-container-low p-4 w-full max-w-sm rounded-lg border border-outline-variant/10 shadow-2xl">
+<div class="flex items-center gap-2 mb-3 border-b border-outline-variant/20 pb-2">
+<span class="material-symbols-outlined text-[14px] text-on-surface-variant">terminal</span>
+<span class="font-mono text-[10px] text-on-surface-variant font-bold tracking-wider uppercase">Kernel Logs</span>
+</div>
+<div class="space-y-1 overflow-hidden h-24">
+<p class="font-mono text-[10px] leading-relaxed text-on-surface-variant/80">[14:22:01] <span class="text-primary">MOUNTING CORE_ENGINE...</span> [OK]</p>
+<p class="font-mono text-[10px] leading-relaxed text-on-surface-variant/80">[14:22:03] <span class="text-primary">ESTABLISHING CRYPTO_HANDSHAKE...</span> [OK]</p>
+<p class="font-mono text-[10px] leading-relaxed text-on-surface-variant/80">[14:22:05] <span class="text-primary">VERIFYING_INTEGRITY_SHIELDS...</span> [OK]</p>
+<p class="font-mono text-[10px] leading-relaxed text-on-surface-variant/80">[14:22:08] <span class="text-primary">SYNCING_GLOBAL_LEDGER_DATA...</span> [LOADING]</p>
+<p class="font-mono text-[10px] leading-relaxed text-on-surface-variant/40">[14:22:09] <span class="text-on-surface-variant/40">BUFFERING_MEMORY_ALLOCATION...</span></p>
+</div>
+</div>
+<!-- Version & Environment (Bottom Right) -->
+<div class="flex flex-col items-end gap-1">
+<div class="flex items-center gap-2 px-3 py-1 bg-surface-container-high rounded-full">
+<span class="w-1.5 h-1.5 rounded-full bg-primary"></span>
+<span class="font-mono text-[10px] text-primary tracking-widest">PRODUCTION_ENV</span>
+</div>
+<p class="text-[10px] font-mono text-on-surface-variant opacity-30 mt-2">V 1.0.4 - ENCRYPTED SESSION - ©2024 TRACE_CORP</p>
+</div>
+</footer>
+<!-- Minimal Background "Forensic Grid" Texture -->
+<div class="fixed inset-0 -z-10 opacity-[0.03]" style="background-image: radial-gradient(#ffffff 0.5px, transparent 0.5px); background-size: 24px 24px;"></div>
 </body></html>
