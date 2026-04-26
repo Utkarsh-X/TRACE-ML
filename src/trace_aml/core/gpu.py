@@ -37,6 +37,7 @@ import os
 from pathlib import Path
 import subprocess
 import sys
+import textwrap
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -191,6 +192,53 @@ def _load_windows_dll(dll_name: str) -> bool:
     return False
 
 
+def _probe_cuda_with_real_model(timeout_s: int = 25) -> bool:
+    """Verify InsightFace actually binds CUDA in an isolated subprocess.
+
+    Returns True only if the subprocess completes and reports CUDA provider
+    usage. This avoids enabling CUDA when ORT can be imported but InsightFace
+    still falls back to CPU or triggers native instability.
+    """
+    script = textwrap.dedent(
+        r"""
+        import sys
+        from pathlib import Path
+
+        import insightface
+        import numpy as np
+
+        candidates = [
+            Path.home() / ".insightface" / "models" / "buffalo_l" / "det_10g.onnx",
+            Path.home() / ".insightface" / "models" / "buffalo_l" / "w600k_r50.onnx",
+        ]
+        model = next((p for p in candidates if p.exists()), None)
+        if model is None:
+            # No local model cache yet - don't block startup on first download.
+            sys.exit(0)
+
+        app = insightface.app.FaceAnalysis(
+            name="buffalo_l",
+            providers=["CUDAExecutionProvider", "CPUExecutionProvider"],
+        )
+        app.prepare(ctx_id=0, det_size=(640, 640))
+        app.get(np.zeros((96, 96, 3), dtype=np.uint8))
+        """
+    )
+    try:
+        completed = subprocess.run(
+            [sys.executable, "-c", script],
+            capture_output=True,
+            timeout=timeout_s,
+            text=True,
+        )
+        combined = f"{completed.stdout or ''}\n{completed.stderr or ''}"
+        if completed.returncode != 0:
+            return False
+        return "CUDAExecutionProvider" in combined
+    except Exception:
+        return False
+
+
 def _verify_provider(provider: str, cuda_device_id: int = 0) -> bool:
     """Confirm the given EP is usable before handing the list to ONNX Runtime."""
     if os.name == "nt" and provider in _PROVIDER_REQUIRED_DLLS:
@@ -220,6 +268,9 @@ def _verify_provider(provider: str, cuda_device_id: int = 0) -> bool:
             finally:
                 for h in handles:
                     h.close()
+
+            if provider == "CUDAExecutionProvider" and not _probe_cuda_with_real_model():
+                return False
             return True
         except Exception:
             return False
