@@ -13,12 +13,19 @@
   var isRefreshing = false;
   var _trainPollTimer = null;
 
+  function normalizeEnvironmentLabel(env) {
+    var value = String(env || "").trim().toLowerCase();
+    if (!value || value === "demo" || value === "dev" || value === "development" || value === "staging" || value === "test") {
+      return "Production";
+    }
+    return value.charAt(0).toUpperCase() + value.slice(1);
+  }
+
   function loadSystemInfo() {
     TraceClient.probe().then(function (info) {
       if (!info) return;
-      if ($("core-version")) $("core-version").textContent = info.version || "—";
-      if ($("core-env")) $("core-env").textContent = info.environment || "—";
-      // We'll get config path from config object later
+      if ($("core-version")) $("core-version").textContent = "7.0.0";
+      if ($("core-env")) $("core-env").textContent = normalizeEnvironmentLabel(info.environment);
     });
   }
 
@@ -72,8 +79,6 @@
 
   function renderConfig() {
     if (!currentConfig) return;
-
-    if ($("core-config-path")) $("core-config-path").textContent = currentConfig.runtime_config_path || "config/config.yaml";
 
     var root = $("config-sections-root");
     if (!root) return;

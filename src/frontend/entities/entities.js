@@ -105,13 +105,11 @@
         + (isKnown ? 'person' : 'person_off')
         + '</span>';
 
-      var pill = activityPillHtml(ent);
       return '<div class="entity-card entity-card--' + cardType + '" data-entity-id="' + TraceClient.escapeHtml(ent.entity_id) + '">'
         /* top row: badge + activity pill + arrow */
         + '<div class="flex items-center justify-between mb-2">'
         + '<div class="flex items-center gap-2">'
         + '<span class="entity-card__badge entity-card__badge--' + typeKey + '">' + badgeText + '</span>'
-        + pill
         + '</div>'
         + '<span class="ec-arrow material-symbols-outlined" style="font-size:14px;color:#919191">arrow_forward</span>'
         + '</div>'

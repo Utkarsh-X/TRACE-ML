@@ -247,6 +247,50 @@
       display: flex;
     }
 
+    /* Index search shell */
+    .index-search-shell {
+      display: flex;
+      align-items: center;
+      width: 100%;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 4px;
+      transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+    }
+
+    .index-search-shell:focus-within {
+      border-color: rgba(255, 255, 255, 0.3);
+      background: rgba(255, 255, 255, 0.05);
+      box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.06);
+    }
+
+    .index-search-shell .material-symbols-outlined {
+      padding-left: 10px;
+      color: #7f7f7f;
+      flex-shrink: 0;
+      font-size: 15px;
+      line-height: 1;
+    }
+
+    .index-search-shell input {
+      width: 100%;
+      min-width: 0;
+      border: 0;
+      background: transparent;
+      outline: none;
+      box-shadow: none;
+      padding: 9px 10px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.7rem;
+      color: #f2f2f2;
+      letter-spacing: 0.02em;
+    }
+
+    .index-search-shell input::placeholder {
+      color: #777;
+      opacity: 1;
+    }
+
     /* Enhanced Person Card */
     .person-card {
       padding: 12px;
@@ -922,7 +966,7 @@
     <aside class="sidenav" id="sidenav">
       <div class="sidenav-header">
         <button class="hamburger-btn" id="sidenav-toggle" title="Toggle sidebar (Ctrl+B)">
-          <span class="material-symbols-outlined">menu</span>
+          <span class="material-symbols-outlined">dock_to_right</span>
         </button>
         <span class="sidenav-brand">TRACE-AML</span>
       </div>
@@ -999,12 +1043,9 @@
                 </button>
                 <span class="font-mono text-[0.6rem] text-outline" id="person-count">--</span>
               </div>
-              <div class="relative">
-                <span
-                  class="material-symbols-outlined absolute left-3 top-2 text-outline-variant text-[16px]">search</span>
-                <input type="text" placeholder="Search index..."
-                  class="w-full bg-surface-high font-mono text-[0.7rem] text-white border-0 px-3 py-2 pl-9 placeholder-outline-variant focus:ring-1 focus:ring-primary rounded-sm"
-                  id="person-search" />
+              <div class="index-search-shell">
+                <span class="material-symbols-outlined">search</span>
+                <input type="text" placeholder="Search index..." id="person-search" />
               </div>
             </header>
             <!-- List area — height controlled by the horizontal splitter below -->

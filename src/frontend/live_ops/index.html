@@ -119,6 +119,35 @@
       0%, 100% { opacity: 1; }
       50%       { opacity: 0.3; }
     }
+
+    /* ── Live Ops health mini-bar alignment ───────────────── */
+    .ops-health-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.35rem 0.9rem;
+      align-items: center;
+    }
+
+    .ops-health-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: center;
+      column-gap: 0.6rem;
+      min-width: 0;
+    }
+
+    .ops-health-row .stat-label {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .ops-health-value {
+      min-width: 1.6ch;
+      text-align: right;
+      line-height: 1;
+      font-variant-numeric: tabular-nums;
+    }
   </style>
 </head>
 
@@ -130,7 +159,7 @@
 <aside class="sidenav" id="sidenav">
   <div class="sidenav-header">
     <button class="hamburger-btn" id="sidenav-toggle" title="Toggle sidebar (Ctrl+B)">
-      <span class="material-symbols-outlined">menu</span>
+      <span class="material-symbols-outlined">dock_to_right</span>
     </button>
     <span class="sidenav-brand">TRACE-AML</span>
   </div>
@@ -212,22 +241,22 @@
           </div>
 
           <!-- System health mini-bar -->
-          <div class="px-4 py-2.5 border-b border-outline-variant/10 flex-shrink-0 grid grid-cols-2 gap-x-3 gap-y-1">
-            <div class="flex items-center justify-between">
+          <div class="px-4 py-2.5 border-b border-outline-variant/10 flex-shrink-0 ops-health-grid">
+            <div class="ops-health-row">
               <span class="stat-label">Entities</span>
-              <span class="font-mono text-[0.8rem] text-white" id="health-entities">--</span>
+              <span class="font-mono text-[0.8rem] text-white ops-health-value" id="health-entities">--</span>
             </div>
-            <div class="flex items-center justify-between">
+            <div class="ops-health-row">
               <span class="stat-label">Incidents</span>
-              <span class="font-mono text-[0.8rem] text-white" id="health-incidents">--</span>
+              <span class="font-mono text-[0.8rem] text-white ops-health-value" id="health-incidents">--</span>
             </div>
-            <div class="flex items-center justify-between">
+            <div class="ops-health-row">
               <span class="stat-label">Alerts</span>
-              <span class="font-mono text-[0.8rem] text-white" id="health-alerts">--</span>
+              <span class="font-mono text-[0.8rem] text-white ops-health-value" id="health-alerts">--</span>
             </div>
-            <div class="flex items-center justify-between">
+            <div class="ops-health-row">
               <span class="stat-label">Detections</span>
-              <span class="font-mono text-[0.8rem] text-white" id="health-detections">--</span>
+              <span class="font-mono text-[0.8rem] text-white ops-health-value" id="health-detections">--</span>
             </div>
           </div>
 

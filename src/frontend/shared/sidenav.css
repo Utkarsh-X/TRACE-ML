@@ -14,7 +14,7 @@
 /* ── Side nav ───────────────────────────────────────────────────── */
 .sidenav {
   --sn-expanded: 240px;
-  --sn-collapsed: 62px;
+  --sn-collapsed: 55px;
 
   width: var(--sn-expanded);
   height: 100vh;
@@ -127,6 +127,9 @@
 }
 .sidenav.collapsed .sidenav-status .status-label {
   opacity: 0;
+}
+.sidenav.collapsed .sidenav-status {
+  display: none;
 }
 
 /* ── Nav sections ───────────────────────────────────────────────── */
