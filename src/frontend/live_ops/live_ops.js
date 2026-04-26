@@ -361,22 +361,23 @@
 
   var _overlayTimer = null;
 
-  // ── 6-type entity style definitions ──────────────────────────────────────
-  // Each entry defines the bracket/label colour, short label prefix,
-  // whether to render confidence, and the intel-panel status line.
+  // ── Forensic overlay palette ─────────────────────────────────────────────
+  // Desaturated, mid-brightness colours that remain clearly distinct on a dark
+  // camera feed without burning into the image or competing with each other.
+  // Priority hierarchy is maintained: red=threat, gold=protected, grey=neutral.
   var ENTITY_TYPE_STYLES = {
-    criminal:    { color: "#ff3366", badge: "CRIM",  showConf: true,
-                   status: "IDENTIFIED \u00b7 CRIMINAL / POI" },
-    missing:     { color: "#ffaa33", badge: "MISS",  showConf: true,
-                   status: "IDENTIFIED \u00b7 MISSING PERSON" },
-    employee:    { color: "#33ff77", badge: "STAFF", showConf: true,
-                   status: "IDENTIFIED \u00b7 AUTH STAFF" },
-    vip:         { color: "#ffdd44", badge: "VIP",   showConf: true,
-                   status: "IDENTIFIED \u00b7 PROTECTED ENTITY" },
-    unknown:     { color: "#bb44ff", badge: "UNK",   showConf: false,
-                   status: "NEW UNKNOWN \u00b7 No DB match" },
-    reappearing: { color: "#ff44cc", badge: "RPT",   showConf: true,
-                   status: "REAPPEARING \u00b7 Seen before" },
+    criminal:    { color: "#d95555", badge: "CRIM",  showConf: true,
+                   status: "IDENTIFIED · CRIMINAL / POI" },
+    missing:     { color: "#c47f3a", badge: "MISS",  showConf: true,
+                   status: "IDENTIFIED · MISSING PERSON" },
+    employee:    { color: "#4a9e6b", badge: "STAFF", showConf: true,
+                   status: "IDENTIFIED · AUTH STAFF" },
+    vip:         { color: "#c8aa52", badge: "VIP",   showConf: true,
+                   status: "IDENTIFIED · PROTECTED ENTITY" },
+    unknown:     { color: "#7a7a9a", badge: "UNK",   showConf: false,
+                   status: "NEW UNKNOWN · No DB match" },
+    reappearing: { color: "#8888bb", badge: "RPT",   showConf: true,
+                   status: "REAPPEARING · Seen before" },
   };
 
   // Pulse map: track_id -> timestamp when committed (for 800ms on-appear glow).

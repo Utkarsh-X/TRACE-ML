@@ -55,11 +55,13 @@ def draw_box(frame, bbox: tuple[int, int, int, int], color: tuple[int, int, int]
 
 
 def _decision_color(decision: DecisionState) -> tuple[int, int, int]:
+    # Forensic overlay palette — muted, desaturated BGR values.
+    # Avoids full-saturation primaries that burn into the camera feed.
     if decision == DecisionState.accept:
-        return (0, 0, 255)
+        return (85, 85, 217)   # muted indigo-blue  (#D55555 → BGR)
     if decision == DecisionState.review:
-        return (0, 200, 255)
-    return (0, 255, 0)
+        return (160, 175, 196) # soft warm-grey-teal (#C4AF A0 → BGR)
+    return (107, 158, 74)      # muted sage-green   (#4A9E6B → BGR)
 
 
 class RecognitionSession:
@@ -704,8 +706,8 @@ class RecognitionSession:
         cv2.addWeighted(overlay, 0.5, frame, 0.5, 0, frame)
 
         pulse = int(6 + (math.sin(time.time() * 4) + 1) * 4)
-        cv2.circle(frame, (18, 18), pulse, (0, 255, 200), 1)
-        draw_text(frame, "TRACE-AML // OPERATOR MODE", (40, 22), (0, 255, 200))
+        cv2.circle(frame, (18, 18), pulse, (180, 220, 180), 1)
+        draw_text(frame, "TRACE-AML // OPERATOR MODE", (40, 22), (180, 220, 180))
         draw_text(
             frame,
             f"FPS:{fps:.1f}  TRACKS:{self.temporal.active_track_count()}  LAT:{self.last_latency_ms:.0f}ms  CAMERA:device0",
@@ -742,7 +744,7 @@ class RecognitionSession:
         overlay2 = frame.copy()
         cv2.rectangle(overlay2, (x0, 0), (w, min(h, 200)), (0, 0, 0), -1)
         cv2.addWeighted(overlay2, 0.45, frame, 0.55, 0, frame)
-        draw_text(frame, "EVENT FEED", (x0 + 8, 22), (0, 255, 200), scale=0.52)
+        draw_text(frame, "EVENT FEED", (x0 + 8, 22), (180, 220, 180), scale=0.52)
         for idx, item in enumerate(list(self.event_feed)[:7]):
             draw_text(frame, f"{idx+1:02d} {item}", (x0 + 8, 44 + idx * 20), (210, 210, 210), scale=0.47)
 
