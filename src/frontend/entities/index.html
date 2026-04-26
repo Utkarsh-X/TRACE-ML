@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html class="dark" lang="en">
+
 <head>
   <meta charset="utf-8" />
   <meta content="width=device-width, initial-scale=1.0" name="viewport" />
@@ -14,13 +15,14 @@
     /* ── Compact stat bar ─────────────────────────── */
     .stat-bar {
       display: flex;
-      border-top: 1px solid rgba(255,255,255,0.06);
-      border-bottom: 1px solid rgba(255,255,255,0.06);
+      border-top: 1px solid rgba(255, 255, 255, 0.06);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
     }
+
     .stat-bar__item {
       flex: 1;
       padding: 0.75rem 1.25rem;
-      border-right: 1px solid rgba(255,255,255,0.06);
+      border-right: 1px solid rgba(255, 255, 255, 0.06);
       display: flex;
       flex-direction: column;
       gap: 0.25rem;
@@ -32,9 +34,19 @@
       transition: background 0.15s;
       text-align: left;
     }
-    .stat-bar__item:last-child { border-right: none; }
-    .stat-bar__item:hover { background: rgba(255,255,255,0.03); }
-    .stat-bar__item.active { background: rgba(255,255,255,0.05); }
+
+    .stat-bar__item:last-child {
+      border-right: none;
+    }
+
+    .stat-bar__item:hover {
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    .stat-bar__item.active {
+      background: rgba(255, 255, 255, 0.05);
+    }
+
     .stat-bar__label {
       font-family: 'JetBrains Mono', monospace;
       font-size: 0.58rem;
@@ -42,7 +54,11 @@
       letter-spacing: 0.12em;
       color: #919191;
     }
-    .stat-bar__item:hover .stat-bar__label { color: #c0c0c0; }
+
+    .stat-bar__item:hover .stat-bar__label {
+      color: #c0c0c0;
+    }
+
     .stat-bar__value {
       font-family: 'Inter', sans-serif;
       font-size: 1.75rem;
@@ -50,6 +66,7 @@
       line-height: 1;
       color: #fff;
     }
+
     .stat-bar__hint {
       font-family: 'JetBrains Mono', monospace;
       font-size: 0.52rem;
@@ -58,7 +75,10 @@
       letter-spacing: 0.08em;
       margin-top: 2px;
     }
-    .stat-bar__item:hover .stat-bar__hint { color: #666; }
+
+    .stat-bar__item:hover .stat-bar__hint {
+      color: #666;
+    }
 
     /* ── Entity card grid ─────────────────────────── */
     #entity-grid {
@@ -68,25 +88,44 @@
       padding: 1rem 1.25rem;
       background: transparent;
     }
-    @media (max-width: 860px) { #entity-grid { grid-template-columns: repeat(2, 1fr); } }
-    @media (max-width: 560px) { #entity-grid { grid-template-columns: 1fr; } }
+
+    @media (max-width: 860px) {
+      #entity-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    @media (max-width: 560px) {
+      #entity-grid {
+        grid-template-columns: 1fr;
+      }
+    }
 
     /* ── Entity card ──────────────────────────────── */
     .entity-card {
       background: #1c1c1c;
-      border: 1px solid rgba(255,255,255,0.06);
+      border: 1px solid rgba(255, 255, 255, 0.06);
       padding: 1.1rem 1.25rem 1rem;
       cursor: pointer;
       position: relative;
       transition: background 0.15s, border-color 0.15s, box-shadow 0.15s;
     }
+
     .entity-card:hover {
       background: #232323;
-      border-color: rgba(255,255,255,0.14);
-      box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+      border-color: rgba(255, 255, 255, 0.14);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
     }
-    .entity-card:hover .ec-arrow { opacity: 1; transform: translateX(3px); }
-    .ec-arrow { opacity: 0; transition: opacity 0.15s, transform 0.15s; }
+
+    .entity-card:hover .ec-arrow {
+      opacity: 1;
+      transform: translateX(3px);
+    }
+
+    .ec-arrow {
+      opacity: 0;
+      transition: opacity 0.15s, transform 0.15s;
+    }
 
     /* ── Activity signal pill ──────────────────────── */
     .activity-pill {
@@ -100,6 +139,7 @@
       padding: 2px 6px;
       border-radius: 2px;
     }
+
     .activity-pill::before {
       content: '';
       width: 5px;
@@ -107,15 +147,47 @@
       border-radius: 50%;
       flex-shrink: 0;
     }
-    .activity-pill--active  { color: #4ade80; background: rgba(74,222,128,0.08); }
-    .activity-pill--active::before { background: #4ade80; box-shadow: 0 0 4px #4ade80; animation: pulse-dot 2s infinite; }
-    .activity-pill--idle    { color: #919191; background: rgba(145,145,145,0.08); }
-    .activity-pill--idle::before { background: #555; }
-    .activity-pill--flagged { color: #ff6b6b; background: rgba(255,107,107,0.08); }
-    .activity-pill--flagged::before { background: #ff6b6b; animation: pulse-dot 1s infinite; }
+
+    .activity-pill--active {
+      color: #4ade80;
+      background: rgba(74, 222, 128, 0.08);
+    }
+
+    .activity-pill--active::before {
+      background: #4ade80;
+      box-shadow: 0 0 4px #4ade80;
+      animation: pulse-dot 2s infinite;
+    }
+
+    .activity-pill--idle {
+      color: #919191;
+      background: rgba(145, 145, 145, 0.08);
+    }
+
+    .activity-pill--idle::before {
+      background: #555;
+    }
+
+    .activity-pill--flagged {
+      color: #ff6b6b;
+      background: rgba(255, 107, 107, 0.08);
+    }
+
+    .activity-pill--flagged::before {
+      background: #ff6b6b;
+      animation: pulse-dot 1s infinite;
+    }
+
     @keyframes pulse-dot {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.4; }
+
+      0%,
+      100% {
+        opacity: 1;
+      }
+
+      50% {
+        opacity: 0.4;
+      }
     }
 
     /* ── Quick filter chips ───────────────────────── */
@@ -126,24 +198,42 @@
       letter-spacing: 0.1em;
       padding: 4px 12px;
       background: transparent;
-      border: 1px solid rgba(255,255,255,0.1);
+      border: 1px solid rgba(255, 255, 255, 0.1);
       color: #919191;
       cursor: pointer;
       transition: background 0.15s, color 0.15s, border-color 0.15s;
     }
-    .quick-filter-chip:hover { background: rgba(255,255,255,0.04); color: #ccc; border-color: rgba(255,255,255,0.2); }
-    .quick-filter-chip.active { background: rgba(255,255,255,0.1); color: #fff; border-color: rgba(255,255,255,0.35); }
+
+    .quick-filter-chip:hover {
+      background: rgba(255, 255, 255, 0.04);
+      color: #ccc;
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    .quick-filter-chip.active {
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+      border-color: rgba(255, 255, 255, 0.35);
+    }
 
     /* top accent line per type - monochromatic patterns */
     .entity-card::before {
       content: '';
       position: absolute;
-      top: 0; left: 0; right: 0;
+      top: 0;
+      left: 0;
+      right: 0;
       height: 2px;
     }
-    .entity-card--known::before   { background: rgba(255,255,255,0.15); }
+
+    .entity-card--known::before {
+      background: rgba(255, 255, 255, 0.15);
+    }
+
     /* Unknown entity: gray pattern instead of red */
-    .entity-card--unknown::before { background: repeating-linear-gradient(90deg, rgba(189,189,189,0.3) 0px, rgba(189,189,189,0.3) 2px, transparent 2px, transparent 4px); }
+    .entity-card--unknown::before {
+      background: repeating-linear-gradient(90deg, rgba(189, 189, 189, 0.3) 0px, rgba(189, 189, 189, 0.3) 2px, transparent 2px, transparent 4px);
+    }
 
     /* badge - monochromatic */
     .entity-card__badge {
@@ -158,12 +248,32 @@
       border: 1px solid;
       margin-bottom: 0.7rem;
     }
-    .entity-card__badge--known    { color: #c6c6c6; border-color: rgba(198,198,198,0.22); border-style: solid; }
+
+    .entity-card__badge--known {
+      color: #c6c6c6;
+      border-color: rgba(198, 198, 198, 0.22);
+      border-style: solid;
+    }
+
     /* Unknown badge: gray dashed instead of red */
-    .entity-card__badge--unknown  { color: #919191; border-color: rgba(117,117,117,0.4); background: transparent; border-style: dashed; }
-    .entity-card__badge--vip      { color: #fff;    border-color: rgba(255,255,255,0.45); }
+    .entity-card__badge--unknown {
+      color: #919191;
+      border-color: rgba(117, 117, 117, 0.4);
+      background: transparent;
+      border-style: dashed;
+    }
+
+    .entity-card__badge--vip {
+      color: #fff;
+      border-color: rgba(255, 255, 255, 0.45);
+    }
+
     /* Criminal badge: gray solid instead of red */
-    .entity-card__badge--criminal { color: #e2e2e2; border-color: rgba(255,255,255,0.3); background: rgba(255,255,255,0.05); }
+    .entity-card__badge--criminal {
+      color: #e2e2e2;
+      border-color: rgba(255, 255, 255, 0.3);
+      background: rgba(255, 255, 255, 0.05);
+    }
 
     /* avatar */
     .entity-card__avatar {
@@ -171,7 +281,7 @@
       height: 38px;
       flex-shrink: 0;
       background: #141414;
-      border: 1px solid rgba(255,255,255,0.08);
+      border: 1px solid rgba(255, 255, 255, 0.08);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -181,14 +291,19 @@
     .entity-card__footer {
       margin-top: 0.9rem;
       padding-top: 0.75rem;
-      border-top: 1px solid rgba(255,255,255,0.06);
+      border-top: 1px solid rgba(255, 255, 255, 0.06);
       display: flex;
       align-items: center;
       justify-content: space-between;
     }
 
-    #view-overview { display: block; }
-    #view-detail   { display: none; }
+    #view-overview {
+      display: block;
+    }
+
+    #view-detail {
+      display: none;
+    }
 
     /* ── Entity portrait ──────────────────────────── */
     .portrait-frame {
@@ -196,16 +311,20 @@
       width: 100%;
       height: 100%;
     }
+
     .portrait-frame__img {
       width: 100%;
       height: 100%;
       object-fit: cover;
       object-position: center top;
-      display: none; /* revealed by JS once loaded */
+      display: none;
+      /* revealed by JS once loaded */
     }
+
     .portrait-frame__img.loaded {
       display: block;
     }
+
     .portrait-frame__placeholder {
       width: 100%;
       height: 100%;
@@ -215,22 +334,23 @@
       justify-content: center;
       gap: 0.5rem;
     }
+
     .portrait-frame__placeholder.hidden {
       display: none;
     }
+
     /* Scan-line animation overlay on portrait */
     .portrait-frame__scanline {
       position: absolute;
       inset: 0;
-      background: repeating-linear-gradient(
-        0deg,
-        transparent,
-        transparent 2px,
-        rgba(0,0,0,0.06) 2px,
-        rgba(0,0,0,0.06) 4px
-      );
+      background: repeating-linear-gradient(0deg,
+          transparent,
+          transparent 2px,
+          rgba(0, 0, 0, 0.06) 2px,
+          rgba(0, 0, 0, 0.06) 4px);
       pointer-events: none;
     }
+
     /* Corner reticule marks */
     .portrait-frame::before,
     .portrait-frame::after {
@@ -238,12 +358,22 @@
       position: absolute;
       width: 16px;
       height: 16px;
-      border-color: rgba(255,255,255,0.18);
+      border-color: rgba(255, 255, 255, 0.18);
       border-style: solid;
       z-index: 2;
     }
-    .portrait-frame::before { top: 8px; left: 8px; border-width: 2px 0 0 2px; }
-    .portrait-frame::after  { bottom: 8px; right: 8px; border-width: 0 2px 2px 0; }
+
+    .portrait-frame::before {
+      top: 8px;
+      left: 8px;
+      border-width: 2px 0 0 2px;
+    }
+
+    .portrait-frame::after {
+      bottom: 8px;
+      right: 8px;
+      border-width: 0 2px 2px 0;
+    }
 
     /* Card avatar portrait thumbnail */
     .entity-card__avatar img {
@@ -256,6 +386,7 @@
     dialog#modal-edit-entity {
       /* When closed, defer to browser default (display:none) */
     }
+
     dialog#modal-edit-entity[open] {
       position: fixed;
       top: 50%;
@@ -273,6 +404,7 @@
       flex-direction: column;
       overflow: hidden;
     }
+
     dialog#modal-edit-entity::backdrop {
       background: rgba(0, 0, 0, 0.65);
       backdrop-filter: blur(2px);
@@ -283,11 +415,13 @@
     dialog#modal-edit-entity[open] {
       animation: modal-appear 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards;
     }
+
     @keyframes modal-appear {
       from {
         opacity: 0;
         transform: translate(-50%, calc(-50% - 16px)) scale(0.96);
       }
+
       to {
         opacity: 1;
         transform: translate(-50%, -50%) scale(1);
@@ -299,8 +433,10 @@
     #edit-tab-images {
       flex: 1;
       overflow-y: auto;
-      min-height: 0; /* critical for flex children to shrink */
+      min-height: 0;
+      /* critical for flex children to shrink */
     }
+
     /* Footer is always pinned at bottom */
     #edit-modal-footer {
       flex-shrink: 0;
@@ -312,6 +448,7 @@
       position: relative;
       overflow: hidden;
     }
+
     .edit-tab-btn::after {
       content: '';
       position: absolute;
@@ -319,14 +456,16 @@
       left: 0;
       right: 0;
       height: 0px;
-      background: rgba(255,255,255, 0.05);
+      background: rgba(255, 255, 255, 0.05);
       z-index: -1;
     }
+
     .edit-tab-btn--active::after {
       height: 20px;
     }
+
     .edit-tab-btn:hover {
-      background: rgba(255,255,255, 0.02);
+      background: rgba(255, 255, 255, 0.02);
     }
 
     /* ── Input Focus Enhancement ──────────────────────── */
@@ -336,6 +475,7 @@
     textarea {
       position: relative;
     }
+
     input[type="text"]:focus,
     select:focus,
     textarea:focus {
@@ -346,10 +486,12 @@
     #edit-image-dropzone {
       position: relative;
     }
+
     #edit-image-dropzone:hover {
       border-color: rgb(98, 198, 239);
       background: rgba(98, 198, 239, 0.05);
     }
+
     #edit-image-dropzone.dragover {
       border-color: rgb(98, 198, 239) !important;
       background: rgba(98, 198, 239, 0.1) !important;
@@ -395,6 +537,7 @@
         grid-template-columns: repeat(3, 1fr) !important;
       }
     }
+
     @media (max-width: 400px) {
       #edit-image-preview-strip {
         grid-template-columns: repeat(2, 1fr) !important;
@@ -406,50 +549,80 @@
     .linked-cases-panel {
       display: flex;
       flex-direction: column;
-      border: 1px solid rgba(255,255,255,0.06);
+      border: 1px solid rgba(255, 255, 255, 0.06);
       background: #171717;
       overflow: hidden;
     }
+
     .linked-cases-panel__header {
       display: flex;
       align-items: center;
       justify-content: space-between;
       padding: 8px 14px;
-      border-bottom: 1px solid rgba(255,255,255,0.05);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
       flex-shrink: 0;
     }
+
     .linked-cases-panel__scroll {
       flex: 1;
       overflow-y: auto;
       padding: 12px;
       min-height: 0;
     }
-    .linked-cases-panel__scroll::-webkit-scrollbar { width: 4px; }
-    .linked-cases-panel__scroll::-webkit-scrollbar-track { background: transparent; }
-    .linked-cases-panel__scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 4px; }
-    .linked-cases-panel__scroll::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.14); }
+
+    .linked-cases-panel__scroll::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    .linked-cases-panel__scroll::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    .linked-cases-panel__scroll::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 4px;
+    }
+
+    .linked-cases-panel__scroll::-webkit-scrollbar-thumb:hover {
+      background: rgba(255, 255, 255, 0.14);
+    }
+
     .linked-cases-panel__footer {
       flex-shrink: 0;
-      border-top: 1px solid rgba(255,255,255,0.05);
+      border-top: 1px solid rgba(255, 255, 255, 0.05);
     }
 
     /* ── Timeline Frame ──────────────────────────── */
     .tl-panel {
-      border: 1px solid rgba(255,255,255,0.06);
+      border: 1px solid rgba(255, 255, 255, 0.06);
       background: #171717;
       overflow: hidden;
       display: flex;
       flex-direction: column;
     }
+
     .tl-scroll {
       max-height: 480px;
       overflow-y: auto;
       overscroll-behavior: contain;
     }
-    .tl-scroll::-webkit-scrollbar { width: 4px; }
-    .tl-scroll::-webkit-scrollbar-track { background: transparent; }
-    .tl-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 4px; }
-    .tl-scroll::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.14); }
+
+    .tl-scroll::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    .tl-scroll::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    .tl-scroll::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 4px;
+    }
+
+    .tl-scroll::-webkit-scrollbar-thumb:hover {
+      background: rgba(255, 255, 255, 0.14);
+    }
 
     /* ALERT / INCIDENT: section header rows */
     .tl-header-row {
@@ -458,13 +631,23 @@
       gap: 10px;
       padding: 9px 14px 9px 12px;
       border-left: 2px solid;
-      background: rgba(255,255,255,0.025);
-      border-bottom: 1px solid rgba(255,255,255,0.05);
+      background: rgba(255, 255, 255, 0.025);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
       margin-top: 1px;
     }
-    .tl-header-row:first-child { margin-top: 0; }
-    .tl-header-row--alert    { border-left-color: rgba(255,255,255,0.3); }
-    .tl-header-row--incident { border-left-color: #ff6b6b; background: rgba(255,107,107,0.05); }
+
+    .tl-header-row:first-child {
+      margin-top: 0;
+    }
+
+    .tl-header-row--alert {
+      border-left-color: rgba(255, 255, 255, 0.3);
+    }
+
+    .tl-header-row--incident {
+      border-left-color: #ff6b6b;
+      background: rgba(255, 107, 107, 0.05);
+    }
 
     .tl-header-row__time {
       font-family: 'JetBrains Mono', monospace;
@@ -474,6 +657,7 @@
       min-width: 58px;
       tabular-nums: all;
     }
+
     .tl-header-row__label {
       font-family: 'JetBrains Mono', monospace;
       font-size: 0.55rem;
@@ -484,8 +668,17 @@
       border: 1px solid;
       flex-shrink: 0;
     }
-    .tl-header-row__label--alert    { color: #c8c8c8; border-color: rgba(200,200,200,0.25); }
-    .tl-header-row__label--incident { color: #ff6b6b; border-color: rgba(255,107,107,0.4); }
+
+    .tl-header-row__label--alert {
+      color: #c8c8c8;
+      border-color: rgba(200, 200, 200, 0.25);
+    }
+
+    .tl-header-row__label--incident {
+      color: #ff6b6b;
+      border-color: rgba(255, 107, 107, 0.4);
+    }
+
     .tl-header-row__title {
       font-size: 0.75rem;
       color: #e0e0e0;
@@ -501,12 +694,20 @@
       display: flex;
       align-items: center;
       gap: 10px;
-      padding: 5px 14px 5px 26px; /* extra left indent */
-      border-bottom: 1px solid rgba(255,255,255,0.025);
+      padding: 5px 14px 5px 26px;
+      /* extra left indent */
+      border-bottom: 1px solid rgba(255, 255, 255, 0.025);
       transition: background 0.12s;
     }
-    .tl-event-row:last-child { border-bottom: none; }
-    .tl-event-row:hover { background: rgba(255,255,255,0.02); }
+
+    .tl-event-row:last-child {
+      border-bottom: none;
+    }
+
+    .tl-event-row:hover {
+      background: rgba(255, 255, 255, 0.02);
+    }
+
     .tl-event-row__time {
       font-family: 'JetBrains Mono', monospace;
       font-size: 0.55rem;
@@ -514,6 +715,7 @@
       white-space: nowrap;
       min-width: 58px;
     }
+
     .tl-event-row__dot {
       width: 4px;
       height: 4px;
@@ -521,6 +723,7 @@
       background: #3a3a3a;
       flex-shrink: 0;
     }
+
     .tl-event-row__text {
       font-size: 0.68rem;
       color: #888;
@@ -540,7 +743,7 @@
       padding: 10px;
       background: transparent;
       border: none;
-      border-top: 1px solid rgba(255,255,255,0.05);
+      border-top: 1px solid rgba(255, 255, 255, 0.05);
       font-family: 'JetBrains Mono', monospace;
       font-size: 0.58rem;
       text-transform: uppercase;
@@ -550,25 +753,35 @@
       transition: color 0.15s, background 0.15s;
       flex-shrink: 0;
     }
-    .tl-load-more:hover { color: #aaa; background: rgba(255,255,255,0.02); }
+
+    .tl-load-more:hover {
+      color: #aaa;
+      background: rgba(255, 255, 255, 0.02);
+    }
+
     #entity-incidents-root {
       flex: 1;
       overflow-y: auto;
       padding-right: 6px;
-      margin-right: -6px; /* offset padding for scrollbar */
+      margin-right: -6px;
+      /* offset padding for scrollbar */
     }
+
     #entity-incidents-root::-webkit-scrollbar {
       width: 4px;
     }
+
     #entity-incidents-root::-webkit-scrollbar-track {
       background: transparent;
     }
+
     #entity-incidents-root::-webkit-scrollbar-thumb {
-      background: rgba(255,255,255,0.1);
+      background: rgba(255, 255, 255, 0.1);
       border-radius: 10px;
     }
+
     #entity-incidents-root::-webkit-scrollbar-thumb:hover {
-      background: rgba(255,255,255,0.2);
+      background: rgba(255, 255, 255, 0.2);
     }
 
     /* ── Action Buttons (Matching History Page) ────────────────────── */
@@ -587,29 +800,50 @@
       justify-content: center;
       gap: 6px;
     }
-    .fbar-btn:hover { opacity: 0.75; }
-    .fbar-btn-primary { background: var(--primary); color: var(--on-primary); font-weight: 700; }
-    .fbar-btn-ghost   { background: transparent; color: var(--outline); border: 1px solid rgba(255,255,255,0.1); }
-    .fbar-btn-ghost:hover { background: rgba(255,255,255,0.05); color: white; opacity: 1; }
+
+    .fbar-btn:hover {
+      opacity: 0.75;
+    }
+
+    .fbar-btn-primary {
+      background: var(--primary);
+      color: var(--on-primary);
+      font-weight: 700;
+    }
+
+    .fbar-btn-ghost {
+      background: transparent;
+      color: var(--outline);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .fbar-btn-ghost:hover {
+      background: rgba(255, 255, 255, 0.05);
+      color: white;
+      opacity: 1;
+    }
 
     /* ── Entity Activity Graph (EAG) ────────────────────── */
     .eag-panel {
-      border: 1px solid rgba(255,255,255,0.06);
+      border: 1px solid rgba(255, 255, 255, 0.06);
       background: #171717;
       overflow: hidden;
     }
+
     .eag-header {
       display: flex;
       align-items: center;
       justify-content: space-between;
       padding: 8px 16px;
-      border-bottom: 1px solid rgba(255,255,255,0.05);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
     }
+
     .eag-header__left {
       display: flex;
       align-items: center;
       gap: 12px;
     }
+
     .eag-header__title {
       font-family: 'JetBrains Mono', monospace;
       font-size: 0.55rem;
@@ -617,18 +851,32 @@
       letter-spacing: 0.12em;
       color: #555;
     }
+
     .eag-header__pattern {
       font-family: 'JetBrains Mono', monospace;
       font-size: 0.52rem;
       text-transform: uppercase;
       letter-spacing: 0.1em;
       padding: 1px 7px;
-      border: 1px solid rgba(255,255,255,0.12);
+      border: 1px solid rgba(255, 255, 255, 0.12);
       color: #888;
     }
-    .eag-header__pattern--burst       { color: #ffb4ab; border-color: rgba(255,180,171,0.3); }
-    .eag-header__pattern--continuous  { color: #4ade80; border-color: rgba(74,222,128,0.25); }
-    .eag-header__pattern--low         { color: #555;    border-color: rgba(255,255,255,0.1); }
+
+    .eag-header__pattern--burst {
+      color: #ffb4ab;
+      border-color: rgba(255, 180, 171, 0.3);
+    }
+
+    .eag-header__pattern--continuous {
+      color: #4ade80;
+      border-color: rgba(74, 222, 128, 0.25);
+    }
+
+    .eag-header__pattern--low {
+      color: #555;
+      border-color: rgba(255, 255, 255, 0.1);
+    }
+
     .eag-header__range {
       font-family: 'JetBrains Mono', monospace;
       font-size: 0.52rem;
@@ -636,16 +884,18 @@
       letter-spacing: 0.1em;
       color: #333;
     }
+
     .eag-chart-wrap {
       position: relative;
       padding: 6px 0 0;
       min-height: 120px;
     }
+
     /* Tooltip */
     #eag-tooltip {
       position: absolute;
       background: #1e1e1e;
-      border: 1px solid rgba(255,255,255,0.1);
+      border: 1px solid rgba(255, 255, 255, 0.1);
       padding: 6px 10px;
       pointer-events: none;
       display: none;
@@ -658,525 +908,581 @@
 
 
 
-<div class="app-shell">
+  <div class="app-shell">
 
-<!-- SIDE NAV -->
-<aside class="sidenav" id="sidenav">
-  <div class="sidenav-header">
-    <button class="hamburger-btn" id="sidenav-toggle" title="Toggle sidebar (Ctrl+B)">
-      <span class="material-symbols-outlined">menu</span>
-    </button>
-    <span class="sidenav-brand">TRACE-AML</span>
-  </div>
-  <div class="sidenav-status">
-    <span class="status-dot" id="connection-badge"></span>
-    <span class="status-label"></span>
-  </div>
-  <nav class="sidenav-nav">
-    <a class="nav-item " href="../live_ops/index.html" data-tooltip="Live Ops">
-      <span class="material-symbols-outlined nav-icon">monitoring</span>
-      <span class="nav-label">Live Ops</span>
-    </a>
-    <a class="nav-item " href="../incidents/index.html" data-tooltip="Incidents">
-      <span class="material-symbols-outlined nav-icon">timeline</span>
-      <span class="nav-label">Incidents</span>
-    </a>
-    <a class="nav-item active" href="../entities/index.html" data-tooltip="Entities">
-      <span class="material-symbols-outlined nav-icon">hub</span>
-      <span class="nav-label">Entities</span>
-    </a>
-    <a class="nav-item " href="../history/index.html" data-tooltip="History">
-      <span class="material-symbols-outlined nav-icon">history</span>
-      <span class="nav-label">History</span>
-    </a>
-    <a class="nav-item " href="../database/index.html" data-tooltip="Database">
-      <span class="material-symbols-outlined nav-icon">database</span>
-      <span class="nav-label">Database</span>
-    </a>
-  </nav>
-  <div class="sidenav-divider"></div>
-  <nav class="sidenav-nav">
-    <a class="nav-item " href="../enrollment/index.html" data-tooltip="Enrollment">
-      <span class="material-symbols-outlined nav-icon">person_add</span>
-      <span class="nav-label">Enrollment</span>
-    </a>
-  </nav>
-  <div class="sidenav-spacer"></div>
-  <div class="sidenav-bottom">
-    <a class="nav-item " href="../settings/index.html" data-tooltip="Settings">
-      <span class="material-symbols-outlined nav-icon">settings</span>
-      <span class="nav-label">Settings</span>
-    </a>
-    <button class="nav-item nav-btn" type="button" data-tooltip="Admin">
-      <span class="material-symbols-outlined nav-icon">person</span>
-      <span class="nav-label">Admin</span>
-    </button>
-    <div class="sidenav-divider"></div>
-    <button class="nav-item nav-btn" type="button" data-tooltip="Help">
-      <span class="material-symbols-outlined nav-icon">help_outline</span>
-      <span class="nav-label">Help</span>
-    </button>
-    <button class="nav-item nav-btn" type="button" data-tooltip="Exit">
-      <span class="material-symbols-outlined nav-icon">logout</span>
-      <span class="nav-label">Exit</span>
-    </button>
-  </div>
-  <div class="sidenav-splitter" id="sidenav-splitter"></div>
-</aside>
-
-<!-- MAIN CANVAS -->
-<main class="main-content" style="overflow-y:auto; overflow-x:hidden;">
-
-  <!-- ═══════════════ OVERVIEW VIEW ═══════════════ -->
-  <div id="view-overview">
-    <div class="p-5 pb-0">
-
-      <!-- Page header + search row -->
-      <div class="flex items-center justify-between flex-wrap gap-3 mb-3">
-        <div>
-          <div class="flex items-center gap-2 mb-1">
-            <span class="w-1 h-1 bg-primary inline-block"></span>
-            <span class="font-mono text-[0.62rem] uppercase tracking-[0.2em] text-outline">Entity Registry</span>
-          </div>
-          <h1 class="font-headline text-2xl font-bold tracking-tight text-white">ENTITY REGISTRY</h1>
-          <p class="font-mono text-[0.65rem] text-outline mt-1">Track, investigate, and manage identified and unknown entities</p>
-        </div>
-        <div class="flex items-center gap-2">
-          <!-- Search -->
-          <div class="flex items-center bg-surface-high">
-            <span class="material-symbols-outlined text-outline flex-shrink-0 pl-3" style="font-size:15px;line-height:1">search</span>
-            <input id="entity-search" type="text" placeholder="Search by name or ID…" class="bg-transparent font-mono text-[0.72rem] text-white border-0 px-3 py-2 min-w-0" style="outline:none;box-shadow:none;width:200px" />
-          </div>
-          <span class="font-mono text-[0.6rem] text-outline uppercase" id="entity-count-label">—</span>
-        </div>
+    <!-- SIDE NAV -->
+    <aside class="sidenav" id="sidenav">
+      <div class="sidenav-header">
+        <button class="hamburger-btn" id="sidenav-toggle" title="Toggle sidebar (Ctrl+B)">
+          <span class="material-symbols-outlined">menu</span>
+        </button>
+        <span class="sidenav-brand">TRACE-AML</span>
       </div>
-
-      <!-- Quick filter chips -->
-      <div class="flex items-center gap-2 mb-4">
-        <button class="quick-filter-chip active" data-qf="all">All</button>
-        <button class="quick-filter-chip" data-qf="active">● Active</button>
-        <button class="quick-filter-chip" data-qf="incidents">⚠ With Incidents</button>
-        <button class="quick-filter-chip" data-qf="unknown">? Unknown</button>
-        <button class="quick-filter-chip" data-qf="known">✓ Known</button>
+      <div class="sidenav-status">
+        <span class="status-dot" id="connection-badge"></span>
+        <span class="status-label"></span>
       </div>
-
-      <!-- Interactive stat bar (click to filter) -->
-      <div class="stat-bar">
-        <button class="stat-bar__item" id="stat-btn-total" title="Show all entities">
-          <span class="stat-bar__label">Total Entities</span>
-          <span class="stat-bar__value" id="ov-total">—</span>
-          <span class="stat-bar__hint">Click to reset</span>
+      <nav class="sidenav-nav">
+        <a class="nav-item " href="../live_ops/index.html" data-tooltip="Live Ops">
+          <span class="material-symbols-outlined nav-icon">monitoring</span>
+          <span class="nav-label">Live Ops</span>
+        </a>
+        <a class="nav-item " href="../incidents/index.html" data-tooltip="Incidents">
+          <span class="material-symbols-outlined nav-icon">timeline</span>
+          <span class="nav-label">Incidents</span>
+        </a>
+        <a class="nav-item active" href="../entities/index.html" data-tooltip="Entities">
+          <span class="material-symbols-outlined nav-icon">hub</span>
+          <span class="nav-label">Entities</span>
+        </a>
+        <a class="nav-item " href="../history/index.html" data-tooltip="History">
+          <span class="material-symbols-outlined nav-icon">history</span>
+          <span class="nav-label">History</span>
+        </a>
+        <a class="nav-item " href="../database/index.html" data-tooltip="Database">
+          <span class="material-symbols-outlined nav-icon">database</span>
+          <span class="nav-label">Database</span>
+        </a>
+      </nav>
+      <div class="sidenav-divider"></div>
+      <nav class="sidenav-nav">
+        <a class="nav-item " href="../enrollment/index.html" data-tooltip="Enrollment">
+          <span class="material-symbols-outlined nav-icon">person_add</span>
+          <span class="nav-label">Enrollment</span>
+        </a>
+      </nav>
+      <div class="sidenav-spacer"></div>
+      <div class="sidenav-bottom">
+        <a class="nav-item " href="../settings/index.html" data-tooltip="Settings">
+          <span class="material-symbols-outlined nav-icon">settings</span>
+          <span class="nav-label">Settings</span>
+        </a>
+        <button class="nav-item nav-btn" type="button" data-tooltip="Admin">
+          <span class="material-symbols-outlined nav-icon">person</span>
+          <span class="nav-label">Admin</span>
         </button>
-        <button class="stat-bar__item" id="stat-btn-known" title="Filter: Known entities">
-          <span class="stat-bar__label">Known</span>
-          <span class="stat-bar__value" style="color:#fff" id="ov-known">—</span>
-          <span class="stat-bar__hint">Filter enrolled</span>
+        <div class="sidenav-divider"></div>
+        <button class="nav-item nav-btn" type="button" data-tooltip="Help">
+          <span class="material-symbols-outlined nav-icon">help_outline</span>
+          <span class="nav-label">Help</span>
         </button>
-        <button class="stat-bar__item" id="stat-btn-unknown" title="Filter: Unknown entities">
-          <span class="stat-bar__label">Unknown</span>
-          <span class="stat-bar__value" style="color:#919191" id="ov-unknown">—</span>
-          <span class="stat-bar__hint">Filter unidentified</span>
-        </button>
-        <button class="stat-bar__item" id="stat-btn-incidents" title="Filter: Entities with open incidents">
-          <span class="stat-bar__label">Open Incidents</span>
-          <span class="stat-bar__value" style="color:#ffb4ab" id="ov-incidents">—</span>
-          <span class="stat-bar__hint">Filter at-risk</span>
+        <button class="nav-item nav-btn" type="button" data-tooltip="Exit">
+          <span class="material-symbols-outlined nav-icon">logout</span>
+          <span class="nav-label">Exit</span>
         </button>
       </div>
+      <div class="sidenav-splitter" id="sidenav-splitter"></div>
+    </aside>
 
-    </div>
+    <!-- MAIN CANVAS -->
+    <main class="main-content" style="overflow-y:auto; overflow-x:hidden;">
 
-    <!-- Entity card grid (full width) -->
-    <div id="entity-grid" style="margin:0">
-      <div style="grid-column:1/-1;display:flex;align-items:center;justify-content:center;padding:5rem;color:#919191;font-family:monospace;font-size:0.75rem;gap:0.5rem">
-        <span class="material-symbols-outlined" style="font-size:20px">hourglass_empty</span> Loading entities…
-      </div>
-    </div>
+      <!-- ═══════════════ OVERVIEW VIEW ═══════════════ -->
+      <div id="view-overview">
+        <div class="p-5 pb-0">
 
-  </div>
-
-  <!-- ═══════════════ DETAIL VIEW ═══════════════ -->
-  <div id="view-detail">
-    <div class="p-8">
-
-      <!-- Back button -->
-      <button id="btn-back" class="flex items-center gap-2 text-outline hover:text-white font-mono text-[0.7rem] uppercase tracking-widest mb-8 bg-transparent border-0 cursor-pointer">
-        <span class="material-symbols-outlined text-[16px]">arrow_back</span>
-        Back to Entities
-      </button>
-
-      <!-- Entity Header (FIX 4: dominant status, narrative hierarchy) -->
-      <div class="flex justify-between items-start mb-10">
-        <div>
-          <div class="flex items-center gap-3 mb-2">
-            <span class="w-1 h-1 bg-primary inline-block"></span>
-            <span class="font-mono text-[0.6875rem] uppercase tracking-[0.2em] text-outline" id="entity-profile-label">Entity Profile</span>
-          </div>
-          <!-- Name -->
-          <h1 class="font-headline text-4xl font-bold tracking-tight text-white mb-2" id="entity-display-name">—</h1>
-          <!-- Dominant status badge -->
-          <div class="flex items-center gap-3 mb-4">
-            <span id="entity-status-badge" class="inline-flex items-center gap-2 px-3 py-1 font-mono text-[0.65rem] font-bold uppercase tracking-widest border" style="border-color:rgba(255,255,255,0.2);color:#fff">—</span>
-            <span class="font-mono text-[0.6rem] text-neutral-500 uppercase tracking-wider">·</span>
-            <span class="font-mono text-[0.65rem] text-outline uppercase" id="entity-type">—</span>
-          </div>
-          <!-- Secondary metadata row -->
-          <div class="flex gap-5">
-            <div class="flex flex-col">
-              <span class="font-mono text-[0.55rem] text-neutral-600 uppercase tracking-widest">Open Cases</span>
-              <span class="text-[0.8rem] uppercase font-semibold" id="entity-severity">—</span>
+          <!-- Page header + search row -->
+          <div class="flex items-center justify-between flex-wrap gap-3 mb-3">
+            <div>
+              <div class="flex items-center gap-2 mb-1">
+                <span class="w-1 h-1 bg-primary inline-block"></span>
+                <span class="font-mono text-[0.62rem] uppercase tracking-[0.2em] text-outline">Entity Registry</span>
+              </div>
+              <h1 class="font-headline text-2xl font-bold tracking-tight text-white">ENTITY REGISTRY</h1>
+              <p class="font-mono text-[0.65rem] text-outline mt-1">Track, investigate, and manage identified and
+                unknown entities</p>
             </div>
-            <div class="flex flex-col pl-5 border-l border-outline-variant/20" id="entity-watchlist-col" style="display:none;">
-              <span class="font-mono text-[0.55rem] text-neutral-600 uppercase tracking-widest">Watchlist Priority</span>
-              <span class="text-[0.8rem] uppercase font-semibold" id="entity-watchlist">—</span>
+            <div class="flex items-center gap-2">
+              <!-- Search -->
+              <div class="flex items-center bg-surface-high">
+                <span class="material-symbols-outlined text-outline flex-shrink-0 pl-3"
+                  style="font-size:15px;line-height:1">search</span>
+                <input id="entity-search" type="text" placeholder="Search by name or ID…"
+                  class="bg-transparent font-mono text-[0.72rem] text-white border-0 px-3 py-2 min-w-0"
+                  style="outline:none;box-shadow:none;width:200px" />
+              </div>
+              <span class="font-mono text-[0.6rem] text-outline uppercase" id="entity-count-label">—</span>
             </div>
-            <!-- Hidden legacy status for JS compat -->
-            <span id="entity-status" style="display:none">—</span>
           </div>
-        </div>
-        <div class="text-right flex flex-col items-end gap-3">
-          <div>
-            <span class="font-mono text-[0.6875rem] text-neutral-500 uppercase tracking-widest block mb-1">Last Seen</span>
-            <span class="text-[0.875rem] text-outline font-mono" id="entity-clock">—</span>
+
+          <!-- Quick filter chips -->
+          <div class="flex items-center gap-2 mb-4">
+            <button class="quick-filter-chip active" data-qf="all">All</button>
+            <button class="quick-filter-chip" data-qf="active">● Active</button>
+            <button class="quick-filter-chip" data-qf="incidents">⚠ With Incidents</button>
+            <button class="quick-filter-chip" data-qf="unknown">? Unknown</button>
+            <button class="quick-filter-chip" data-qf="known">✓ Known</button>
           </div>
-          <div class="flex items-center gap-2">
-            <button id="btn-edit-entity" class="fbar-btn fbar-btn-primary min-w-[140px]" style="display:none;">
-              <span class="material-symbols-outlined" style="font-size:16px;">edit</span> 
-              Edit Record
+
+          <!-- Interactive stat bar (click to filter) -->
+          <div class="stat-bar">
+            <button class="stat-bar__item" id="stat-btn-total" title="Show all entities">
+              <span class="stat-bar__label">Total Entities</span>
+              <span class="stat-bar__value" id="ov-total">—</span>
+              <span class="stat-bar__hint">Click to reset</span>
             </button>
-            <button id="btn-delete-entity" class="fbar-btn fbar-btn-ghost min-w-[120px]" style="display:none;">
-              <span class="material-symbols-outlined" style="font-size:16px;">delete</span> 
-              Terminate
+            <button class="stat-bar__item" id="stat-btn-known" title="Filter: Known entities">
+              <span class="stat-bar__label">Known</span>
+              <span class="stat-bar__value" style="color:#fff" id="ov-known">—</span>
+              <span class="stat-bar__hint">Filter enrolled</span>
+            </button>
+            <button class="stat-bar__item" id="stat-btn-unknown" title="Filter: Unknown entities">
+              <span class="stat-bar__label">Unknown</span>
+              <span class="stat-bar__value" style="color:#919191" id="ov-unknown">—</span>
+              <span class="stat-bar__hint">Filter unidentified</span>
+            </button>
+            <button class="stat-bar__item" id="stat-btn-incidents" title="Filter: Entities with open incidents">
+              <span class="stat-bar__label">Open Incidents</span>
+              <span class="stat-bar__value" style="color:#ffb4ab" id="ov-incidents">—</span>
+              <span class="stat-bar__hint">Filter at-risk</span>
             </button>
           </div>
+
         </div>
+
+        <!-- Entity card grid (full width) -->
+        <div id="entity-grid" style="margin:0">
+          <div
+            style="grid-column:1/-1;display:flex;align-items:center;justify-content:center;padding:5rem;color:#919191;font-family:monospace;font-size:0.75rem;gap:0.5rem">
+            <span class="material-symbols-outlined" style="font-size:20px">hourglass_empty</span> Loading entities…
+          </div>
+        </div>
+
       </div>
 
-      <!-- Row 1: Photo + Stats -->
-      <div class="flex flex-col lg:flex-row gap-8 lg:items-stretch mb-10">
-        <div class="w-full lg:w-1/3 aspect-[4/5] bg-surface-low relative overflow-hidden max-h-[400px] lg:self-start">
-          <div class="portrait-frame w-full h-full">
-            <!-- Portrait image — hidden until loaded; shown on load, hidden again on 404 -->
-            <img
-              id="entity-portrait"
-              class="portrait-frame__img"
-              alt="Entity portrait"
-              onerror="this.classList.remove('loaded'); document.getElementById('entity-portrait-placeholder').classList.remove('hidden');"
-              onload="this.classList.add('loaded'); document.getElementById('entity-portrait-placeholder').classList.add('hidden');"
-            />
-            <!-- Fallback placeholder (visible by default, hidden when portrait loads) -->
-            <div class="portrait-frame__placeholder" id="entity-portrait-placeholder">
-              <span class="material-symbols-outlined text-outline-variant text-[48px]">person_search</span>
-              <p class="font-mono text-[0.65rem] text-outline text-center px-4">Detection capture<br><span class="text-outline-variant text-[0.58rem]">awaiting recognition event</span></p>
-            </div>
-            <!-- Tactical scan-line overlay (purely cosmetic, sits on top) -->
-            <div class="portrait-frame__scanline"></div>
-          </div>
-          <!-- Removed glass confidence overlay (FIX 5) - moved to stats panel -->
-        </div>
+      <!-- ═══════════════ DETAIL VIEW ═══════════════ -->
+      <div id="view-detail">
+        <div class="p-8">
 
-        <!-- FIX 6: Stats as narrative, not widget grid -->
-        <div class="flex-1 flex flex-col gap-4">
-          <div class="mb-1">
-            <span class="section-header">Intelligence Summary</span>
-          </div>
-          <!-- Narrative stat block -->
-          <div class="bg-surface-low p-5 border-l-2 border-primary/40">
-            <p class="font-mono text-[0.65rem] text-outline uppercase tracking-widest mb-2">Detection Activity</p>
-            <p class="text-white text-[1.05rem] font-semibold leading-snug">
-              <span id="stat-appearances" class="text-primary text-2xl font-light">—</span>
-              <span class="text-outline text-[0.85rem] font-normal"> detections across </span>
-              <span id="stat-incident-count" class="text-primary text-2xl font-light">—</span>
-              <span class="text-outline text-[0.85rem] font-normal"> cases</span>
-            </p>
-            <p class="font-mono text-[0.6rem] text-outline mt-2" id="stat-last-activity">Last activity: —</p>
-          </div>
-          <div class="grid grid-cols-2 gap-4">
-            <div class="bg-surface-low p-4 flex flex-col gap-2">
-              <span class="font-mono text-[0.55rem] text-neutral-500 uppercase tracking-widest">Recent Alerts</span>
-              <span class="font-headline text-2xl font-light text-primary" id="stat-avg-conf">—</span>
-              <span class="font-mono text-[0.55rem] text-outline">alerts in last 30 days</span>
+          <!-- Back button -->
+          <button id="btn-back"
+            class="flex items-center gap-2 text-outline hover:text-white font-mono text-[0.7rem] uppercase tracking-widest mb-8 bg-transparent border-0 cursor-pointer">
+            <span class="material-symbols-outlined text-[16px]">arrow_back</span>
+            Back to Entities
+          </button>
+
+          <!-- Entity Header (FIX 4: dominant status, narrative hierarchy) -->
+          <div class="flex justify-between items-start mb-10">
+            <div>
+              <div class="flex items-center gap-3 mb-2">
+                <span class="w-1 h-1 bg-primary inline-block"></span>
+                <span class="font-mono text-[0.6875rem] uppercase tracking-[0.2em] text-outline"
+                  id="entity-profile-label">Entity Profile</span>
+              </div>
+              <!-- Name -->
+              <h1 class="font-headline text-4xl font-bold tracking-tight text-white mb-2" id="entity-display-name">—
+              </h1>
+              <!-- Dominant status badge -->
+              <div class="flex items-center gap-3 mb-4">
+                <span id="entity-status-badge"
+                  class="inline-flex items-center gap-2 px-3 py-1 font-mono text-[0.65rem] font-bold uppercase tracking-widest border"
+                  style="border-color:rgba(255,255,255,0.2);color:#fff">—</span>
+                <span class="font-mono text-[0.6rem] text-neutral-500 uppercase tracking-wider">·</span>
+                <span class="font-mono text-[0.65rem] text-outline uppercase" id="entity-type">—</span>
+              </div>
+              <!-- Secondary metadata row -->
+              <div class="flex gap-5">
+                <div class="flex flex-col">
+                  <span class="font-mono text-[0.55rem] text-neutral-600 uppercase tracking-widest">Open Cases</span>
+                  <span class="text-[0.8rem] uppercase font-semibold" id="entity-severity">—</span>
+                </div>
+                <div class="flex flex-col pl-5 border-l border-outline-variant/20" id="entity-watchlist-col"
+                  style="display:none;">
+                  <span class="font-mono text-[0.55rem] text-neutral-600 uppercase tracking-widest">Watchlist
+                    Priority</span>
+                  <span class="text-[0.8rem] uppercase font-semibold" id="entity-watchlist">—</span>
+                </div>
+                <!-- Hidden legacy status for JS compat -->
+                <span id="entity-status" style="display:none">—</span>
+              </div>
             </div>
-            <div class="bg-surface-low p-4 flex flex-col gap-2">
-              <span class="font-mono text-[0.55rem] text-neutral-500 uppercase tracking-widest">Enrollment Score</span>
-              <span class="font-headline text-2xl font-light text-primary" id="entity-confidence">—</span>
-              <div class="w-full bg-surface-lowest h-[2px] mt-1">
-                <div class="bg-primary h-full transition-all" id="entity-confidence-bar" style="width:0%"></div>
+            <div class="text-right flex flex-col items-end gap-3">
+              <div>
+                <span class="font-mono text-[0.6875rem] text-neutral-500 uppercase tracking-widest block mb-1">Last
+                  Seen</span>
+                <span class="text-[0.875rem] text-outline font-mono" id="entity-clock">—</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <button id="btn-edit-entity" class="fbar-btn fbar-btn-primary min-w-[140px]" style="display:none;">
+                  <span class="material-symbols-outlined" style="font-size:16px;">edit</span>
+                  Edit Record
+                </button>
+                <button id="btn-delete-entity" class="fbar-btn fbar-btn-ghost min-w-[120px]" style="display:none;">
+                  <span class="material-symbols-outlined" style="font-size:16px;">delete</span>
+                  Terminate
+                </button>
               </div>
             </div>
           </div>
-          <!-- Activity Graph — fills the empty space in the stats column next to the portrait -->
-          <div class="eag-panel flex-1" id="entity-activity-panel" style="min-height:120px;">
-            <div class="eag-header">
-              <div class="eag-header__left">
-                <span class="eag-header__title">Activity Over Time</span>
-                <span class="eag-header__pattern" id="eag-pattern-label">—</span>
+
+          <!-- Row 1: Photo + Stats -->
+          <div class="flex flex-col lg:flex-row gap-8 lg:items-stretch mb-10">
+            <div
+              class="w-full lg:w-1/3 aspect-[4/5] bg-surface-low relative overflow-hidden max-h-[400px] lg:self-start">
+              <div class="portrait-frame w-full h-full">
+                <!-- Portrait image — hidden until loaded; shown on load, hidden again on 404 -->
+                <img id="entity-portrait" class="portrait-frame__img" alt="Entity portrait"
+                  onerror="this.classList.remove('loaded'); document.getElementById('entity-portrait-placeholder').classList.remove('hidden');"
+                  onload="this.classList.add('loaded'); document.getElementById('entity-portrait-placeholder').classList.add('hidden');" />
+                <!-- Fallback placeholder (visible by default, hidden when portrait loads) -->
+                <div class="portrait-frame__placeholder" id="entity-portrait-placeholder">
+                  <span class="material-symbols-outlined text-outline-variant text-[48px]">person_search</span>
+                  <p class="font-mono text-[0.65rem] text-outline text-center px-4">Detection capture<br><span
+                      class="text-outline-variant text-[0.58rem]">awaiting recognition event</span></p>
+                </div>
+                <!-- Tactical scan-line overlay (purely cosmetic, sits on top) -->
+                <div class="portrait-frame__scanline"></div>
               </div>
-              <span class="eag-header__range" id="eag-range-label">—</span>
+              <!-- Removed glass confidence overlay (FIX 5) - moved to stats panel -->
             </div>
-            <div id="entity-activity-graph" class="eag-chart-wrap">
-              <!-- SVG injected by JS -->
-            </div>
-          </div>
-        </div>
-      </div>
 
-      <!-- Row 2: Timeline + Linked Cases — items-stretch so both match height -->
-      <div class="flex flex-col lg:flex-row gap-6 mb-10 lg:items-stretch">
-
-        <!-- Timeline column -->
-        <div class="w-full lg:w-2/3 flex flex-col">
-          <div class="flex items-center justify-between mb-3">
-            <h3 class="section-header">Event Timeline</h3>
-          </div>
-          <!-- Timeline panel: proper framed scroll container -->
-          <div id="entity-timeline-root" class="flex-1">
-            <div class="text-outline font-mono text-[0.7rem] py-8 text-center">No timeline data</div>
-          </div>
-        </div>
-
-        <!-- Linked Cases column — same frame, stretches to match timeline -->
-        <div class="w-full lg:w-[340px] flex flex-col">
-          <div class="flex items-center justify-between mb-3">
-            <h3 class="section-header">Linked Cases</h3>
-          </div>
-          <div class="linked-cases-panel flex-1">
-            <!-- Panel header bar matching timeline style -->
-            <div class="linked-cases-panel__header">
-              <span style="font-family:'JetBrains Mono',monospace;font-size:0.55rem;text-transform:uppercase;letter-spacing:0.12em;color:#555;">Case files</span>
-              <span class="material-symbols-outlined" style="font-size:13px;color:#333">link</span>
-            </div>
-            <!-- Scrollable incident list -->
-            <div class="linked-cases-panel__scroll" id="entity-incidents-root">
-              <div class="text-outline font-mono text-[0.7rem] py-4 text-center">No cases</div>
-            </div>
-            <!-- Pinned footer action -->
-            <div class="linked-cases-panel__footer">
-              <a id="btn-open-cases"
-                class="block w-full py-2.5 font-mono text-[0.6rem] uppercase tracking-widest text-center no-underline transition-colors"
-                style="color:#555;background:transparent;"
-                onmouseover="this.style.color='#aaa';this.style.background='rgba(255,255,255,0.03)';"
-                onmouseout="this.style.color='#555';this.style.background='transparent';"
-                href="../incidents/index.html">
-                <span class="material-symbols-outlined" style="font-size:12px;vertical-align:middle;margin-right:4px">open_in_new</span>
-                Open Cases Workspace
-              </a>
-            </div>
-          </div>
-        </div>
-
-      </div>
-
-    </div>
-  </div>
-
-  <!-- EDIT ENTITY MODAL — Tabbed: Identity | Images & Portrait -->
-  <dialog id="modal-edit-entity" class="bg-surface text-on-surface border border-outline-variant/20 p-0" style="box-shadow: 0 24px 64px -16px rgba(0, 0, 0, 0.85), 0 0 0 1px rgba(255,255,255,0.05); border-radius: 2px;">
-
-    <!-- Modal Header — Clean & Aligned with Enrollment -->
-    <div class="p-6 border-b border-outline-variant/10 bg-surface flex justify-between items-start gap-4">
-      <div class="flex-1">
-        <div class="flex items-center gap-3 mb-2">
-          <span class="material-symbols-outlined text-primary text-[20px]">edit_document</span>
-          <h2 id="edit-modal-title" class="font-mono text-[0.85rem] font-bold tracking-widest text-white m-0 uppercase">Edit Entity</h2>
-        </div>
-        <p id="edit-modal-desc" class="font-mono text-[0.62rem] text-outline-variant mt-2.5 hidden leading-relaxed">👤 Provide a name and category to promote this unknown entity to a tracked identity. This will enable biometric enrollment and reference image uploads.</p>
-      </div>
-      <button id="btn-close-edit" class="flex-shrink-0 bg-transparent border-0 text-outline hover:text-white cursor-pointer p-1.5 flex items-center justify-center transition-all rounded-sm hover:bg-surface-high">
-        <span class="material-symbols-outlined text-[20px]">close</span>
-      </button>
-    </div>
-
-    <!-- Tab Navigation — Clean Style -->
-    <div class="flex border-b border-outline-variant/10 bg-surface px-0" id="edit-modal-tabs">
-      <button class="edit-tab-btn edit-tab-btn--active flex-1 py-4 px-6 font-mono text-[0.62rem] uppercase tracking-widest border-b-[3px] border-primary text-white bg-transparent cursor-pointer transition-all" data-tab="identity">
-        <span class="material-symbols-outlined text-[16px] inline mr-2" style="vertical-align:middle">badge</span><span>Identity</span>
-      </button>
-      <button class="edit-tab-btn flex-1 py-4 px-6 font-mono text-[0.62rem] uppercase tracking-widest border-b-[3px] border-transparent text-outline hover:text-white bg-transparent cursor-pointer transition-all" data-tab="images" id="tab-btn-images">
-        <span class="material-symbols-outlined text-[16px] inline mr-2" style="vertical-align:middle">photo_library</span><span>Images & Portrait</span>
-      </button>
-    </div>
-
-    <!-- TAB: Identity — Enhanced Form Fields -->
-    <div id="edit-tab-identity" class="p-6 space-y-8">
-      
-      <!-- Section 01: Identification -->
-      <div class="space-y-4">
-        <div class="flex items-center gap-3">
-          <span class="font-mono text-[0.6rem] text-primary uppercase font-bold tracking-widest">01</span>
-          <h3 class="font-mono text-[0.65rem] text-outline uppercase tracking-wider">Entity Identification</h3>
-          <div class="h-[1px] bg-outline-variant/10 flex-1"></div>
-        </div>
-
-        <div class="grid grid-cols-2 gap-4">
-          <div class="col-span-2">
-            <label class="stat-label mb-2 block">Full Legal Name / Alias *</label>
-            <input type="text" id="edit-entity-name" class="enroll-input font-mono text-[0.75rem]" placeholder="Enter entity name">
-          </div>
-          <div>
-            <label class="stat-label mb-2 block">Risk Category *</label>
-            <select id="edit-entity-category" class="enroll-input font-mono text-[0.75rem] appearance-none cursor-pointer">
-              <option value="unknown">UNKNOWN / UNVERIFIED</option>
-              <option value="criminal">CRIMINAL / POI</option>
-              <option value="vip">PROTECTED ENTITY (VIP)</option>
-              <option value="staff">AUTHORIZED STAFF</option>
-            </select>
-          </div>
-          <div>
-            <label class="stat-label mb-2 block">Watchlist Priority</label>
-            <select id="edit-entity-severity" class="enroll-input font-mono text-[0.75rem] appearance-none cursor-pointer">
-              <option value="">-- NONE --</option>
-              <option value="low">LEVEL 1 - ROUTINE (Low)</option>
-              <option value="medium">LEVEL 2 - ELEVATED (Medium)</option>
-              <option value="high">LEVEL 3 - CRITICAL (High)</option>
-            </select>
-          </div>
-        </div>
-      </div>
-
-      <!-- Section 02: Demographics -->
-      <div class="space-y-4">
-        <div class="flex items-center gap-3">
-          <span class="font-mono text-[0.6rem] text-primary uppercase font-bold tracking-widest">02</span>
-          <h3 class="font-mono text-[0.65rem] text-outline uppercase tracking-wider">Demographics & Origin</h3>
-          <div class="h-[1px] bg-outline-variant/10 flex-1"></div>
-        </div>
-
-        <div class="grid grid-cols-2 gap-4">
-          <div>
-            <label class="stat-label mb-2 block">Date of Birth</label>
-            <input type="text" id="edit-entity-dob" class="enroll-input font-mono text-[0.75rem]" placeholder="YYYY-MM-DD">
-          </div>
-          <div>
-            <label class="stat-label mb-2 block">Gender Identity</label>
-            <select id="edit-entity-gender" class="enroll-input font-mono text-[0.75rem] appearance-none cursor-pointer">
-              <option value="">-- UNDISCLOSED --</option>
-              <option value="male">MALE</option>
-              <option value="female">FEMALE</option>
-              <option value="other">OTHER / NON-BINARY</option>
-            </select>
-          </div>
-          <div>
-            <label class="stat-label mb-2 block">Origin City</label>
-            <input type="text" id="edit-entity-city" class="enroll-input font-mono text-[0.75rem]" placeholder="City">
-          </div>
-          <div>
-            <label class="stat-label mb-2 block">Nationality</label>
-            <input type="text" id="edit-entity-country" class="enroll-input font-mono text-[0.75rem]" placeholder="Country">
-          </div>
-          <div class="col-span-2">
-            <label class="stat-label mb-2 block">Intelligence Notes / Behavioral Profile</label>
-            <textarea id="edit-entity-notes" rows="3" class="enroll-input font-mono text-[0.75rem] resize-none" placeholder="Additional details, background, context…"></textarea>
-          </div>
-        </div>
-      </div>
-
-    </div>
-
-    <!-- TAB: Images & Portrait — Redesigned -->
-    <div id="edit-tab-images" class="p-6 space-y-8 hidden">
-
-      <!-- Section 03: Biometric Data -->
-      <div class="space-y-6">
-        <div class="flex items-center gap-3">
-          <span class="font-mono text-[0.6rem] text-primary uppercase font-bold tracking-widest">03</span>
-          <h3 class="font-mono text-[0.65rem] text-outline uppercase tracking-wider">Biometric Acquisition</h3>
-          <div class="h-[1px] bg-outline-variant/10 flex-1"></div>
-        </div>
-
-        <!-- Primary Portrait -->
-        <div class="bg-surface-low/40 border border-outline-variant/10 p-5 rounded-sm">
-          <div class="flex items-center justify-between mb-4">
-            <h4 class="font-mono text-[0.6rem] text-primary uppercase tracking-widest">Primary System Portrait</h4>
-            <span class="font-mono text-[0.55rem] text-outline-variant uppercase">Required for facial recognition</span>
-          </div>
-          
-          <div class="flex items-start gap-6">
-            <div class="relative flex-shrink-0 group">
-              <div class="w-24 h-24 bg-surface-high border border-outline-variant/20 rounded-sm overflow-hidden flex items-center justify-center">
-                <img id="edit-portrait-preview" class="w-full h-full object-cover hidden" alt="Current portrait" />
-                <div id="edit-portrait-placeholder" class="w-full h-full flex items-center justify-center flex-col gap-1">
-                  <span class="material-symbols-outlined text-outline-variant text-[32px]">person_search</span>
+            <!-- FIX 6: Stats as narrative, not widget grid -->
+            <div class="flex-1 flex flex-col gap-4">
+              <div class="mb-1">
+                <span class="section-header">Intelligence Summary</span>
+              </div>
+              <!-- Narrative stat block -->
+              <div class="bg-surface-low p-5 border-l-2 border-primary/40">
+                <p class="font-mono text-[0.65rem] text-outline uppercase tracking-widest mb-2">Detection Activity</p>
+                <p class="text-white text-[1.05rem] font-semibold leading-snug">
+                  <span id="stat-appearances" class="text-primary text-2xl font-light">—</span>
+                  <span class="text-outline text-[0.85rem] font-normal"> detections across </span>
+                  <span id="stat-incident-count" class="text-primary text-2xl font-light">—</span>
+                  <span class="text-outline text-[0.85rem] font-normal"> cases</span>
+                </p>
+                <p class="font-mono text-[0.6rem] text-outline mt-2" id="stat-last-activity">Last activity: —</p>
+              </div>
+              <div class="grid grid-cols-2 gap-4">
+                <div class="bg-surface-low p-4 flex flex-col gap-2">
+                  <span class="font-mono text-[0.55rem] text-neutral-500 uppercase tracking-widest">Recent Alerts</span>
+                  <span class="font-headline text-2xl font-light text-primary" id="stat-avg-conf">—</span>
+                  <span class="font-mono text-[0.55rem] text-outline">alerts in last 30 days</span>
+                </div>
+                <div class="bg-surface-low p-4 flex flex-col gap-2">
+                  <span class="font-mono text-[0.55rem] text-neutral-500 uppercase tracking-widest">Enrollment
+                    Score</span>
+                  <span class="font-headline text-2xl font-light text-primary" id="entity-confidence">—</span>
+                  <div class="w-full bg-surface-lowest h-[2px] mt-1">
+                    <div class="bg-primary h-full transition-all" id="entity-confidence-bar" style="width:0%"></div>
+                  </div>
                 </div>
               </div>
-              <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none rounded-sm">
-                <span class="material-symbols-outlined text-white text-[18px]">visibility</span>
+              <!-- Activity Graph — fills the empty space in the stats column next to the portrait -->
+              <div class="eag-panel flex-1" id="entity-activity-panel" style="min-height:120px;">
+                <div class="eag-header">
+                  <div class="eag-header__left">
+                    <span class="eag-header__title">Activity Over Time</span>
+                    <span class="eag-header__pattern" id="eag-pattern-label">—</span>
+                  </div>
+                  <span class="eag-header__range" id="eag-range-label">—</span>
+                </div>
+                <div id="entity-activity-graph" class="eag-chart-wrap">
+                  <!-- SVG injected by JS -->
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Row 2: Timeline + Linked Cases — items-stretch so both match height -->
+          <div class="flex flex-col lg:flex-row gap-6 mb-10 lg:items-stretch">
+
+            <!-- Timeline column -->
+            <div class="w-full lg:w-2/3 flex flex-col">
+              <div class="flex items-center justify-between mb-3">
+                <h3 class="section-header">Event Timeline</h3>
+              </div>
+              <!-- Timeline panel: proper framed scroll container -->
+              <div id="entity-timeline-root" class="flex-1">
+                <div class="text-outline font-mono text-[0.7rem] py-8 text-center">No timeline data</div>
               </div>
             </div>
 
-            <div class="flex-1 space-y-3">
-              <label for="edit-portrait-file" class="inline-flex items-center gap-2 px-4 py-2 bg-surface-high hover:bg-surface-bright text-outline hover:text-white font-mono text-[0.65rem] uppercase tracking-wider cursor-pointer transition-all rounded-sm border border-outline-variant/20">
-                <span class="material-symbols-outlined text-[16px]">upload</span>
-                <span>Replace Portrait</span>
-              </label>
-              <input type="file" id="edit-portrait-file" accept="image/*" class="hidden" />
-              <p class="font-mono text-[0.55rem] text-outline-variant leading-relaxed">
-                RECOMMENDED: 512x512 JPG/PNG. PROPER LIGHTING AND FRONT-FACING ORIENTATION REQUIRED FOR ACCURATE VECTOR GENERATION.
-              </p>
+            <!-- Linked Cases column — same frame, stretches to match timeline -->
+            <div class="w-full lg:w-[340px] flex flex-col">
+              <div class="flex items-center justify-between mb-3">
+                <h3 class="section-header">Linked Cases</h3>
+              </div>
+              <div class="linked-cases-panel flex-1">
+                <!-- Panel header bar matching timeline style -->
+                <div class="linked-cases-panel__header">
+                  <span
+                    style="font-family:'JetBrains Mono',monospace;font-size:0.55rem;text-transform:uppercase;letter-spacing:0.12em;color:#555;">Case
+                    files</span>
+                  <span class="material-symbols-outlined" style="font-size:13px;color:#333">link</span>
+                </div>
+                <!-- Scrollable incident list -->
+                <div class="linked-cases-panel__scroll" id="entity-incidents-root">
+                  <div class="text-outline font-mono text-[0.7rem] py-4 text-center">No cases</div>
+                </div>
+                <!-- Pinned footer action -->
+                <div class="linked-cases-panel__footer">
+                  <a id="btn-open-cases"
+                    class="block w-full py-2.5 font-mono text-[0.6rem] uppercase tracking-widest text-center no-underline transition-colors"
+                    style="color:#555;background:transparent;"
+                    onmouseover="this.style.color='#aaa';this.style.background='rgba(255,255,255,0.03)';"
+                    onmouseout="this.style.color='#555';this.style.background='transparent';"
+                    href="../incidents/index.html">
+                    <span class="material-symbols-outlined"
+                      style="font-size:12px;vertical-align:middle;margin-right:4px">open_in_new</span>
+                    Open Cases Workspace
+                  </a>
+                </div>
+              </div>
             </div>
-          </div>
-          <div id="portrait-upload-status" class="hidden mt-3 p-3 bg-surface-high/50 border border-outline-variant/10 font-mono text-[0.6rem] text-primary rounded-sm"></div>
-        </div>
 
-        <!-- Reference Samples -->
-        <div id="images-section-known" class="space-y-4">
-          <div class="flex items-center justify-between">
-            <h4 class="font-mono text-[0.6rem] text-primary uppercase tracking-widest">Supplemental Reference Samples</h4>
-            <span id="edit-image-count" class="font-mono text-[0.55rem] text-outline-variant uppercase">0 SAMPLES LOADED</span>
           </div>
 
-          <div id="edit-image-dropzone" class="drop-zone flex flex-col items-center justify-center p-10 bg-surface-low/30 border-2 border-dashed border-outline-variant/10 hover:border-primary/30 transition-all rounded-sm group cursor-pointer">
-            <span class="material-symbols-outlined text-outline-variant group-hover:text-primary/50 text-[40px] mb-2 transition-colors">cloud_upload</span>
-            <p class="font-mono text-[0.65rem] text-white font-medium">DRAG & DROP SAMPLES</p>
-            <p class="font-mono text-[0.55rem] text-outline-variant mt-0.5">JPG, PNG, OR BMP FORMATS SUPPORTED</p>
-            <input type="file" id="edit-image-file" accept="image/*" multiple class="hidden" />
-          </div>
-
-          <div id="edit-image-preview-container" class="hidden space-y-4">
-            <div id="edit-image-preview-strip" class="grid grid-cols-5 gap-2"></div>
-            <div class="flex gap-2 justify-end">
-              <button id="btn-clear-images-edit" class="px-4 py-2 bg-surface-high text-outline font-mono text-[0.6rem] uppercase tracking-wider hover:bg-surface-bright hover:text-white transition-all rounded-sm border-0 cursor-pointer">CLEAR ALL</button>
-              <button id="btn-upload-images" class="px-5 py-2 bg-primary text-on-primary font-mono text-[0.6rem] font-bold uppercase tracking-wider hover:bg-primary/90 disabled:opacity-20 transition-all rounded-sm border-0 cursor-pointer" disabled>COMMIT SAMPLES</button>
-            </div>
-          </div>
-
-          <div id="images-upload-status" class="hidden mt-3 p-3 bg-surface-high/50 border border-outline-variant/10 font-mono text-[0.6rem] text-primary rounded-sm"></div>
-        </div>
-
-        <!-- Unknown Warning -->
-        <div id="images-section-unknown" class="hidden bg-warning/5 border border-warning/20 p-4 rounded-sm">
-          <div class="flex items-start gap-3">
-            <span class="material-symbols-outlined text-warning text-[18px] flex-shrink-0">lock</span>
-            <p class="font-mono text-[0.62rem] text-warning leading-relaxed uppercase">
-              BIOMETRIC ENROLLMENT DISABLED. PROMOTE ENTITY TO "KNOWN" STATUS ON THE IDENTITY TAB TO UNLOCK IMAGE UPLOAD CAPABILITIES.
-            </p>
-          </div>
         </div>
       </div>
-    </div>
 
-    <!-- Modal Footer — Clean Action Buttons -->
-    <div class="p-6 border-t border-outline-variant/10 bg-surface flex justify-end gap-3" id="edit-modal-footer">
-      <button id="btn-cancel-edit" class="px-6 py-2 bg-surface-high text-outline font-mono text-[0.65rem] font-bold uppercase tracking-wider hover:bg-surface-bright hover:text-white transition-all rounded-sm border-0 cursor-pointer">
-        Cancel
-      </button>
-      <button id="btn-save-edit" class="px-6 py-2 bg-primary text-on-primary font-mono text-[0.65rem] font-bold uppercase tracking-wider hover:bg-primary/90 transition-all rounded-sm border-0 cursor-pointer flex items-center gap-2">
-        <span class="material-symbols-outlined text-[16px]">save</span>
-        <span>Save Changes</span>
-      </button>
-    </div>
+      <!-- EDIT ENTITY MODAL — Tabbed: Identity | Images & Portrait -->
+      <dialog id="modal-edit-entity" class="bg-surface text-on-surface border border-outline-variant/20 p-0"
+        style="box-shadow: 0 24px 64px -16px rgba(0, 0, 0, 0.85), 0 0 0 1px rgba(255,255,255,0.05); border-radius: 2px;">
 
-  </dialog>
+        <!-- Modal Header — Clean & Aligned with Enrollment -->
+        <div class="p-6 border-b border-outline-variant/10 bg-surface flex justify-between items-start gap-4">
+          <div class="flex-1">
+            <div class="flex items-center gap-3 mb-2">
+              <span class="material-symbols-outlined text-primary text-[20px]">edit_document</span>
+              <h2 id="edit-modal-title"
+                class="font-mono text-[0.85rem] font-bold tracking-widest text-white m-0 uppercase">Edit Entity</h2>
+            </div>
+            <p id="edit-modal-desc" class="font-mono text-[0.62rem] text-outline-variant mt-2.5 hidden leading-relaxed">
+              👤 Provide a name and category to promote this unknown entity to a tracked identity. This will enable
+              biometric enrollment and reference image uploads.</p>
+          </div>
+          <button id="btn-close-edit"
+            class="flex-shrink-0 bg-transparent border-0 text-outline hover:text-white cursor-pointer p-1.5 flex items-center justify-center transition-all rounded-sm hover:bg-surface-high">
+            <span class="material-symbols-outlined text-[20px]">close</span>
+          </button>
+        </div>
 
-</main>
+        <!-- Tab Navigation — Clean Style -->
+        <div class="flex border-b border-outline-variant/10 bg-surface px-0" id="edit-modal-tabs">
+          <button
+            class="edit-tab-btn edit-tab-btn--active flex-1 py-4 px-6 font-mono text-[0.62rem] uppercase tracking-widest border-b-[3px] border-primary text-white bg-transparent cursor-pointer transition-all"
+            data-tab="identity">
+            <span class="material-symbols-outlined text-[16px] inline mr-2"
+              style="vertical-align:middle">badge</span><span>Identity</span>
+          </button>
+          <button
+            class="edit-tab-btn flex-1 py-4 px-6 font-mono text-[0.62rem] uppercase tracking-widest border-b-[3px] border-transparent text-outline hover:text-white bg-transparent cursor-pointer transition-all"
+            data-tab="images" id="tab-btn-images">
+            <span class="material-symbols-outlined text-[16px] inline mr-2"
+              style="vertical-align:middle">photo_library</span><span>Images & Portrait</span>
+          </button>
+        </div>
+
+        <!-- TAB: Identity — Enhanced Form Fields -->
+        <div id="edit-tab-identity" class="p-6 space-y-8">
+
+          <!-- Section 01: Identification -->
+          <div class="space-y-4">
+            <div class="flex items-center gap-3">
+              <span class="font-mono text-[0.6rem] text-primary uppercase font-bold tracking-widest">01</span>
+              <h3 class="font-mono text-[0.65rem] text-outline uppercase tracking-wider">Entity Identification</h3>
+              <div class="h-[1px] bg-outline-variant/10 flex-1"></div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+              <div class="col-span-2">
+                <label class="stat-label mb-2 block">Full Legal Name / Alias *</label>
+                <input type="text" id="edit-entity-name" class="enroll-input font-mono text-[0.75rem]"
+                  placeholder="Enter entity name">
+              </div>
+              <div>
+                <label class="stat-label mb-2 block">Risk Category *</label>
+                <select id="edit-entity-category"
+                  class="enroll-input font-mono text-[0.75rem] appearance-none cursor-pointer">
+                  <option value="unknown">UNKNOWN / UNVERIFIED</option>
+                  <option value="criminal">CRIMINAL / POI</option>
+                  <option value="vip">PROTECTED ENTITY (VIP)</option>
+                  <option value="staff">AUTHORIZED STAFF</option>
+                </select>
+              </div>
+              <div>
+                <label class="stat-label mb-2 block">Watchlist Priority</label>
+                <select id="edit-entity-severity"
+                  class="enroll-input font-mono text-[0.75rem] appearance-none cursor-pointer">
+                  <option value="">-- NONE --</option>
+                  <option value="low">LEVEL 1 - ROUTINE (Low)</option>
+                  <option value="medium">LEVEL 2 - ELEVATED (Medium)</option>
+                  <option value="high">LEVEL 3 - CRITICAL (High)</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- Section 02: Demographics -->
+          <div class="space-y-4">
+            <div class="flex items-center gap-3">
+              <span class="font-mono text-[0.6rem] text-primary uppercase font-bold tracking-widest">02</span>
+              <h3 class="font-mono text-[0.65rem] text-outline uppercase tracking-wider">Demographics & Origin</h3>
+              <div class="h-[1px] bg-outline-variant/10 flex-1"></div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="stat-label mb-2 block">Date of Birth</label>
+                <input type="text" id="edit-entity-dob" class="enroll-input font-mono text-[0.75rem]"
+                  placeholder="YYYY-MM-DD">
+              </div>
+              <div>
+                <label class="stat-label mb-2 block">Gender Identity</label>
+                <select id="edit-entity-gender"
+                  class="enroll-input font-mono text-[0.75rem] appearance-none cursor-pointer">
+                  <option value="">-- UNDISCLOSED --</option>
+                  <option value="male">MALE</option>
+                  <option value="female">FEMALE</option>
+                  <option value="other">OTHER / NON-BINARY</option>
+                </select>
+              </div>
+              <div>
+                <label class="stat-label mb-2 block">Origin City</label>
+                <input type="text" id="edit-entity-city" class="enroll-input font-mono text-[0.75rem]"
+                  placeholder="City">
+              </div>
+              <div>
+                <label class="stat-label mb-2 block">Nationality</label>
+                <input type="text" id="edit-entity-country" class="enroll-input font-mono text-[0.75rem]"
+                  placeholder="Country">
+              </div>
+              <div class="col-span-2">
+                <label class="stat-label mb-2 block">Intelligence Notes / Behavioral Profile</label>
+                <textarea id="edit-entity-notes" rows="3" class="enroll-input font-mono text-[0.75rem] resize-none"
+                  placeholder="Additional details, background, context…"></textarea>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- TAB: Images & Portrait — Redesigned -->
+        <div id="edit-tab-images" class="p-6 space-y-8 hidden">
+
+          <!-- Section 03: Biometric Data -->
+          <div class="space-y-6">
+            <div class="flex items-center gap-3">
+              <span class="font-mono text-[0.6rem] text-primary uppercase font-bold tracking-widest">03</span>
+              <h3 class="font-mono text-[0.65rem] text-outline uppercase tracking-wider">Biometric Acquisition</h3>
+              <div class="h-[1px] bg-outline-variant/10 flex-1"></div>
+            </div>
+
+            <!-- Primary Portrait -->
+            <div class="bg-surface-low/40 border border-outline-variant/10 p-5 rounded-sm">
+              <div class="flex items-center justify-between mb-4">
+                <h4 class="font-mono text-[0.6rem] text-primary uppercase tracking-widest">Primary System Portrait</h4>
+                <span class="font-mono text-[0.55rem] text-outline-variant uppercase">Required for facial
+                  recognition</span>
+              </div>
+
+              <div class="flex items-start gap-6">
+                <div class="relative flex-shrink-0 group">
+                  <div
+                    class="w-24 h-24 bg-surface-high border border-outline-variant/20 rounded-sm overflow-hidden flex items-center justify-center">
+                    <img id="edit-portrait-preview" class="w-full h-full object-cover hidden" alt="Current portrait" />
+                    <div id="edit-portrait-placeholder"
+                      class="w-full h-full flex items-center justify-center flex-col gap-1">
+                      <span class="material-symbols-outlined text-outline-variant text-[32px]">person_search</span>
+                    </div>
+                  </div>
+                  <div
+                    class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none rounded-sm">
+                    <span class="material-symbols-outlined text-white text-[18px]">visibility</span>
+                  </div>
+                </div>
+
+                <div class="flex-1 space-y-3">
+                  <label for="edit-portrait-file"
+                    class="inline-flex items-center gap-2 px-4 py-2 bg-surface-high hover:bg-surface-bright text-outline hover:text-white font-mono text-[0.65rem] uppercase tracking-wider cursor-pointer transition-all rounded-sm border border-outline-variant/20">
+                    <span class="material-symbols-outlined text-[16px]">upload</span>
+                    <span>Replace Portrait</span>
+                  </label>
+                  <input type="file" id="edit-portrait-file" accept="image/*" class="hidden" />
+                  <p class="font-mono text-[0.55rem] text-outline-variant leading-relaxed">
+                    RECOMMENDED: 512x512 JPG/PNG. PROPER LIGHTING AND FRONT-FACING ORIENTATION REQUIRED FOR ACCURATE
+                    VECTOR GENERATION.
+                  </p>
+                </div>
+              </div>
+              <div id="portrait-upload-status"
+                class="hidden mt-3 p-3 bg-surface-high/50 border border-outline-variant/10 font-mono text-[0.6rem] text-primary rounded-sm">
+              </div>
+            </div>
+
+            <!-- Reference Samples -->
+            <div id="images-section-known" class="space-y-4">
+              <div class="flex items-center justify-between">
+                <h4 class="font-mono text-[0.6rem] text-primary uppercase tracking-widest">Supplemental Reference
+                  Samples</h4>
+                <span id="edit-image-count" class="font-mono text-[0.55rem] text-outline-variant uppercase">0 SAMPLES
+                  LOADED</span>
+              </div>
+
+              <div id="edit-image-dropzone"
+                class="drop-zone flex flex-col items-center justify-center p-10 bg-surface-low/30 border-2 border-dashed border-outline-variant/10 hover:border-primary/30 transition-all rounded-sm group cursor-pointer">
+                <span
+                  class="material-symbols-outlined text-outline-variant group-hover:text-primary/50 text-[40px] mb-2 transition-colors">cloud_upload</span>
+                <p class="font-mono text-[0.65rem] text-white font-medium">DRAG & DROP SAMPLES</p>
+                <p class="font-mono text-[0.55rem] text-outline-variant mt-0.5">JPG, PNG, OR BMP FORMATS SUPPORTED</p>
+                <input type="file" id="edit-image-file" accept="image/*" multiple class="hidden" />
+              </div>
+
+              <div id="edit-image-preview-container" class="hidden space-y-4">
+                <div id="edit-image-preview-strip" class="grid grid-cols-5 gap-2"></div>
+                <div class="flex gap-2 justify-end">
+                  <button id="btn-clear-images-edit"
+                    class="px-4 py-2 bg-surface-high text-outline font-mono text-[0.6rem] uppercase tracking-wider hover:bg-surface-bright hover:text-white transition-all rounded-sm border-0 cursor-pointer">CLEAR
+                    ALL</button>
+                  <button id="btn-upload-images"
+                    class="px-5 py-2 bg-primary text-on-primary font-mono text-[0.6rem] font-bold uppercase tracking-wider hover:bg-primary/90 disabled:opacity-20 transition-all rounded-sm border-0 cursor-pointer"
+                    disabled>COMMIT SAMPLES</button>
+                </div>
+              </div>
+
+              <div id="images-upload-status"
+                class="hidden mt-3 p-3 bg-surface-high/50 border border-outline-variant/10 font-mono text-[0.6rem] text-primary rounded-sm">
+              </div>
+            </div>
+
+            <!-- Unknown Warning -->
+            <div id="images-section-unknown" class="hidden bg-warning/5 border border-warning/20 p-4 rounded-sm">
+              <div class="flex items-start gap-3">
+                <span class="material-symbols-outlined text-warning text-[18px] flex-shrink-0">lock</span>
+                <p class="font-mono text-[0.62rem] text-warning leading-relaxed uppercase">
+                  BIOMETRIC ENROLLMENT DISABLED. PROMOTE ENTITY TO "KNOWN" STATUS ON THE IDENTITY TAB TO UNLOCK IMAGE
+                  UPLOAD CAPABILITIES.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Modal Footer — Clean Action Buttons -->
+        <div class="p-6 border-t border-outline-variant/10 bg-surface flex justify-end gap-3" id="edit-modal-footer">
+          <button id="btn-cancel-edit"
+            class="px-6 py-2 bg-surface-high text-outline font-mono text-[0.65rem] font-bold uppercase tracking-wider hover:bg-surface-bright hover:text-white transition-all rounded-sm border-0 cursor-pointer">
+            Cancel
+          </button>
+          <button id="btn-save-edit"
+            class="px-6 py-2 bg-primary text-on-primary font-mono text-[0.65rem] font-bold uppercase tracking-wider hover:bg-primary/90 transition-all rounded-sm border-0 cursor-pointer flex items-center gap-2">
+            <span class="material-symbols-outlined text-[16px]">save</span>
+            <span>Save Changes</span>
+          </button>
+        </div>
+
+      </dialog>
+
+    </main>
 
 
-<script src="../shared/trace_toast.js"></script>
-<script src="../shared/trace_client.js"></script>
-<script src="../shared/trace_render.js"></script>
-<script src="../shared/sidenav.js"></script>
-<script src="./entities.js"></script>
+    <script src="../shared/trace_toast.js"></script>
+    <script src="../shared/trace_client.js"></script>
+    <script src="../shared/trace_render.js"></script>
+    <script src="../shared/sidenav.js"></script>
+    <script src="./entities.js"></script>
 
-</div><!-- /app-shell -->
+  </div><!-- /app-shell -->
 </body>
+
 </html>

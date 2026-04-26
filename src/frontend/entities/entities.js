@@ -19,19 +19,19 @@
 
   var _allEntities = [];
   var _currentEntityId = null;
-  var _currentProfile  = null;
+  var _currentProfile = null;
   var _activeQuickFilter = "all"; // tracks current quick-filter chip
 
   /* ─────────────────────────── View Switching ────────────────────────── */
 
   function showOverview() {
     $("view-overview").style.display = "block";
-    $("view-detail").style.display   = "none";
+    $("view-detail").style.display = "none";
   }
 
   function showDetail() {
     $("view-overview").style.display = "none";
-    $("view-detail").style.display   = "block";
+    $("view-detail").style.display = "block";
   }
 
   /* ─────────────────────────── Overview ─────────────────────────── */
@@ -54,20 +54,20 @@
   }
 
   function renderOverviewStats(list) {
-    var known   = list.filter(function (e) { return String(e.type || e.entity_type || "") === "known"; }).length;
+    var known = list.filter(function (e) { return String(e.type || e.entity_type || "") === "known"; }).length;
     var unknown = list.filter(function (e) { return String(e.type || e.entity_type || "") !== "known"; }).length;
     var withInc = list.reduce(function (acc, e) {
       return acc + (parseInt(e.open_incident_count, 10) || 0);
     }, 0);
 
-    var t = $("ov-total");     if (t) t.textContent = String(list.length);
-    var k = $("ov-known");     if (k) k.textContent = String(known);
-    var u = $("ov-unknown");   if (u) u.textContent = String(unknown);
+    var t = $("ov-total"); if (t) t.textContent = String(list.length);
+    var k = $("ov-known"); if (k) k.textContent = String(known);
+    var u = $("ov-unknown"); if (u) u.textContent = String(unknown);
     var i = $("ov-incidents"); if (i) i.textContent = String(withInc);
   }
 
   function renderGrid(list) {
-    var grid  = $("entity-grid");
+    var grid = $("entity-grid");
     var label = $("entity-count-label");
     if (!grid) return;
     if (label) label.textContent = list.length + " entit" + (list.length !== 1 ? "ies" : "y");
@@ -80,55 +80,55 @@
     }
 
     grid.innerHTML = list.map(function (ent) {
-      var isKnown   = String(ent.type || ent.entity_type || "") === "known";
-      var name      = TraceClient.escapeHtml(ent.name || ent.entity_id);
-      var shortId   = TraceClient.escapeHtml(String(ent.entity_id || ""));
-      var cat       = String(ent.category || (isKnown ? "known" : "unknown")).toLowerCase();
-      var lastSeen  = ent.last_seen_at ? TraceClient.formatTime(ent.last_seen_at) : "—";
-      var openInc   = parseInt(ent.open_incident_count, 10) || 0;
+      var isKnown = String(ent.type || ent.entity_type || "") === "known";
+      var name = TraceClient.escapeHtml(ent.name || ent.entity_id);
+      var shortId = TraceClient.escapeHtml(String(ent.entity_id || ""));
+      var cat = String(ent.category || (isKnown ? "known" : "unknown")).toLowerCase();
+      var lastSeen = ent.last_seen_at ? TraceClient.formatTime(ent.last_seen_at) : "—";
+      var openInc = parseInt(ent.open_incident_count, 10) || 0;
 
-      var typeKey   = cat === "criminal" ? "criminal" : cat === "vip" ? "vip" : isKnown ? "known" : "unknown";
+      var typeKey = cat === "criminal" ? "criminal" : cat === "vip" ? "vip" : isKnown ? "known" : "unknown";
       var badgeText = isKnown ? cat.toUpperCase() : "UNKNOWN";
-      var cardType  = isKnown ? "known" : "unknown";
+      var cardType = isKnown ? "known" : "unknown";
 
       // Build portrait thumbnail for the avatar cell.
       var portraitTs = Math.floor(Date.now() / 30000); // 30 s cache window
       var avatarHtml = ent.entity_id
         ? '<img src="' + TraceClient.entityPortraitUrl(ent.entity_id) + '?t=' + portraitTs + '"'
-          + ' alt="" loading="lazy"'
-          + ' onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\'"'
-          + ' style="display:block" />'
-          + '<span class="material-symbols-outlined" style="font-size:18px;color:#919191;display:none">'
-            + (isKnown ? 'person' : 'person_off')
-          + '</span>'
+        + ' alt="" loading="lazy"'
+        + ' onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\'"'
+        + ' style="display:block" />'
+        + '<span class="material-symbols-outlined" style="font-size:18px;color:#919191;display:none">'
+        + (isKnown ? 'person' : 'person_off')
+        + '</span>'
         : '<span class="material-symbols-outlined" style="font-size:18px;color:#919191">'
-            + (isKnown ? 'person' : 'person_off')
-          + '</span>';
+        + (isKnown ? 'person' : 'person_off')
+        + '</span>';
 
       var pill = activityPillHtml(ent);
       return '<div class="entity-card entity-card--' + cardType + '" data-entity-id="' + TraceClient.escapeHtml(ent.entity_id) + '">'
         /* top row: badge + activity pill + arrow */
         + '<div class="flex items-center justify-between mb-2">'
-        +   '<div class="flex items-center gap-2">'
-        +     '<span class="entity-card__badge entity-card__badge--' + typeKey + '">' + badgeText + '</span>'
-        +     pill
-        +   '</div>'
-        +   '<span class="ec-arrow material-symbols-outlined" style="font-size:14px;color:#919191">arrow_forward</span>'
+        + '<div class="flex items-center gap-2">'
+        + '<span class="entity-card__badge entity-card__badge--' + typeKey + '">' + badgeText + '</span>'
+        + pill
+        + '</div>'
+        + '<span class="ec-arrow material-symbols-outlined" style="font-size:14px;color:#919191">arrow_forward</span>'
         + '</div>'
         /* avatar + name block */
         + '<div class="flex items-center gap-3">'
-        +   '<div class="entity-card__avatar">' + avatarHtml + '</div>'
-        +   '<div class="flex-1 min-w-0">'
-        +     '<div style="font-family:Inter,sans-serif;font-weight:600;font-size:0.9rem;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.2">' + name + '</div>'
-        +     '<div style="font-family:JetBrains Mono,monospace;font-size:0.58rem;color:#666;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + shortId + '</div>'
-        +   '</div>'
+        + '<div class="entity-card__avatar">' + avatarHtml + '</div>'
+        + '<div class="flex-1 min-w-0">'
+        + '<div style="font-family:Inter,sans-serif;font-weight:600;font-size:0.9rem;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.2">' + name + '</div>'
+        + '<div style="font-family:JetBrains Mono,monospace;font-size:0.58rem;color:#666;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + shortId + '</div>'
+        + '</div>'
         + '</div>'
         /* footer */
         + '<div class="entity-card__footer">'
-        +   '<span style="font-family:JetBrains Mono,monospace;font-size:0.58rem;color:#666">' + TraceClient.escapeHtml(lastSeen) + '</span>'
-        +   (openInc > 0
-              ? '<span style="font-family:JetBrains Mono,monospace;font-size:0.58rem;color:#ffb4ab">' + openInc + ' open case' + (openInc > 1 ? 's' : '') + '</span>'
-              : '<span style="font-family:JetBrains Mono,monospace;font-size:0.58rem;color:#474747">No open cases</span>')
+        + '<span style="font-family:JetBrains Mono,monospace;font-size:0.58rem;color:#666">' + TraceClient.escapeHtml(lastSeen) + '</span>'
+        + (openInc > 0
+          ? '<span style="font-family:JetBrains Mono,monospace;font-size:0.58rem;color:#ffb4ab">' + openInc + ' open case' + (openInc > 1 ? 's' : '') + '</span>'
+          : '<span style="font-family:JetBrains Mono,monospace;font-size:0.58rem;color:#474747">No open cases</span>')
         + '</div>'
         + '</div>';
     }).join("");
@@ -179,11 +179,11 @@
 
       var matchQF = true;
       switch (_activeQuickFilter) {
-        case "active":    matchQF = state === "active"; break;
+        case "active": matchQF = state === "active"; break;
         case "incidents": matchQF = openInc > 0; break;
-        case "unknown":   matchQF = !isKnown; break;
-        case "known":     matchQF = isKnown; break;
-        default:          matchQF = true;
+        case "unknown": matchQF = !isKnown; break;
+        case "known": matchQF = isKnown; break;
+        default: matchQF = true;
       }
 
       return matchText && matchQF;
@@ -231,9 +231,9 @@
       var rawStatus = String(entity.status || "active").toLowerCase();
       var state = open > 0 ? "flagged" : getActivityState(entity);
       var badgeConfigs = {
-        flagged: { text: "⚠ FLAGGED",      bg: "rgba(255,107,107,0.1)", border: "rgba(255,107,107,0.5)", color: "#ff6b6b" },
-        active:  { text: "● ACTIVE",        bg: "rgba(74,222,128,0.07)", border: "rgba(74,222,128,0.4)", color: "#4ade80" },
-        idle:    { text: "◌ INACTIVE",      bg: "transparent",           border: "rgba(145,145,145,0.3)", color: "#919191" },
+        flagged: { text: "⚠ FLAGGED", bg: "rgba(255,107,107,0.1)", border: "rgba(255,107,107,0.5)", color: "#ff6b6b" },
+        active: { text: "● ACTIVE", bg: "rgba(74,222,128,0.07)", border: "rgba(74,222,128,0.4)", color: "#4ade80" },
+        idle: { text: "◌ INACTIVE", bg: "transparent", border: "rgba(145,145,145,0.3)", color: "#919191" },
       };
       var cfg = badgeConfigs[state] || badgeConfigs.idle;
       statusBadge.textContent = cfg.text;
@@ -249,24 +249,24 @@
     if (sevEl) {
       var open = parseInt(entity.open_incident_count, 10) || 0;
       sevEl.textContent = open > 0 ? open + " OPEN" : "NONE";
-      sevEl.className   = open > 0
+      sevEl.className = open > 0
         ? "text-[0.8rem] text-error uppercase font-semibold"
         : "text-[0.8rem] text-outline uppercase font-semibold";
     }
 
     // ── Watchlist Priority (enrolled severity) ───────────────────────────────
     var watchlistCol = $("entity-watchlist-col");
-    var watchlistEl  = $("entity-watchlist");
-    var enrolledSev  = String(person.severity || "").toLowerCase().trim();
+    var watchlistEl = $("entity-watchlist");
+    var enrolledSev = String(person.severity || "").toLowerCase().trim();
     var sevMap = {
-      "low":    { label: "L1 · ROUTINE",   color: "#62c6ef" },
-      "medium": { label: "L2 · ELEVATED",  color: "#f5a623" },
-      "high":   { label: "L3 · CRITICAL",  color: "#ff453a" },
+      "low": { label: "L1 · ROUTINE", color: "#62c6ef" },
+      "medium": { label: "L2 · ELEVATED", color: "#f5a623" },
+      "high": { label: "L3 · CRITICAL", color: "#ff453a" },
     };
     if (watchlistCol && watchlistEl && enrolledSev && sevMap[enrolledSev]) {
       watchlistCol.style.display = "";
-      watchlistEl.textContent    = sevMap[enrolledSev].label;
-      watchlistEl.style.color    = sevMap[enrolledSev].color;
+      watchlistEl.textContent = sevMap[enrolledSev].label;
+      watchlistEl.style.color = sevMap[enrolledSev].color;
     } else if (watchlistCol) {
       watchlistCol.style.display = "none";
     }
@@ -296,12 +296,12 @@
   }
 
   function renderStats(profile) {
-    var stats   = profile.stats || {};
-    var entity  = profile.entity || {};
+    var stats = profile.stats || {};
+    var entity = profile.entity || {};
 
-    var a = $("stat-appearances");    if (a) a.textContent = String(stats.detection_count || 0);
+    var a = $("stat-appearances"); if (a) a.textContent = String(stats.detection_count || 0);
     var i = $("stat-incident-count"); if (i) i.textContent = String(stats.incident_count || 0);
-    var r = $("stat-avg-conf");       if (r) r.textContent = String(stats.recent_alert_count || 0);
+    var r = $("stat-avg-conf"); if (r) r.textContent = String(stats.recent_alert_count || 0);
 
     // FIX 6: Narrative last-activity text
     var actEl = $("stat-last-activity");
@@ -330,35 +330,35 @@
     if (ps.length < 2) return "";
     var d = "M " + ps[0].x.toFixed(1) + " " + ps[0].y.toFixed(1);
     for (var i = 0; i < ps.length - 1; i++) {
-      var mx = ((ps[i].x + ps[i+1].x) / 2).toFixed(1);
+      var mx = ((ps[i].x + ps[i + 1].x) / 2).toFixed(1);
       d += " C " + mx + " " + ps[i].y.toFixed(1) +
-           " "   + mx + " " + ps[i+1].y.toFixed(1) +
-           " "   + ps[i+1].x.toFixed(1) + " " + ps[i+1].y.toFixed(1);
+        " " + mx + " " + ps[i + 1].y.toFixed(1) +
+        " " + ps[i + 1].x.toFixed(1) + " " + ps[i + 1].y.toFixed(1);
     }
     return d;
   }
 
   function _eagPattern(buckets, maxC) {
     if (!maxC) return { key: "low", label: "Low Activity" };
-    var avg = buckets.reduce(function(s, v) { return s + v; }, 0) / buckets.length;
+    var avg = buckets.reduce(function (s, v) { return s + v; }, 0) / buckets.length;
     // Variance for spread
-    var variance = buckets.reduce(function(s, v) {
+    var variance = buckets.reduce(function (s, v) {
       return s + (v - avg) * (v - avg);
     }, 0) / buckets.length;
     var cv = avg > 0 ? Math.sqrt(variance) / avg : 0; // coefficient of variation
     if (maxC / Math.max(avg, 0.001) > 3 || cv > 1.2) {
-      return { key: "burst",      label: "Burst Activity" };
+      return { key: "burst", label: "Burst Activity" };
     }
     if (avg > 0.3) {
       return { key: "continuous", label: "Continuous Presence" };
     }
-    return { key: "low",         label: "Low Activity" };
+    return { key: "low", label: "Low Activity" };
   }
 
   function renderActivityGraph(timeline) {
-    var panel   = $("entity-activity-panel");
-    var wrap    = $("entity-activity-graph");
-    var patEl   = $("eag-pattern-label");
+    var panel = $("entity-activity-panel");
+    var wrap = $("entity-activity-graph");
+    var patEl = $("eag-pattern-label");
     var rangeEl = $("eag-range-label");
     if (!panel || !wrap) return;
 
@@ -377,11 +377,11 @@
     var pH = CH - MT - MB;
 
     // Compute time range from all items
-    var timestamps = timeline.map(function(it) {
+    var timestamps = timeline.map(function (it) {
       return new Date(it.timestamp_utc).getTime();
     });
-    var minT  = Math.min.apply(null, timestamps);
-    var maxT  = Math.max.apply(null, timestamps);
+    var minT = Math.min.apply(null, timestamps);
+    var maxT = Math.max.apply(null, timestamps);
     var range = maxT - minT || 1;
 
     // Bucket event counts
@@ -390,33 +390,33 @@
     for (var bi = 0; bi < BUCKETS; bi++) {
       bucketTimes.push(minT + (bi / (BUCKETS - 1)) * range);
     }
-    timeline.forEach(function(it) {
-      var t  = new Date(it.timestamp_utc).getTime();
-      var b  = Math.min(BUCKETS - 1, Math.floor(((t - minT) / range) * (BUCKETS - 1)));
+    timeline.forEach(function (it) {
+      var t = new Date(it.timestamp_utc).getTime();
+      var b = Math.min(BUCKETS - 1, Math.floor(((t - minT) / range) * (BUCKETS - 1)));
       buckets[b] += 1;
     });
 
     var maxC = Math.max.apply(null, buckets) || 1;
 
     // Points
-    var pts = buckets.map(function(c, i) {
+    var pts = buckets.map(function (c, i) {
       return {
-        x:     ML + (i / (BUCKETS - 1)) * pW,
-        y:     MT + pH - (c / maxC) * pH * 0.85,
+        x: ML + (i / (BUCKETS - 1)) * pW,
+        y: MT + pH - (c / maxC) * pH * 0.85,
         count: c,
-        time:  bucketTimes[i]
+        time: bucketTimes[i]
       };
     });
 
-    var baseY    = (MT + pH).toFixed(1);
+    var baseY = (MT + pH).toFixed(1);
     var linePath = _eagSmooth(pts);
     var areaPath = linePath +
-      " L " + pts[pts.length-1].x.toFixed(1) + " " + baseY +
+      " L " + pts[pts.length - 1].x.toFixed(1) + " " + baseY +
       " L " + pts[0].x.toFixed(1) + " " + baseY + " Z";
 
     // Identify alert/incident timestamps
     var alertTimes = [];
-    timeline.forEach(function(it) {
+    timeline.forEach(function (it) {
       var k = String(it.kind || "").toLowerCase();
       if (k === "alert" || k === "incident") {
         alertTimes.push(new Date(it.timestamp_utc).getTime());
@@ -426,11 +426,11 @@
     // Time axis formatter
     function fmtT(ms) {
       var d = new Date(ms);
-      return String(d.getHours()).padStart(2,"0") + ":" + String(d.getMinutes()).padStart(2,"0");
+      return String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0");
     }
     function fmtRange(ms) {
       var d = new Date(ms);
-      return ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][d.getMonth()]
+      return ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][d.getMonth()]
         + " " + d.getDate();
     }
 
@@ -458,14 +458,14 @@
     o.push('</linearGradient></defs>');
 
     // Minimal grid: 2 horizontal dashed lines
-    [0.33, 0.66].forEach(function(ratio) {
+    [0.33, 0.66].forEach(function (ratio) {
       var gy = (MT + ratio * pH).toFixed(1);
-      o.push('<line x1="' + ML + '" y1="' + gy + '" x2="' + (ML+pW) + '" y2="' + gy +
+      o.push('<line x1="' + ML + '" y1="' + gy + '" x2="' + (ML + pW) + '" y2="' + gy +
         '" stroke="rgba(255,255,255,0.04)" stroke-width="1" stroke-dasharray="3,5"/>');
     });
 
     // Baseline
-    o.push('<line x1="' + ML + '" y1="' + baseY + '" x2="' + (ML+pW) + '" y2="' + baseY +
+    o.push('<line x1="' + ML + '" y1="' + baseY + '" x2="' + (ML + pW) + '" y2="' + baseY +
       '" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>');
 
     // Area fill
@@ -475,7 +475,7 @@
     o.push('<path d="' + linePath + '" fill="none" stroke="rgba(255,255,255,0.55)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>');
 
     // Alert dot markers ON the curve
-    alertTimes.forEach(function(at) {
+    alertTimes.forEach(function (at) {
       var b = Math.min(BUCKETS - 1, Math.floor(((at - minT) / range) * (BUCKETS - 1)));
       var pt = pts[b];
       if (!pt) return;
@@ -494,7 +494,7 @@
     // X-axis time labels (3 pts: start, mid, end)
     var xLY = (MT + pH + 17).toFixed(1);
     o.push('<text x="' + ML + '" y="' + xLY + '" fill="rgba(255,255,255,0.18)" font-family="\'JetBrains Mono\',monospace" font-size="8" text-anchor="start">' + fmtT(minT) + '</text>');
-    o.push('<text x="' + (ML + pW/2).toFixed(1) + '" y="' + xLY + '" fill="rgba(255,255,255,0.12)" font-family="\'JetBrains Mono\',monospace" font-size="8" text-anchor="middle">' + fmtT((minT+maxT)/2) + '</text>');
+    o.push('<text x="' + (ML + pW / 2).toFixed(1) + '" y="' + xLY + '" fill="rgba(255,255,255,0.12)" font-family="\'JetBrains Mono\',monospace" font-size="8" text-anchor="middle">' + fmtT((minT + maxT) / 2) + '</text>');
     o.push('<text x="' + (ML + pW).toFixed(1) + '" y="' + xLY + '" fill="rgba(255,255,255,0.18)" font-family="\'JetBrains Mono\',monospace" font-size="8" text-anchor="end">' + fmtT(maxT) + '</text>');
 
     // Invisible hit rect for mouse events
@@ -507,19 +507,19 @@
     wrap.innerHTML = o.join("");
 
     // ── Hover wiring ────────────────────────────────────────────────────
-    var svgEl  = wrap.querySelector("#eag-svg");
-    var xhair  = wrap.querySelector("#eag-xhair");
-    var hDot   = wrap.querySelector("#eag-hover-dot");
-    var tipEl  = wrap.querySelector("#eag-tooltip");
-    var hitEl  = wrap.querySelector("#eag-hit");
+    var svgEl = wrap.querySelector("#eag-svg");
+    var xhair = wrap.querySelector("#eag-xhair");
+    var hDot = wrap.querySelector("#eag-hover-dot");
+    var tipEl = wrap.querySelector("#eag-tooltip");
+    var hitEl = wrap.querySelector("#eag-hit");
     if (!hitEl || !svgEl) return;
 
-    hitEl.addEventListener("mousemove", function(e) {
+    hitEl.addEventListener("mousemove", function (e) {
       var svgRect = svgEl.getBoundingClientRect();
-      var mouseX  = e.clientX - svgRect.left;
-      var relX    = mouseX - ML;
-      var idx     = Math.max(0, Math.min(BUCKETS - 1, Math.round((relX / pW) * (BUCKETS - 1))));
-      var pt      = pts[idx];
+      var mouseX = e.clientX - svgRect.left;
+      var relX = mouseX - ML;
+      var idx = Math.max(0, Math.min(BUCKETS - 1, Math.round((relX / pW) * (BUCKETS - 1))));
+      var pt = pts[idx];
 
       xhair.setAttribute("x1", pt.x.toFixed(1));
       xhair.setAttribute("x2", pt.x.toFixed(1));
@@ -531,9 +531,9 @@
 
       // Tooltip
       var d = new Date(pt.time);
-      var timeStr = String(d.getHours()).padStart(2,"0") + ":" +
-                    String(d.getMinutes()).padStart(2,"0") + ":" +
-                    String(d.getSeconds()).padStart(2,"0");
+      var timeStr = String(d.getHours()).padStart(2, "0") + ":" +
+        String(d.getMinutes()).padStart(2, "0") + ":" +
+        String(d.getSeconds()).padStart(2, "0");
       tipEl.innerHTML =
         '<div style="font-family:\'JetBrains Mono\',monospace;font-size:0.52rem;color:#555;margin-bottom:3px;">' + timeStr + '</div>' +
         '<div style="font-family:\'JetBrains Mono\',monospace;font-size:0.9rem;font-weight:700;color:#fff;line-height:1;">' + pt.count + '</div>' +
@@ -542,22 +542,22 @@
       var tX = (mouseX / CW * wrap.offsetWidth) + 12;
       var tY = Math.max(4, (pt.y / CH * wrap.offsetHeight) - 40);
       if (tX + 90 > wrap.offsetWidth) tX -= 100;
-      tipEl.style.left    = tX + "px";
-      tipEl.style.top     = tY + "px";
+      tipEl.style.left = tX + "px";
+      tipEl.style.top = tY + "px";
       tipEl.style.display = "block";
     });
 
-    hitEl.addEventListener("mouseleave", function() {
+    hitEl.addEventListener("mouseleave", function () {
       xhair.setAttribute("display", "none");
       hDot.setAttribute("display", "none");
       tipEl.style.display = "none";
     });
 
     // ── Click: scroll timeline to that time bucket ──────────────────────
-    hitEl.addEventListener("click", function(e) {
+    hitEl.addEventListener("click", function (e) {
       var svgRect = svgEl.getBoundingClientRect();
-      var relX    = (e.clientX - svgRect.left) - ML;
-      var idx     = Math.max(0, Math.min(BUCKETS - 1, Math.round((relX / pW) * (BUCKETS - 1))));
+      var relX = (e.clientX - svgRect.left) - ML;
+      var idx = Math.max(0, Math.min(BUCKETS - 1, Math.round((relX / pW) * (BUCKETS - 1))));
       var targetTime = bucketTimes[idx];
 
       // Find the first timeline row whose timestamp is nearest to targetTime
@@ -565,7 +565,7 @@
       if (!timelineRoot) return;
       var rows = timelineRoot.querySelectorAll(".tl-header-row, .tl-event-row");
       var best = null, bestDiff = Infinity;
-      rows.forEach(function(row) {
+      rows.forEach(function (row) {
         var ts = parseInt(row.getAttribute("data-ts") || "0", 10);
         if (!ts) return;
         var diff = Math.abs(ts - targetTime);
@@ -575,7 +575,7 @@
         best.scrollIntoView({ behavior: "smooth", block: "center" });
         // Brief flash highlight
         best.style.background = "rgba(255,255,255,0.07)";
-        setTimeout(function() { best.style.background = ""; }, 800);
+        setTimeout(function () { best.style.background = ""; }, 800);
       }
     });
   }
@@ -586,13 +586,13 @@
   var _TL_HEADER_KINDS = { "alert": true, "incident": true };
 
   function _buildHeaderRow(item) {
-    var kind    = String(item.kind || "alert").toLowerCase();
-    var time    = TraceClient.escapeHtml(TraceClient.formatTime(item.timestamp_utc));
+    var kind = String(item.kind || "alert").toLowerCase();
+    var time = TraceClient.escapeHtml(TraceClient.formatTime(item.timestamp_utc));
     var summary = TraceClient.escapeHtml(item.summary || item.title || "");
-    var modCls  = kind === "incident" ? "incident" : "alert";
-    var lblCls  = kind === "incident" ? "incident" : "alert";
-    var label   = kind === "incident" ? "INCIDENT" : "ALERT";
-    var ts      = new Date(item.timestamp_utc).getTime();
+    var modCls = kind === "incident" ? "incident" : "alert";
+    var lblCls = kind === "incident" ? "incident" : "alert";
+    var label = kind === "incident" ? "INCIDENT" : "ALERT";
+    var ts = new Date(item.timestamp_utc).getTime();
     return '<div class="tl-header-row tl-header-row--' + modCls + '" data-ts="' + ts + '">'
       + '<span class="tl-header-row__time">' + time + '</span>'
       + '<span class="tl-header-row__label tl-header-row__label--' + lblCls + '">' + label + '</span>'
@@ -601,9 +601,9 @@
   }
 
   function _buildEventRow(item) {
-    var time    = TraceClient.escapeHtml(TraceClient.formatTime(item.timestamp_utc));
+    var time = TraceClient.escapeHtml(TraceClient.formatTime(item.timestamp_utc));
     var summary = TraceClient.escapeHtml(item.summary || item.title || "");
-    var ts      = new Date(item.timestamp_utc).getTime();
+    var ts = new Date(item.timestamp_utc).getTime();
     return '<div class="tl-event-row" data-ts="' + ts + '">'
       + '<span class="tl-event-row__time">' + time + '</span>'
       + '<span class="tl-event-row__dot"></span>'
@@ -625,8 +625,8 @@
 
     // Split into visible + hidden
     var visible = sorted.slice(0, _TIMELINE_INITIAL);
-    var hidden  = sorted.slice(_TIMELINE_INITIAL);
-    var total   = sorted.length;
+    var hidden = sorted.slice(_TIMELINE_INITIAL);
+    var total = sorted.length;
 
     function buildRows(items) {
       return items.map(function (item) {
@@ -654,13 +654,13 @@
       // Panel header bar
       '<div class="tl-panel">'
       + '<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 14px;border-bottom:1px solid rgba(255,255,255,0.05);flex-shrink:0;">'
-      +   '<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.55rem;text-transform:uppercase;letter-spacing:0.12em;color:#555;">' + countLabel + '</span>'
-      +   '<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.52rem;text-transform:uppercase;letter-spacing:0.1em;color:#333;">Newest first</span>'
+      + '<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.55rem;text-transform:uppercase;letter-spacing:0.12em;color:#555;">' + countLabel + '</span>'
+      + '<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.52rem;text-transform:uppercase;letter-spacing:0.1em;color:#333;">Newest first</span>'
       + '</div>'
       // Scrollable rows area
       + '<div class="tl-scroll">'
-      +   visibleHtml
-      +   overflowHtml
+      + visibleHtml
+      + overflowHtml
       + '</div>'
       // Load more (outside scroll so it doesn't scroll away)
       + loadMoreHtml
@@ -707,18 +707,18 @@
   /* ─────────────────────────── Delete flow ──────────────────────── */
 
   function wireDeleteFlow() {
-    var btnDelete   = $("btn-delete-entity");
+    var btnDelete = $("btn-delete-entity");
 
     if (btnDelete) {
       btnDelete.addEventListener("click", function () {
         if (!_currentEntityId) return;
         var name = ((_currentProfile && _currentProfile.entity) || {}).name || _currentEntityId;
-        
+
         TraceDialog.confirm(
           "Terminate Entity Record",
           "You are about to permanently delete the entity " + name + " and all associated data, including biometric embeddings, portraits, and detection history.",
           { type: "error", confirmText: "Terminate Record" }
-        ).then(function(ok) {
+        ).then(function (ok) {
           if (!ok) return;
 
           TraceClient.deleteEntity(_currentEntityId).then(function (res) {
@@ -742,15 +742,15 @@
 
   function switchModalTab(tabName) {
     var identityTab = $("edit-tab-identity");
-    var imagesTab   = $("edit-tab-images");
-    var tabBtns     = document.querySelectorAll(".edit-tab-btn");
+    var imagesTab = $("edit-tab-images");
+    var tabBtns = document.querySelectorAll(".edit-tab-btn");
 
     if (tabName === "identity") {
       if (identityTab) identityTab.classList.remove("hidden");
-      if (imagesTab)   imagesTab.classList.add("hidden");
+      if (imagesTab) imagesTab.classList.add("hidden");
     } else {
       if (identityTab) identityTab.classList.add("hidden");
-      if (imagesTab)   imagesTab.classList.remove("hidden");
+      if (imagesTab) imagesTab.classList.remove("hidden");
     }
 
     tabBtns.forEach(function (btn) {
@@ -767,7 +767,7 @@
 
   function openEditModal(startTab) {
     if (!_currentProfile || !_currentProfile.entity) return;
-    var ent    = _currentProfile.entity;
+    var ent = _currentProfile.entity;
     var person = _currentProfile.linked_person || {};
     var isKnown = String(ent.type || ent.entity_type) === "known";
 
@@ -791,7 +791,7 @@
 
     // ── Modal title & desc ──
     var titleEl = $("edit-modal-title");
-    var descEl  = $("edit-modal-desc");
+    var descEl = $("edit-modal-desc");
     var saveBtn = $("btn-save-edit");
     if (!isKnown) {
       if (titleEl) titleEl.textContent = "Enroll Unknown Entity";
@@ -808,10 +808,10 @@
     }
 
     // ── Images tab: show correct section ──
-    var knownSection   = $("images-section-known");
+    var knownSection = $("images-section-known");
     var unknownSection = $("images-section-unknown");
     if (isKnown) {
-      if (knownSection)   knownSection.classList.remove("hidden");
+      if (knownSection) knownSection.classList.remove("hidden");
       if (unknownSection) unknownSection.classList.add("hidden");
       // Show portrait preview
       var prevImg = $("edit-portrait-preview");
@@ -819,14 +819,14 @@
       if (prevImg && ent.entity_id) {
         var ts = Math.floor(Date.now() / 10000);
         prevImg.src = TraceClient.entityPortraitUrl(ent.entity_id) + "?t=" + ts;
-        prevImg.onload  = function () { prevImg.classList.remove("hidden"); if (prevPlaceholder) prevPlaceholder.classList.add("hidden"); };
-        prevImg.onerror = function () { prevImg.classList.add("hidden");    if (prevPlaceholder) prevPlaceholder.classList.remove("hidden"); };
+        prevImg.onload = function () { prevImg.classList.remove("hidden"); if (prevPlaceholder) prevPlaceholder.classList.add("hidden"); };
+        prevImg.onerror = function () { prevImg.classList.add("hidden"); if (prevPlaceholder) prevPlaceholder.classList.remove("hidden"); };
       }
       // Show images tab for known entities
       var tabBtnImages = $("tab-btn-images");
       if (tabBtnImages) tabBtnImages.style.display = "";
     } else {
-      if (knownSection)   knownSection.classList.add("hidden");
+      if (knownSection) knownSection.classList.add("hidden");
       if (unknownSection) unknownSection.classList.remove("hidden");
       var tabBtnImages2 = $("tab-btn-images");
       // Still show the tab but content will say "enroll first"
@@ -841,7 +841,7 @@
 
     // Focus on name input if unknown entity (better UX)
     if (!isKnown) {
-      setTimeout(function() {
+      setTimeout(function () {
         var nameInput = $("edit-entity-name");
         if (nameInput) nameInput.focus();
       }, 100);
@@ -871,8 +871,8 @@
     var container = $("edit-image-preview-container");
     if (container) container.classList.add("hidden");
     var strip = $("edit-image-preview-strip");
-    if (strip) { 
-      strip.innerHTML = ""; 
+    if (strip) {
+      strip.innerHTML = "";
     }
     var countEl = $("edit-image-count");
     if (countEl) countEl.textContent = "No images selected";
@@ -912,20 +912,20 @@
         thumb.className = "relative w-16 h-16 bg-surface-high border border-outline-variant/30 overflow-hidden flex-shrink-0 rounded-sm group cursor-pointer transition-all hover:border-outline-variant/60";
         thumb.style.filter = "grayscale(100%)";
         thumb.style.transition = "filter 0.2s ease, border-color 0.2s ease";
-        
+
         // Image element
         var img = document.createElement("img");
         img.src = e.target.result;
         img.className = "w-full h-full object-cover";
         img.alt = "Preview " + (index + 1);
-        
+
         // Delete button overlay (hidden by default, shown on hover)
         var deleteBtn = document.createElement("button");
         deleteBtn.className = "absolute inset-0 w-full h-full flex items-center justify-center bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity rounded-sm border-0 cursor-pointer";
         deleteBtn.innerHTML = '<span class="material-symbols-outlined text-error text-[20px]">delete</span>';
         deleteBtn.type = "button";
         deleteBtn.setAttribute("data-file-index", index);
-        
+
         // Hover effects on thumbnail
         thumb.addEventListener("mouseenter", function () {
           thumb.style.filter = "grayscale(0%)";
@@ -933,7 +933,7 @@
         thumb.addEventListener("mouseleave", function () {
           thumb.style.filter = "grayscale(100%)";
         });
-        
+
         // Delete functionality
         deleteBtn.addEventListener("click", function (evt) {
           evt.stopPropagation();
@@ -941,7 +941,7 @@
           _selectedFiles.splice(fileIndex, 1);
           handleFilesSelected(_selectedFiles);
         });
-        
+
         thumb.appendChild(img);
         thumb.appendChild(deleteBtn);
         strip.appendChild(thumb);
@@ -1121,14 +1121,14 @@
       }
 
       var payload = {
-        name:     nameVal,
+        name: nameVal,
         category: ($("edit-entity-category") || {}).value || "unknown",
         severity: (($("edit-entity-severity") || {}).value || "").trim(),
-        dob:      (($("edit-entity-dob") || {}).value || "").trim(),
-        gender:   (($("edit-entity-gender") || {}).value || "").trim(),
-        city:     (($("edit-entity-city") || {}).value || "").trim(),
-        country:  (($("edit-entity-country") || {}).value || "").trim(),
-        notes:    (($("edit-entity-notes") || {}).value || "").trim(),
+        dob: (($("edit-entity-dob") || {}).value || "").trim(),
+        gender: (($("edit-entity-gender") || {}).value || "").trim(),
+        city: (($("edit-entity-city") || {}).value || "").trim(),
+        country: (($("edit-entity-country") || {}).value || "").trim(),
+        notes: (($("edit-entity-notes") || {}).value || "").trim(),
       };
 
       btnSaveEdit.disabled = true;
@@ -1201,9 +1201,9 @@
 
     // Stat bar click-to-filter (FIX 3)
     var statMappings = [
-      { id: "stat-btn-total",     qf: "all" },
-      { id: "stat-btn-known",     qf: "known" },
-      { id: "stat-btn-unknown",   qf: "unknown" },
+      { id: "stat-btn-total", qf: "all" },
+      { id: "stat-btn-known", qf: "known" },
+      { id: "stat-btn-unknown", qf: "unknown" },
       { id: "stat-btn-incidents", qf: "incidents" },
     ];
     statMappings.forEach(function (m) {
@@ -1234,9 +1234,9 @@
     });
 
     // Close / cancel modal
-    var btnCloseEdit  = $("btn-close-edit");
+    var btnCloseEdit = $("btn-close-edit");
     var btnCancelEdit = $("btn-cancel-edit");
-    if (btnCloseEdit)  btnCloseEdit.addEventListener("click", closeEditModal);
+    if (btnCloseEdit) btnCloseEdit.addEventListener("click", closeEditModal);
     if (btnCancelEdit) btnCancelEdit.addEventListener("click", closeEditModal);
 
     // Save identity

@@ -24,7 +24,7 @@
 
   function loadHealth() {
     if (isRefreshing) return;
-    
+
     var grid = $("health-grid");
     if (!grid) return;
 
@@ -37,7 +37,7 @@
 
       // Update overall status
       $("overall-status").textContent = health.status === "ok" ? "Operational" : "Attention Required";
-      $("overall-status").className = health.status === "ok" 
+      $("overall-status").className = health.status === "ok"
         ? "px-2 py-0.5 bg-success/10 text-success text-[0.65rem] font-mono uppercase tracking-wider border border-success/20"
         : "px-2 py-0.5 bg-warn/10 text-warn text-[0.65rem] font-mono uppercase tracking-wider border border-warn/20";
 
@@ -162,7 +162,7 @@
     root.innerHTML = html;
 
     // Attach event listeners for sliders/toggles (existing config keys, exclude notifications which are handled separately)
-    root.querySelectorAll("input[type=range], input[type=checkbox][data-key]").forEach(function(input) {
+    root.querySelectorAll("input[type=range], input[type=checkbox][data-key]").forEach(function (input) {
       var key = input.getAttribute("data-key");
       // Skip notification toggles - they use Save button instead of hot-tune
       if (key && key.startsWith("notifications.")) return;
@@ -170,14 +170,14 @@
     });
 
     // Policy matrix checkboxes
-    root.querySelectorAll("input[data-policy-trigger]").forEach(function(cb) {
+    root.querySelectorAll("input[data-policy-trigger]").forEach(function (cb) {
       cb.addEventListener("change", handlePolicyChange);
     });
 
     // Notification test buttons
-    wireTestButton('btn-test-email',   '/api/v1/notifications/test/email');
-    wireTestButton('btn-test-wa',      '/api/v1/notifications/test/whatsapp');
-    wireTestButton('btn-test-pdf',     '/api/v1/notifications/test/pdf');
+    wireTestButton('btn-test-email', '/api/v1/notifications/test/email');
+    wireTestButton('btn-test-wa', '/api/v1/notifications/test/whatsapp');
+    wireTestButton('btn-test-pdf', '/api/v1/notifications/test/pdf');
 
     // WhatsApp connection manager — start polling when settings page loads
     wa_startPolling();
@@ -185,27 +185,27 @@
     // Save & persist notification settings
     var btnSave = document.getElementById('btn-save-notifications');
     if (btnSave) {
-      btnSave.addEventListener('click', function() { saveNotificationSettings(true, null); });
+      btnSave.addEventListener('click', function () { saveNotificationSettings(true, null); });
     }
     // Reset notification settings
     var btnReset = document.getElementById('btn-reset-notifications');
     if (btnReset) {
-      btnReset.addEventListener('click', function() {
+      btnReset.addEventListener('click', function () {
         TraceDialog.confirm(
           'Reset Notification Settings',
           'This will wipe all saved notification credentials and restore defaults. Are you sure?',
           { type: 'error', confirmText: 'Reset' }
-        ).then(function(ok) {
+        ).then(function (ok) {
           if (!ok) return;
           fetch('/api/v1/config/notifications/reset', { method: 'POST' })
-          .then(function(r) { return r.json(); })
-          .then(function(data) {
-            if (data.notifications) currentConfig.notifications = data.notifications;
-            TraceToast.success('Reset', 'Notification settings cleared.');
-            // Re-render to show empty fields
-            renderConfig();
-          })
-          .catch(function() { TraceToast.error('Reset Failed', 'Check backend logs.'); });
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+              if (data.notifications) currentConfig.notifications = data.notifications;
+              TraceToast.success('Reset', 'Notification settings cleared.');
+              // Re-render to show empty fields
+              renderConfig();
+            })
+            .catch(function () { TraceToast.error('Reset Failed', 'Check backend logs.'); });
         });
       });
     }
@@ -236,14 +236,14 @@
   }
 
   function renderPolicyMatrix(policy, trigger) {
-    var ALL_TYPES  = ['log', 'pdf_report', 'email', 'whatsapp'];
-    var ICONS      = { log: '📋', pdf_report: '📄', email: '📧', whatsapp: '💬' };
+    var ALL_TYPES = ['log', 'pdf_report', 'email', 'whatsapp'];
+    var ICONS = { log: '📋', pdf_report: '📄', email: '📧', whatsapp: '💬' };
     var severities = ['low', 'medium', 'high'];
     var SEV_COLORS = { low: 'text-outline', medium: 'text-warn', high: 'text-error' };
 
-    var rows = severities.map(function(sev) {
+    var rows = severities.map(function (sev) {
       var active = policy[sev] || [];
-      var cells  = ALL_TYPES.map(function(at) {
+      var cells = ALL_TYPES.map(function (at) {
         var checked = active.indexOf(at) !== -1 ? 'checked' : '';
         var id = 'policy-' + trigger + '-' + sev + '-' + at;
         return `
@@ -272,7 +272,7 @@
         </tr>`;
     }).join('');
 
-    var headers = ALL_TYPES.map(function(at) {
+    var headers = ALL_TYPES.map(function (at) {
       return `<th class="font-mono text-[0.55rem] text-outline uppercase pb-3 text-center">${ICONS[at]} ${at}</th>`;
     }).join('');
 
@@ -303,8 +303,8 @@
 
   function renderNotificationsSection(notif) {
     var email = notif.email || {};
-    var wa    = notif.whatsapp || {};
-    var pdf   = notif.pdf_report || {};
+    var wa = notif.whatsapp || {};
+    var pdf = notif.pdf_report || {};
 
     function field(label, inputHtml, hint) {
       return `
@@ -316,12 +316,12 @@
     }
     function inp(id, value, placeholder, type) {
       type = type || 'text';
-      return `<input type="${type}" id="${id}" value="${escHtml(value||'')}" placeholder="${placeholder||''}"
+      return `<input type="${type}" id="${id}" value="${escHtml(value || '')}" placeholder="${placeholder || ''}"
         class="w-full bg-surface-high font-mono text-[0.75rem] text-on-surface border border-outline-variant/20
                px-3 py-2 focus:outline-none focus:border-primary/60 transition-colors placeholder:text-outline/40">`;
     }
     function listInp(id, arr, placeholder) {
-      return `<input type="text" id="${id}" value="${escHtml((arr||[]).join(', '))}" placeholder="${placeholder||''}"
+      return `<input type="text" id="${id}" value="${escHtml((arr || []).join(', '))}" placeholder="${placeholder || ''}"
         class="w-full bg-surface-high font-mono text-[0.75rem] text-on-surface border border-outline-variant/20
                px-3 py-2 focus:outline-none focus:border-primary/60 transition-colors placeholder:text-outline/40">`;
     }
@@ -364,7 +364,7 @@
         ${field('SMTP Port', inp('notif-smtp-port', email.smtp_port, '587'), '587=STARTTLS · 465=SSL')}
         ${field('Username', inp('notif-smtp-user', email.smtp_user, 'alerts@your-org.com'))}
         ${field('Password', inp('notif-smtp-pass', email.smtp_password || '', '●●●●●●●●', 'password'),
-                 'Stored in config file for testing.')}
+      'Stored in config file for testing.')}
         ${field('Sender Address', inp('notif-sender', email.sender_address, 'trace-aml@your-org.com'))}
         ${field('Recipients (comma-sep)', listInp('notif-email-recipients', email.recipient_addresses, 'operator@org.com, ops2@org.com'))}
       </div>
@@ -382,7 +382,7 @@
     var waBody = `
       <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6">
         ${field('Bridge URL', inp('notif-wa-url', wa.bridge_url || '', 'http://localhost:3001'),
-                 'Local Node.js bridge — run: npm start in whatsapp-bridge/')}
+      'Local Node.js bridge — run: npm start in whatsapp-bridge/')}
         ${field('Recipients (comma-sep, E.164)', listInp('notif-wa-numbers', wa.recipient_numbers, '+919876543210, +1234567890'))}
       </div>
       <div class="flex items-center gap-6 mt-4 mb-5">
@@ -485,12 +485,12 @@
         </p>
 
         ${channelCard('mail', 'Email / SMTP',
-          function() { return !!(email.smtp_host && email.smtp_user && (email.recipient_addresses||[]).length); },
-          emailBody, 'btn-test-email', 'Send Test Email')}
+      function () { return !!(email.smtp_host && email.smtp_user && (email.recipient_addresses || []).length); },
+      emailBody, 'btn-test-email', 'Send Test Email')}
 
         ${channelCard('chat', 'WhatsApp (Evolution API)',
-          function() { return !!(wa.bridge_url && (wa.recipient_numbers||[]).length); },
-          waBody, 'btn-test-wa', 'Send Test WhatsApp')}
+        function () { return !!(wa.bridge_url && (wa.recipient_numbers || []).length); },
+        waBody, 'btn-test-wa', 'Send Test WhatsApp')}
 
         <div class="border border-outline-variant/10 bg-surface-container/20">
           <div class="flex items-center justify-between px-5 py-3 border-b border-outline-variant/10 bg-surface-high/20">
@@ -539,13 +539,13 @@
   }
 
   function escHtml(s) {
-    return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    return String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   }
 
   function handleConfigChange(e) {
     var key = e.target.getAttribute("data-key");
     var value = e.target.type === "checkbox" ? e.target.checked : parseFloat(e.target.value);
-    
+
     // Optimistic UI update
     var valDisplay = $("val-" + key);
     if (valDisplay) valDisplay.textContent = value;
@@ -560,7 +560,7 @@
     }
     current[parts[parts.length - 1]] = value;
 
-    TraceClient.updateConfig(payload).then(function(newCfg) {
+    TraceClient.updateConfig(payload).then(function (newCfg) {
       if (newCfg) {
         currentConfig = newCfg;
         console.log("[Settings] Hot-tune applied:", key, "=", value);
@@ -571,7 +571,7 @@
   function handlePolicyChange() {
     // Collect full on_create matrix from checkboxes
     var matrix = { on_create: { low: [], medium: [], high: [] } };
-    document.querySelectorAll('input[data-policy-trigger="on_create"]').forEach(function(cb) {
+    document.querySelectorAll('input[data-policy-trigger="on_create"]').forEach(function (cb) {
       if (cb.checked) {
         var sev = cb.getAttribute('data-policy-sev');
         var type = cb.getAttribute('data-policy-type');
@@ -579,20 +579,20 @@
       }
     });
     // PATCH in-memory first, then immediately persist to disk
-    TraceClient.updateConfig({ actions: matrix }).then(function(newCfg) {
+    TraceClient.updateConfig({ actions: matrix }).then(function (newCfg) {
       if (newCfg) { currentConfig = newCfg; }
       // Auto-save so policy matrix survives restarts
       return fetch('/api/v1/config/notifications/save', { method: 'POST' });
-    }).then(function(resp) {
+    }).then(function (resp) {
       if (!resp || !resp.ok) return;
       // Show brief "✓ Saved" next to the section heading
       var statusEl = document.getElementById('notif-save-status');
       if (statusEl) {
         statusEl.textContent = '✓ Policy saved';
         statusEl.style.color = 'var(--success, #4ade80)';
-        setTimeout(function() { statusEl.textContent = ''; }, 2500);
+        setTimeout(function () { statusEl.textContent = ''; }, 2500);
       }
-    }).catch(function() { /* silent — PATCH already applied in-memory */ });
+    }).catch(function () { /* silent — PATCH already applied in-memory */ });
   }
 
   // ── WhatsApp Connection Manager ──────────────────────────────────────────────
@@ -600,64 +600,64 @@
   var _waPollTimer = null;
 
   function wa_applyState(data) {
-    var state   = (data && data.state) || 'bridge_down';
-    var qr      = data && data.qr;
-    var phone   = data && data.phone;
+    var state = (data && data.state) || 'bridge_down';
+    var qr = data && data.qr;
+    var phone = data && data.phone;
 
     // Hide all zones
-    ['wa-qr-zone','wa-connected-zone','wa-down-zone','wa-init-zone'].forEach(function(id) {
+    ['wa-qr-zone', 'wa-connected-zone', 'wa-down-zone', 'wa-init-zone'].forEach(function (id) {
       var el = document.getElementById(id); if (el) el.classList.add('hidden');
     });
 
-    var dotEl  = document.getElementById('wa-state-dot');
+    var dotEl = document.getElementById('wa-state-dot');
     var textEl = document.getElementById('wa-state-text');
-    var badge  = document.getElementById('wa-state-badge');
+    var badge = document.getElementById('wa-state-badge');
 
     if (state === 'connected') {
       var z = document.getElementById('wa-connected-zone');
       if (z) z.classList.remove('hidden');
       var ph = document.getElementById('wa-phone-label');
       if (ph) ph.textContent = phone ? 'Phone: +' + phone : 'Session active';
-      if (dotEl)  { dotEl.className  = 'w-1.5 h-1.5 rounded-full bg-success inline-block'; }
+      if (dotEl) { dotEl.className = 'w-1.5 h-1.5 rounded-full bg-success inline-block'; }
       if (textEl) { textEl.textContent = 'Connected'; textEl.style.color = 'var(--success,#4ade80)'; }
-      if (badge)  { badge.className = 'flex items-center gap-1.5 font-mono text-[0.6rem] px-2 py-0.5 border border-success/30 bg-success/5'; }
+      if (badge) { badge.className = 'flex items-center gap-1.5 font-mono text-[0.6rem] px-2 py-0.5 border border-success/30 bg-success/5'; }
 
     } else if (state === 'qr_ready') {
       var z = document.getElementById('wa-qr-zone');
       if (z) z.classList.remove('hidden');
       var img = document.getElementById('wa-qr-img');
       if (img && qr) img.src = qr;
-      if (dotEl)  { dotEl.className  = 'w-1.5 h-1.5 rounded-full bg-warn inline-block'; }
+      if (dotEl) { dotEl.className = 'w-1.5 h-1.5 rounded-full bg-warn inline-block'; }
       if (textEl) { textEl.textContent = 'Scan QR'; textEl.style.color = 'var(--warn,#eab308)'; }
-      if (badge)  { badge.className = 'flex items-center gap-1.5 font-mono text-[0.6rem] px-2 py-0.5 border border-warn/30 bg-warn/5'; }
+      if (badge) { badge.className = 'flex items-center gap-1.5 font-mono text-[0.6rem] px-2 py-0.5 border border-warn/30 bg-warn/5'; }
 
     } else if (state === 'initializing') {
       var z = document.getElementById('wa-init-zone');
       if (z) z.classList.remove('hidden');
-      if (dotEl)  { dotEl.className  = 'w-1.5 h-1.5 rounded-full bg-warn inline-block animate-pulse'; }
+      if (dotEl) { dotEl.className = 'w-1.5 h-1.5 rounded-full bg-warn inline-block animate-pulse'; }
       if (textEl) { textEl.textContent = 'Initializing'; textEl.style.color = 'var(--warn,#eab308)'; }
-      if (badge)  { badge.className = 'flex items-center gap-1.5 font-mono text-[0.6rem] px-2 py-0.5 border border-warn/20'; }
+      if (badge) { badge.className = 'flex items-center gap-1.5 font-mono text-[0.6rem] px-2 py-0.5 border border-warn/20'; }
 
     } else { // bridge_down
       var z = document.getElementById('wa-down-zone');
       if (z) z.classList.remove('hidden');
-      if (dotEl)  { dotEl.className  = 'w-1.5 h-1.5 rounded-full bg-error inline-block'; }
+      if (dotEl) { dotEl.className = 'w-1.5 h-1.5 rounded-full bg-error inline-block'; }
       if (textEl) { textEl.textContent = 'Bridge Offline'; textEl.style.color = 'var(--error,#ef4444)'; }
-      if (badge)  { badge.className = 'flex items-center gap-1.5 font-mono text-[0.6rem] px-2 py-0.5 border border-error/30 bg-error/5'; }
+      if (badge) { badge.className = 'flex items-center gap-1.5 font-mono text-[0.6rem] px-2 py-0.5 border border-error/30 bg-error/5'; }
     }
   }
 
   function wa_poll() {
     fetch('/api/v1/whatsapp/status', { cache: 'no-store' })
-      .then(function(r) { return r.ok ? r.json() : null; })
-      .then(function(data) {
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (data) {
         wa_applyState(data);
         // Keep polling while QR is shown or initializing; slow down when connected/down
         var interval = (data && (data.state === 'qr_ready' || data.state === 'initializing')) ? 3000 : 8000;
         _waPollTimer = setTimeout(wa_poll, interval);
       })
-      .catch(function() {
-        wa_applyState({state: 'bridge_down'});
+      .catch(function () {
+        wa_applyState({ state: 'bridge_down' });
         _waPollTimer = setTimeout(wa_poll, 8000);
       });
   }
@@ -667,7 +667,7 @@
     // Wire Refresh button
     var refreshBtn = document.getElementById('wa-refresh-btn');
     if (refreshBtn) {
-      refreshBtn.addEventListener('click', function() {
+      refreshBtn.addEventListener('click', function () {
         if (_waPollTimer) { clearTimeout(_waPollTimer); }
         wa_poll();
       });
@@ -675,10 +675,10 @@
     // Wire Disconnect button
     var discBtn = document.getElementById('wa-disconnect-btn');
     if (discBtn) {
-      discBtn.addEventListener('click', function() {
+      discBtn.addEventListener('click', function () {
         fetch('/api/v1/whatsapp/logout', { method: 'POST' })
-          .then(function() {
-            wa_applyState({state: 'initializing'});
+          .then(function () {
+            wa_applyState({ state: 'initializing' });
             setTimeout(wa_poll, 2000);
           });
       });
@@ -690,12 +690,12 @@
     var btn = document.getElementById(btnId);
     var statusEl = document.getElementById(btnId + '-status');
     if (!btn) return;
-    btn.addEventListener('click', function() {
+    btn.addEventListener('click', function () {
       // Validate required fields before testing (channels are auto-enabled by field presence)
       if (btnId === 'btn-test-email') {
-        var host = (document.getElementById('notif-smtp-host')||{}).value || '';
-        var user = (document.getElementById('notif-smtp-user')||{}).value || '';
-        var recip = (document.getElementById('notif-email-recipients')||{}).value || '';
+        var host = (document.getElementById('notif-smtp-host') || {}).value || '';
+        var user = (document.getElementById('notif-smtp-user') || {}).value || '';
+        var recip = (document.getElementById('notif-email-recipients') || {}).value || '';
         if (!host || !user || !recip.trim()) {
           if (statusEl) { statusEl.textContent = '✗ Fill in SMTP Host, Username, and Recipients first'; statusEl.style.color = 'var(--error)'; }
           TraceToast.warning('Email Not Configured', 'Enter SMTP Host, Username, and at least one Recipient before testing.');
@@ -703,8 +703,8 @@
         }
       }
       if (btnId === 'btn-test-wa') {
-        var bridgeUrl = (document.getElementById('notif-wa-url')||{}).value || '';
-        var waRecip = (document.getElementById('notif-wa-numbers')||{}).value || '';
+        var bridgeUrl = (document.getElementById('notif-wa-url') || {}).value || '';
+        var waRecip = (document.getElementById('notif-wa-numbers') || {}).value || '';
         if (!bridgeUrl || !waRecip.trim()) {
           if (statusEl) { statusEl.textContent = '✗ Fill in Bridge URL and Recipients first'; statusEl.style.color = 'var(--error)'; }
           TraceToast.warning('WhatsApp Not Configured', 'Enter the Bridge URL and at least one recipient number before testing.');
@@ -715,39 +715,39 @@
       if (statusEl) statusEl.textContent = 'Saving & Processing...';
 
       // Auto-save notification settings first, then test
-      saveNotificationSettingsThen(function() {
+      saveNotificationSettingsThen(function () {
         if (statusEl) statusEl.textContent = btnId === 'btn-test-pdf' ? 'Generating...' : 'Sending...';
         fetch(url, { method: 'POST' })
-        .then(function(r) { return r.json(); })
-        .then(function(data) {
-          var ok = data.status === 'queued' || data.status === 'sent' || data.status === 'generated';
-          if (statusEl) {
-            statusEl.textContent = ok ? '✓ ' + data.status : '✗ ' + (data.reason || data.status);
-            statusEl.style.color = ok ? 'var(--success)' : 'var(--error)';
-          }
-          if (ok) {
-            if (btnId === 'btn-test-pdf') {
-              var targetUrl = data.pdf_url || data.html_url;
-              if (targetUrl) {
-                var isFallback = !data.pdf_url && data.html_url;
-                var msg = isFallback ? 'Showing HTML Preview (PDF libs missing)' : 'Opening PDF preview...';
-                TraceToast.success('Report Generated', msg);
-                setTimeout(function() {
-                  window.open(targetUrl, '_blank');
-                }, 800);
-              } else {
-                TraceToast.warning('Generated but No URL', 'Report created but could not be served.');
-              }
-            } else {
-              TraceToast.success('Test Sent', 'Check recipient for delivery.');
+          .then(function (r) { return r.json(); })
+          .then(function (data) {
+            var ok = data.status === 'queued' || data.status === 'sent' || data.status === 'generated';
+            if (statusEl) {
+              statusEl.textContent = ok ? '✓ ' + data.status : '✗ ' + (data.reason || data.status);
+              statusEl.style.color = ok ? 'var(--success)' : 'var(--error)';
             }
-          }
-          else    TraceToast.warning('Failed', data.reason || data.status);
-        })
-        .catch(function(e) {
-          if (statusEl) { statusEl.textContent = '✗ Network error'; statusEl.style.color = 'var(--error)'; }
-        })
-        .finally(function() { btn.disabled = false; });
+            if (ok) {
+              if (btnId === 'btn-test-pdf') {
+                var targetUrl = data.pdf_url || data.html_url;
+                if (targetUrl) {
+                  var isFallback = !data.pdf_url && data.html_url;
+                  var msg = isFallback ? 'Showing HTML Preview (PDF libs missing)' : 'Opening PDF preview...';
+                  TraceToast.success('Report Generated', msg);
+                  setTimeout(function () {
+                    window.open(targetUrl, '_blank');
+                  }, 800);
+                } else {
+                  TraceToast.warning('Generated but No URL', 'Report created but could not be served.');
+                }
+              } else {
+                TraceToast.success('Test Sent', 'Check recipient for delivery.');
+              }
+            }
+            else TraceToast.warning('Failed', data.reason || data.status);
+          })
+          .catch(function (e) {
+            if (statusEl) { statusEl.textContent = '✗ Network error'; statusEl.style.color = 'var(--error)'; }
+          })
+          .finally(function () { btn.disabled = false; });
       });
 
     });
@@ -756,28 +756,28 @@
   function _buildNotifPayload() {
     function v(id) { var el = document.getElementById(id); return el ? el.value.trim() : ''; }
     function cb(id) { var el = document.getElementById(id); return el ? el.checked : false; }
-    function nums(id) { return v(id).split(',').map(function(s){return s.trim();}).filter(Boolean); }
+    function nums(id) { return v(id).split(',').map(function (s) { return s.trim(); }).filter(Boolean); }
     var payload = {
       email: {
-        smtp_host:           v('notif-smtp-host'),
-        smtp_port:           parseInt(v('notif-smtp-port'), 10) || 587,
-        smtp_user:           v('notif-smtp-user'),
-        sender_address:      v('notif-sender'),
+        smtp_host: v('notif-smtp-host'),
+        smtp_port: parseInt(v('notif-smtp-port'), 10) || 587,
+        smtp_user: v('notif-smtp-user'),
+        sender_address: v('notif-sender'),
         recipient_addresses: nums('notif-email-recipients'),
-        attach_pdf:          cb('notif-email-attach-pdf'),
-        use_tls:             cb('notif-email-tls'),
+        attach_pdf: cb('notif-email-attach-pdf'),
+        use_tls: cb('notif-email-tls'),
       },
       whatsapp: {
-        bridge_url:       v('notif-wa-url'),
+        bridge_url: v('notif-wa-url'),
         recipient_numbers: nums('notif-wa-numbers'),
-        send_pdf:         cb('notif-wa-send-pdf'),
-        send_text:        cb('notif-wa-send-text'),
+        send_pdf: cb('notif-wa-send-pdf'),
+        send_text: cb('notif-wa-send-text'),
       },
       pdf_report: {
         include_entity_portrait: cb('notif-pdf-portrait'),
-        include_screenshots:     cb('notif-pdf-screenshots'),
-        max_detection_rows: parseInt((document.getElementById('notif-pdf-det-rows')||{value:20}).value, 10),
-        max_alert_rows:     parseInt((document.getElementById('notif-pdf-alert-rows')||{value:50}).value, 10),
+        include_screenshots: cb('notif-pdf-screenshots'),
+        max_detection_rows: parseInt((document.getElementById('notif-pdf-det-rows') || { value: 20 }).value, 10),
+        max_alert_rows: parseInt((document.getElementById('notif-pdf-alert-rows') || { value: 50 }).value, 10),
       }
     };
     var pw = v('notif-smtp-pass');
@@ -796,27 +796,27 @@
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
     })
-    .then(function(r) { return r.json(); })
-    .then(function(data) {
-      if (data.notifications) currentConfig.notifications = data.notifications;
-      if (persist) {
-        return fetch('/api/v1/config/notifications/save', { method: 'POST' })
-          .then(function(r) { return r.json(); })
-          .then(function(saved) {
-            if (statusEl) { statusEl.textContent = '✓ Saved to disk'; statusEl.style.color = 'var(--success)'; }
-            TraceToast.success('Persisted', 'Settings saved — will reload on next restart.');
-            if (saved.notifications) currentConfig.notifications = saved.notifications;
-            if (callback) callback();
-          });
-      } else {
-        if (statusEl) { statusEl.textContent = '✓ Applied'; statusEl.style.color = 'var(--success)'; }
-        if (callback) callback();
-      }
-    })
-    .catch(function() {
-      if (statusEl) { statusEl.textContent = '✗ Failed'; statusEl.style.color = 'var(--error)'; }
-      TraceToast.error('Save Failed', 'Check backend logs.');
-    });
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        if (data.notifications) currentConfig.notifications = data.notifications;
+        if (persist) {
+          return fetch('/api/v1/config/notifications/save', { method: 'POST' })
+            .then(function (r) { return r.json(); })
+            .then(function (saved) {
+              if (statusEl) { statusEl.textContent = '✓ Saved to disk'; statusEl.style.color = 'var(--success)'; }
+              TraceToast.success('Persisted', 'Settings saved — will reload on next restart.');
+              if (saved.notifications) currentConfig.notifications = saved.notifications;
+              if (callback) callback();
+            });
+        } else {
+          if (statusEl) { statusEl.textContent = '✓ Applied'; statusEl.style.color = 'var(--success)'; }
+          if (callback) callback();
+        }
+      })
+      .catch(function () {
+        if (statusEl) { statusEl.textContent = '✗ Failed'; statusEl.style.color = 'var(--error)'; }
+        TraceToast.error('Save Failed', 'Check backend logs.');
+      });
   }
 
   // Alias used by wireTestButton (applies live, then calls callback)
@@ -828,11 +828,11 @@
     var navItems = document.querySelectorAll("#settings-nav .nav-pill");
     var scrollContainer = $("settings-scroll-container");
 
-    navItems.forEach(function(item) {
-      item.addEventListener("click", function() {
+    navItems.forEach(function (item) {
+      item.addEventListener("click", function () {
         var sectionId = item.getAttribute("data-section");
         var target = $(sectionId);
-        
+
         if (target) {
           // Update visual state
           navItems.forEach(i => {
@@ -849,11 +849,11 @@
     });
 
     // Scroll listener for active state
-    scrollContainer.addEventListener("scroll", function() {
+    scrollContainer.addEventListener("scroll", function () {
       var sections = ["section-health", "section-recognition", "section-rules",
-                      "section-actions", "section-notifications", "section-neural", "section-camera"];
+        "section-actions", "section-notifications", "section-neural", "section-camera"];
       var current = "";
-      
+
       for (var id of sections) {
         var el = $(id);
         if (el && el.offsetTop - scrollContainer.offsetTop <= scrollContainer.scrollTop + 100) {
@@ -923,8 +923,8 @@
 
         // Only update if not already being handled by rebuild status
         if (runningEl && (runningEl.textContent === "IDLE" || runningEl.textContent === "")) {
-          var processing = Object.values(persons).filter(function(s) { return s === "processing"; }).length;
-          var queued = Object.values(persons).filter(function(s) { return s === "queued"; }).length;
+          var processing = Object.values(persons).filter(function (s) { return s === "processing"; }).length;
+          var queued = Object.values(persons).filter(function (s) { return s === "queued"; }).length;
 
           if (processing > 0) {
             if (dot) dot.className = "status-dot status-dot--active";
@@ -945,11 +945,11 @@
     // Refresh Health button
     var btnRefresh = $("btn-refresh-health");
     if (btnRefresh) {
-      btnRefresh.addEventListener("click", function() {
+      btnRefresh.addEventListener("click", function () {
         btnRefresh.classList.add("animate-spin");
         isRefreshing = true;
         loadHealth();
-        setTimeout(function() {
+        setTimeout(function () {
           btnRefresh.classList.remove("animate-spin");
           isRefreshing = false;
         }, 1000);
@@ -959,14 +959,14 @@
     // Auto-refresh toggle
     var autoToggle = $("auto-refresh-toggle");
     var healthInterval = null;
-    
+
     function startPolling() {
       if (healthInterval) clearInterval(healthInterval);
       healthInterval = setInterval(loadHealth, 5000);
     }
-    
+
     if (autoToggle) {
-      autoToggle.addEventListener("change", function() {
+      autoToggle.addEventListener("change", function () {
         if (this.checked) startPolling();
         else if (healthInterval) {
           clearInterval(healthInterval);
@@ -983,7 +983,7 @@
           "Confirm Deduplication",
           "Scan and remove duplicate incident entries from the database?\n\nThis may take several seconds.",
           { confirmText: "Start Scan" }
-        ).then(function(ok) {
+        ).then(function (ok) {
           if (!ok) return;
           btnDeduplicate.disabled = true;
           btnDeduplicate.textContent = "...";
@@ -1003,23 +1003,23 @@
     }
 
     // ── Force Full System Reset ────────────────────────────────────────
-    var btnFactoryReset   = $("btn-factory-reset");
-    var progressEl        = $("factory-reset-progress");
-    var statusEl          = $("factory-reset-status");
+    var btnFactoryReset = $("btn-factory-reset");
+    var progressEl = $("factory-reset-progress");
+    var statusEl = $("factory-reset-status");
 
     if (btnFactoryReset) {
-      btnFactoryReset.addEventListener("click", function() {
+      btnFactoryReset.addEventListener("click", function () {
         TraceDialog.confirm(
           "Full System Reset",
           "This will permanently delete all persons, embeddings, entities, detections, incidents, portraits, and screenshots.",
           { type: "error", confirmText: "Wipe Everything", verifyText: "RESET" }
-        ).then(function(ok) {
+        ).then(function (ok) {
           if (!ok) return;
 
           // Show progress
           if (btnFactoryReset) { btnFactoryReset.disabled = true; }
           if (progressEl) { progressEl.style.display = "block"; }
-          if (statusEl)   { statusEl.textContent = "Wiping all data — please wait..."; }
+          if (statusEl) { statusEl.textContent = "Wiping all data — please wait..."; }
 
           TraceClient.factoryReset().then(function (result) {
             if (result && result.status === "success") {
@@ -1046,7 +1046,7 @@
         loadHealth();
         startPolling();
         pollTrainStatus(); // Initial poll
-        TraceClient.getConfig().then(function(cfg) {
+        TraceClient.getConfig().then(function (cfg) {
           currentConfig = cfg;
           renderConfig();
           initSidebar();
