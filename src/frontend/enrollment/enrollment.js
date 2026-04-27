@@ -151,16 +151,22 @@
       if (delBtn) {
         delBtn.addEventListener("click", function () {
           var pid = delBtn.getAttribute("data-pid");
-          if (!confirm("Confirm record termination for " + pid + "? This action is irreversible.")) return;
-          TraceClient.deletePerson(pid).then(function () {
-            loadPersonList();
-            panel.innerHTML = '<div class="flex flex-col items-center justify-center h-full text-center opacity-30">'
-              + '<span class="material-symbols-outlined text-[48px] mb-2">delete_forever</span>'
-              + '<p class="font-mono text-[0.65rem] uppercase tracking-widest">Record terminated</p></div>';
+          TraceDialog.confirm(
+            "Terminate Record",
+            "Confirm record termination for " + pid + "? This action is irreversible.",
+            { type: "error", confirmText: "Terminate" }
+          ).then(function(ok) {
+            if (!ok) return;
+            TraceClient.deletePerson(pid).then(function () {
+              TraceToast.success("Record Terminated", "Entity record " + pid + " has been permanently deleted.");
+              loadPersonList();
+              panel.innerHTML = '<div class="flex flex-col items-center justify-center h-full text-center opacity-30">'
+                + '<span class="material-symbols-outlined text-[48px] mb-2">delete_forever</span>'
+                + '<p class="font-mono text-[0.65rem] uppercase tracking-widest">Record terminated</p></div>';
+            });
           });
         });
-      }
-    });
+      }    });
   }
 
   function detailRow(label, value, valueClass) {
@@ -309,8 +315,10 @@
       TraceClient.uploadPersonImages(result.person_id, _selectedFiles).then(function (uploadResult) {
         if (uploadResult) {
           if (statusEl) statusEl.textContent = "✓ " + result.person_id + " — ENROLLED";
+          TraceToast.success("Enrollment Successful", "Entity " + payload.name + " (" + result.person_id + ") registered with " + _selectedFiles.length + " samples.");
         } else {
           if (statusEl) statusEl.textContent = "RECORD CREATED, BIOMETRIC UPLOAD FAILED";
+          TraceToast.warning("Partial Success", "Record created, but biometric samples failed to upload.");
         }
         setTimeout(function() { if(statusEl) statusEl.textContent = ""; }, 4000);
         clearForm();
@@ -318,6 +326,7 @@
       });
     }).catch(function () {
       if (statusEl) statusEl.textContent = "SYSTEM ERROR";
+      TraceToast.error("System Error", "Failed to communicate with enrollment service.");
       if (btn) btn.disabled = false;
     });
   }

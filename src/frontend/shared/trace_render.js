@@ -84,32 +84,47 @@
 
   /* ───────────────────── Component Renderers ─────────────────────── */
 
-  /**
-   * Render a timeline card (used on Incidents, History, Entity pages).
-   * @param {Object} item  TimelineItem from API
-   * @returns {string} HTML
-   */
   function timelineCard(item) {
-    var kindLabel = String(item.kind || "event").toUpperCase();
-    var badgeHtml = badge(_timelineKind(item.kind), kindLabel);
-    var title = esc(item.title || "");
-    var time = esc(fmtTime(item.timestamp_utc));
-    var summary = esc(item.summary || "");
-    var meta = [];
-    if (item.entity_id) meta.push("Entity: " + esc(item.entity_id));
-    if (item.source) meta.push("Source: " + esc(item.source));
-    if (item.incident_id) meta.push("Incident: " + esc(item.incident_id));
-    if (item.metadata) {
-      if (item.metadata.track_id) meta.push("Track: " + esc(item.metadata.track_id));
-      if (item.metadata.event_count) meta.push("Events: " + esc(item.metadata.event_count));
+    var ev = item.ev || item;
+    var count = item.count || 1;
+
+    var kindLabel = String(ev.kind || "event").toUpperCase();
+    var badgeHtml = badge(_timelineKind(ev.kind), kindLabel);
+    
+    var title = esc(ev.title || "");
+    if (count > 1) {
+      title = '<span class="text-primary mr-1">[' + count + 'x]</span>' + title;
     }
 
-    return '<div class="bg-surface-container p-4 hover:bg-surface-high transition-colors">'
+    var timeStr;
+    if (count > 1) {
+      var earliest = Math.min(item.startTime, item.endTime);
+      var latest = Math.max(item.startTime, item.endTime);
+      timeStr = esc(fmtTime(new Date(earliest).toISOString())) + " \u2014 " + esc(fmtTime(new Date(latest).toISOString()));
+    } else {
+      timeStr = esc(fmtTime(ev.timestamp_utc));
+    }
+
+    var summary = esc(ev.summary || "");
+    var meta = [];
+    if (count === 1) {
+      if (ev.entity_id) meta.push("Entity: " + esc(ev.entity_id));
+      if (ev.source) meta.push("Source: " + esc(ev.source));
+      if (ev.incident_id) meta.push("Incident: " + esc(ev.incident_id));
+      if (ev.metadata) {
+        if (ev.metadata.track_id) meta.push("Track: " + esc(ev.metadata.track_id));
+        if (ev.metadata.event_count) meta.push("Events: " + esc(ev.metadata.event_count));
+      }
+    }
+
+    var payloadStr = esc(encodeURIComponent(JSON.stringify(item)));
+
+    return '<div class="bg-surface-container p-4 hover:bg-surface-high transition-colors cursor-pointer timeline-card-item" data-payload="' + payloadStr + '">'
       + '<div class="flex items-center justify-between mb-2">'
       + '<div class="flex items-center gap-2">' + badgeHtml
       + '<span class="font-headline font-semibold text-[0.8rem] text-primary">' + title + "</span>"
       + "</div>"
-      + '<span class="font-mono text-[0.6rem] text-outline">' + time + "</span>"
+      + '<span class="font-mono text-[0.6rem] text-outline">' + timeStr + "</span>"
       + "</div>"
       + '<p class="text-[0.75rem] text-on-surface-variant leading-relaxed">' + summary + "</p>"
       + (meta.length
@@ -145,7 +160,7 @@
       ? '<span class="font-mono text-[0.6rem] text-outline">' + esc(info.join("  ")) + "</span>"
       : '';
 
-    return '<div class="bg-surface-high p-3 hover:bg-surface-bright transition-colors cursor-pointer">'
+    return '<div class="bg-surface-high p-3 hover:bg-surface-bright transition-colors cursor-pointer" data-entity-id="' + esc(entity.entity_id || "") + '">'
       + '<div class="flex items-center justify-between mb-1">'
       + '<span class="font-headline font-semibold text-[0.8rem] text-primary truncate max-w-[160px]">' + name + "</span>"
       + catBadge
@@ -190,7 +205,7 @@
     // Truncate summary to avoid overflow
     if (summary.length > 80) summary = summary.substring(0, 77) + "...";
 
-    return '<div class="bg-surface-high p-4 hover:bg-surface-bright transition-colors cursor-pointer">'
+    return '<div class="bg-surface-high p-4 hover:bg-surface-bright transition-colors cursor-pointer" data-incident-id="' + esc(inc.incident_id || "") + '">'
       + '<div class="flex items-center justify-between mb-1 gap-2">'
       + '<span class="font-headline font-semibold text-[0.8rem] text-primary truncate">' + esc(displayId) + "</span>"
       + statusBadge
@@ -297,14 +312,15 @@
     var statusClass = entity.status === "active" ? "text-primary" : "text-on-surface-variant";
     var typeLabel = String(entity.type || "unknown").toUpperCase();
     var typeBadge = entity.type === "known" ? badge("filled", typeLabel) : badge("neutral", typeLabel);
-    var created = entity.created_at ? fmtDateTime(entity.created_at) : "—";
+    var created = entity.created_at ? fmtDateTime(entity.created_at) : "\u2014";
     var alerts = entity.recent_alert_count != null ? String(entity.recent_alert_count) : "0";
     var incidents = entity.open_incident_count != null ? String(entity.open_incident_count) : "0";
-    var updated = entity.last_seen_at ? fmtDateTime(entity.last_seen_at) : "—";
-    return '<tr class="' + bgClass + ' cursor-pointer">'
+    var updated = entity.last_seen_at ? fmtDateTime(entity.last_seen_at) : "\u2014";
+    var url = "../entities/index.html?id=" + encodeURIComponent(entity.entity_id || "");
+    return '<tr class="' + bgClass + ' hover:bg-surface-high transition-colors cursor-pointer" onclick="window.location.href=\'' + url + '\'">'
       + '<td class="font-mono ' + idClass + '">' + esc(entity.entity_id) + "</td>"
       + "<td>" + typeBadge + "</td>"
-      + '<td class="text-on-surface">' + esc(entity.name || "—") + "</td>"
+      + '<td class="text-on-surface">' + esc(entity.name || "\u2014") + "</td>"
       + "<td>" + catBadge + "</td>"
       + '<td class="' + statusClass + '">' + esc(entity.status) + "</td>"
       + '<td class="font-mono text-outline text-[0.65rem]">' + created + "</td>"
@@ -313,6 +329,7 @@
       + '<td class="font-mono text-outline text-[0.65rem]">' + updated + "</td>"
       + "</tr>";
   }
+
 
   /**
    * Render a health check row.
@@ -385,7 +402,8 @@
 
 
   /**
-   * Show or hide the offline banner.
+   * Show or hide the offline showcase overlay.
+   * Inspired by the reference style: centered status + retry action.
    */
   function updateOfflineBanner(state) {
     var bannerId = "offline-banner";
@@ -394,16 +412,47 @@
       if (existing) existing.remove();
       return;
     }
-    if (existing) return; // already showing
     if (state !== "offline") return;
 
-    var banner = document.createElement("div");
-    banner.id = bannerId;
-    banner.className = "fixed top-14 left-20 right-0 z-30 bg-error-container/90 backdrop-blur-sm px-6 py-2 flex items-center gap-3";
-    banner.innerHTML =
-      '<span class="material-symbols-outlined text-error text-[16px]">cloud_off</span>'
-      + '<span class="font-mono text-[0.7rem] text-error">Backend disconnected — showing layout only</span>';
-    document.body.appendChild(banner);
+    if (!existing) {
+      var overlay = document.createElement("div");
+      overlay.id = bannerId;
+      overlay.style.position = "fixed";
+      overlay.style.inset = "0";
+      overlay.style.zIndex = "120";
+      overlay.style.display = "flex";
+      overlay.style.alignItems = "center";
+      overlay.style.justifyContent = "center";
+      overlay.style.background = "linear-gradient(to top, rgba(0,0,0,0.62), rgba(0,0,0,0.32) 45%, rgba(0,0,0,0.22))";
+      overlay.style.backdropFilter = "blur(2px)";
+      overlay.style.webkitBackdropFilter = "blur(2px)";
+      overlay.innerHTML =
+        '<div style="display:flex;flex-direction:column;align-items:center;gap:18px;text-align:center;padding:24px 28px;max-width:560px;">'
+        + '<span class="material-symbols-outlined" style="font-size:38px;color:#d8d8d8;opacity:0.88;">cloud_off</span>'
+        + '<div style="font-family:\'Inter\',sans-serif;font-size:1.25rem;letter-spacing:0.16em;text-transform:uppercase;color:#f2f2f2;font-weight:300;">Connection Lost</div>'
+        + '<div style="font-family:\'JetBrains Mono\',monospace;font-size:0.68rem;letter-spacing:0.08em;color:#a0a0a0;">Backend disconnected — showing layout only</div>'
+        + '<button id="offline-retry-btn" type="button" style="margin-top:6px;padding:10px 22px;border:1px solid rgba(255,255,255,0.3);background:#fff;color:#0f0f0f;font-family:\'JetBrains Mono\',monospace;font-size:0.62rem;letter-spacing:0.16em;text-transform:uppercase;cursor:pointer;border-radius:2px;">Retry</button>'
+        + "</div>";
+      document.body.appendChild(overlay);
+
+      var retryBtn = document.getElementById("offline-retry-btn");
+      if (retryBtn) {
+        retryBtn.addEventListener("click", function () {
+          retryBtn.textContent = "Retrying...";
+          retryBtn.setAttribute("disabled", "disabled");
+          retryBtn.style.opacity = "0.7";
+          retryBtn.style.cursor = "wait";
+          if (global.TraceClient && typeof global.TraceClient.probe === "function") {
+            global.TraceClient.probe().finally(function () {
+              retryBtn.textContent = "Retry";
+              retryBtn.removeAttribute("disabled");
+              retryBtn.style.opacity = "";
+              retryBtn.style.cursor = "pointer";
+            });
+          }
+        });
+      }
+    }
   }
 
   /**
@@ -412,7 +461,7 @@
    */
   function dimContent(rootEl) {
     if (!rootEl) return;
-    rootEl.style.opacity = "0.4";
+    rootEl.style.opacity = "0.33";
     rootEl.style.pointerEvents = "none";
   }
 

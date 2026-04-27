@@ -7,8 +7,11 @@ import threading
 import time
 from dataclasses import dataclass
 
+import cv2
 import numpy as np
+from loguru import logger
 
+from trace_aml.core.config import Settings
 from trace_aml.core.models import RecognitionMatch
 from trace_aml.liveness.base import LivenessResult
 from trace_aml.pipeline.capture import FramePacket
@@ -34,6 +37,7 @@ class InferenceWorker:
         store: VectorStore,
         frame_queue: queue.Queue[FramePacket],
         result_queue: queue.Queue[InferencePacket],
+        settings: Settings | None = None,
     ) -> None:
         self.recognizer = recognizer
         self.store = store
@@ -41,6 +45,19 @@ class InferenceWorker:
         self.result_queue = result_queue
         self._stop_event = threading.Event()
         self._thread: threading.Thread | None = None
+
+        # ── CPU offload settings ──────────────────────────────────────────
+        # How many frames to skip between each inference call.
+        # 0 = every frame, 1 = every other, 2 = every 3rd, etc.
+        # When settings=None (unit-test context) default to 0 so every frame
+        # is processed and tests don't need to think about frame counters.
+        self._skip: int = int(getattr(settings.pipeline, "inference_skip_frames", 0)) if settings else 0
+        # Scale factor applied to frame dimensions before ML inference.
+        # The original full-res frame is kept in the output packet.
+        self._scale: float = float(getattr(settings.pipeline, "inference_resolution_scale", 1.0)) if settings else 1.0
+        self._frame_counter: int = 0
+        # ──────────────────────────────────────────────────────────────────
+
 
     def start(self) -> None:
         self._thread = threading.Thread(target=self._run, daemon=True)
@@ -53,12 +70,54 @@ class InferenceWorker:
             except queue.Empty:
                 continue
 
-            recognized = self.recognizer.match(packet.frame, self.store)
+            # ── Frame skip ───────────────────────────────────────────────
+            # Increment counter on every frame.  Only run inference on
+            # frame 0, (skip+1), 2*(skip+1), …  All other frames are
+            # discarded here before touching the GPU or gallery cache.
+            self._frame_counter += 1
+            if self._skip > 0 and (self._frame_counter % (self._skip + 1)) != 0:
+                continue
+            # ─────────────────────────────────────────────────────────────
+
+            # ── Resolution downscale for inference ───────────────────────
+            # Fewer pixels = faster ONNX decode + smaller GPU texture upload.
+            # The original full-res frame travels forward in the packet so
+            # the overlay renderer / screenshot saver use the full image.
+            infer_frame = packet.frame
+            if self._scale != 1.0:
+                h, w = infer_frame.shape[:2]
+                new_w = max(1, int(w * self._scale))
+                new_h = max(1, int(h * self._scale))
+                infer_frame = cv2.resize(
+                    infer_frame, (new_w, new_h), interpolation=cv2.INTER_LINEAR
+                )
+            # ─────────────────────────────────────────────────────────────
+
+            try:
+                recognized = self.recognizer.match(infer_frame, self.store)
+            except Exception as exc:
+                # Keep pipeline alive even if a provider crashes at runtime.
+                logger.exception("Inference worker recovered from recognizer failure: {}", exc)
+                continue
             matches = [item[0] for item in recognized]
             embeddings = [item[1] for item in recognized]
             liveness = [item[2] for item in recognized]
+
+            # Re-scale bounding boxes back to full-res coordinates so the
+            # overlay renderer draws boxes on the correct positions.
+            if self._scale != 1.0:
+                inv = 1.0 / self._scale
+                for match in matches:
+                    x, y, bw, bh = match.bbox
+                    match.bbox = (
+                        int(x * inv),
+                        int(y * inv),
+                        int(bw * inv),
+                        int(bh * inv),
+                    )
+
             out = InferencePacket(
-                frame=packet.frame,
+                frame=packet.frame,          # full-res original
                 frame_index=packet.frame_index,
                 captured_at=packet.captured_at,
                 processed_at=time.time(),

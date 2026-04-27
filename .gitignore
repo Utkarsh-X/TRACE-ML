@@ -40,6 +40,9 @@ data/screenshots/
 data/exports/
 data/person_images/
 data/vectors/
+data/portraits/
+data/vault/
+data/index/
 dataset/
 models/
 
@@ -71,3 +74,6 @@ config.local.yaml
 # Inpiration Folder
 color_theme_inpiration/
 
+# Node modules
+node_modules/
+whatsapp-bridge/

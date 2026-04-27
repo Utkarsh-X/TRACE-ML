@@ -1,17 +1,32 @@
 <!DOCTYPE html>
 <html class="dark" lang="en">
+
 <head>
   <meta charset="utf-8" />
   <meta content="width=device-width, initial-scale=1.0" name="viewport" />
-  <title>TRACE-AML | Database</title>
+  <title>TRACE-AML | Database Explorer</title>
+  <meta name="description"
+    content="TRACE-AML Database Explorer — Browse, inspect, and open entity profiles from the global intelligence registry." />
 
   <!-- Compiled Design System (no CDN) -->
   <link rel="stylesheet" href="../shared/tailwind-compiled.css" />
   <link rel="stylesheet" href="../shared/base.css" />
+  <link rel="stylesheet" href="../shared/trace_toast.css" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 
   <style>
+    /* ─── Keyframes ─────────────────────────────────────── */
+    @keyframes spin {
+      from {
+        transform: rotate(0deg);
+      }
+
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
     /* ─── Full-height vertical split layout ─────────────── */
     .db-grid {
       display: flex;
@@ -19,25 +34,429 @@
       height: 100vh;
       gap: 0;
     }
+
     .db-table-section {
       flex: 1;
       display: flex;
       flex-direction: column;
       overflow: hidden;
-      min-h-0;
     }
 
-    .db-table th, .db-table td {
-      padding: 0.5rem 0.75rem;
+    /* ─── Stat strip ─────────────────────────────────────── */
+    .db-stat-strip {
+      display: flex;
+      align-items: stretch;
+      gap: 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      background: #111;
+      flex-shrink: 0;
+    }
+
+    .db-stat-card {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      padding: 0.6rem 1.25rem;
+      border-right: 1px solid rgba(255, 255, 255, 0.06);
+      gap: 0.15rem;
+    }
+
+    .db-stat-card:last-child {
+      border-right: none;
+    }
+
+    .db-stat-label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.55rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: #555;
+    }
+
+    .db-stat-value {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 1rem;
+      font-weight: 700;
+      color: #fff;
+      line-height: 1;
+    }
+
+    /* ─── Table ──────────────────────────────────────────── */
+    .db-table th,
+    .db-table td {
+      padding: 0.45rem 0.75rem;
       text-align: left;
       white-space: nowrap;
     }
-    .db-table tbody tr:hover {
-      background-color: #2a2a2a;
-    }
+
     .db-table tbody tr {
+      cursor: pointer;
       transition: background-color 0.1s ease;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
     }
+
+    .db-table tbody tr:hover {
+      background-color: #2a2a2a !important;
+    }
+
+    .db-table tbody tr:hover .db-row-actions {
+      opacity: 1;
+    }
+
+    /* ─── Row name hierarchy ─────────────────────────────── */
+    .db-cell-entity {
+      display: flex;
+      flex-direction: column;
+      gap: 0.1rem;
+    }
+
+    .db-entity-name {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: #ffffff;
+      letter-spacing: 0.01em;
+    }
+
+    .db-entity-id {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.58rem;
+      color: #555;
+      letter-spacing: 0.03em;
+    }
+
+    /* ─── Number columns ─────────────────────────────────── */
+    .db-num {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: #ccc;
+    }
+
+    .db-num--alert {
+      color: #ff9800;
+    }
+
+    .db-num--zero {
+      color: #444;
+    }
+
+    /* ─── Row actions ────────────────────────────────────── */
+    .db-row-actions {
+      opacity: 0;
+      transition: opacity 0.15s ease;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .db-row-btn {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.6rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      padding: 0.25rem 0.6rem;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      background: transparent;
+      color: #aaa;
+      cursor: pointer;
+      border-radius: 2px;
+      transition: all 0.1s;
+    }
+
+    .db-row-btn:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+      border-color: rgba(255, 255, 255, 0.35);
+    }
+
+    .db-row-btn--primary {
+      background: rgba(255, 255, 255, 0.08);
+      color: #fff;
+      border-color: rgba(255, 255, 255, 0.25);
+    }
+
+    .db-row-btn--primary:hover {
+      background: rgba(255, 255, 255, 0.18);
+    }
+
+    /* ─── Filter chips ───────────────────────────────────── */
+    .db-filter-chips {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      flex-wrap: wrap;
+    }
+
+    .db-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.6rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      padding: 0.2rem 0.55rem;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      background: rgba(255, 255, 255, 0.06);
+      color: #bbb;
+      border-radius: 2px;
+      cursor: pointer;
+      transition: all 0.12s;
+      user-select: none;
+    }
+
+    .db-chip:hover {
+      background: rgba(255, 255, 255, 0.12);
+      color: #fff;
+    }
+
+    .db-chip.active {
+      background: rgba(255, 255, 255, 0.15);
+      border-color: rgba(255, 255, 255, 0.45);
+      color: #fff;
+    }
+
+    .db-chip-remove {
+      font-size: 0.7rem;
+      opacity: 0.6;
+      line-height: 1;
+    }
+
+    .db-chip.active .db-chip-remove {
+      opacity: 1;
+    }
+
+    /* ─── Live indicator ─────────────────────────────────── */
+    .db-live-indicator {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.6rem;
+      color: #555;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .db-live-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #444;
+      flex-shrink: 0;
+      transition: background 0.3s;
+    }
+
+    .db-live-dot.active {
+      background: #4caf50;
+      box-shadow: 0 0 5px #4caf5088;
+      animation: livePulse 2s ease-in-out infinite;
+    }
+
+    @keyframes livePulse {
+
+      0%,
+      100% {
+        opacity: 1;
+      }
+
+      50% {
+        opacity: 0.5;
+      }
+    }
+
+    /* ─── Search highlight ───────────────────────────────── */
+    mark.db-mark {
+      background: rgba(255, 255, 100, 0.25);
+      color: #fff;
+      border-radius: 2px;
+      padding: 0 1px;
+    }
+
+    /* ─── Misc ───────────────────────────────────────────── */
+    .db-search-wrap {
+      flex: 1;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .db-search-field {
+      position: relative;
+      width: 100%;
+    }
+
+    .db-search-wrap .db-search-icon {
+      position: absolute;
+      left: 0.65rem;
+      top: 0;
+      bottom: 0;
+      display: flex;
+      align-items: center;
+      font-size: 15px;
+      color: #7f7f7f;
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    .db-search-wrap input {
+      width: 100%;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 4px;
+      padding: 0.52rem 0.75rem 0.52rem 2.1rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.7rem;
+      color: #f2f2f2;
+      outline: none;
+      transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+    }
+
+    .db-search-wrap input:focus {
+      border-color: rgba(255, 255, 255, 0.3);
+      background: rgba(255, 255, 255, 0.05);
+      box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.06);
+    }
+
+    .db-search-wrap input::placeholder {
+      color: #777;
+      opacity: 1;
+    }
+
+    .db-search-hint {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.55rem;
+      color: #4c4c4c;
+      letter-spacing: 0.05em;
+      margin-top: 0.28rem;
+      padding-left: 2.1rem;
+    }
+
+    .db-sync-btn {
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.45rem 0.9rem;
+      background: #fff;
+      color: #000;
+      border: none;
+      border-radius: 3px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.62rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      cursor: pointer;
+      transition: opacity 0.15s;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .db-sync-btn:hover {
+      opacity: 0.88;
+    }
+
+    .db-sync-btn:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+
+    /* ─── Empty state ────────────────────────────────────── */
+    .db-empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 0.75rem;
+      padding: 3.5rem 1rem;
+      text-align: center;
+    }
+
+    .db-empty-icon {
+      font-size: 36px;
+      color: #333;
+    }
+
+    .db-empty-msg {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.72rem;
+      color: #555;
+    }
+
+    .db-empty-actions {
+      display: flex;
+      gap: 0.6rem;
+      margin-top: 0.25rem;
+    }
+
+    .db-empty-btn {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.6rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      padding: 0.35rem 0.85rem;
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      background: rgba(255, 255, 255, 0.05);
+      color: #bbb;
+      cursor: pointer;
+      border-radius: 2px;
+      transition: all 0.12s;
+      text-decoration: none;
+    }
+
+    .db-empty-btn:hover {
+      background: rgba(255, 255, 255, 0.12);
+      color: #fff;
+      border-color: rgba(255, 255, 255, 0.35);
+    }
+
+    /* ─── Footer ─────────────────────────────────────────── */
+    .db-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.5rem 1.25rem;
+      border-top: 1px solid rgba(255, 255, 255, 0.06);
+      background: #0f0f0f;
+      flex-shrink: 0;
+      gap: 1rem;
+    }
+
+    .db-footer-count {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.6rem;
+      color: #555;
+    }
+
+    .db-footer-right {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .db-limit-wrap {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.6rem;
+      color: #555;
+    }
+
+    .db-limit-wrap select {
+      background: #1a1a1a;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: #ccc;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.6rem;
+      padding: 0.2rem 0.4rem;
+      border-radius: 2px;
+      cursor: pointer;
+    }
+
     .terminal-block {
       white-space: pre-wrap;
       word-break: break-all;
@@ -48,183 +467,223 @@
 
 <body class="bg-background text-on-surface font-body overflow-hidden">
 
-<div class="app-shell">
+  <div class="app-shell">
 
-<!-- SIDE NAV -->
-<aside class="sidenav" id="sidenav">
-  <div class="sidenav-header">
-    <button class="hamburger-btn" id="sidenav-toggle" title="Toggle sidebar (Ctrl+B)">
-      <span class="material-symbols-outlined">menu</span>
-    </button>
-    <span class="sidenav-brand">TRACE-AML</span>
-  </div>
-  <div class="sidenav-status">
-    <span class="status-dot" id="connection-badge"></span>
-    <span class="status-label"></span>
-  </div>
-  <nav class="sidenav-nav">
-    <a class="nav-item " href="../live_ops/index.html" data-tooltip="Live Ops">
-      <span class="material-symbols-outlined nav-icon">monitoring</span>
-      <span class="nav-label">Live Ops</span>
-    </a>
-    <a class="nav-item " href="../incidents/index.html" data-tooltip="Incidents">
-      <span class="material-symbols-outlined nav-icon">timeline</span>
-      <span class="nav-label">Incidents</span>
-    </a>
-    <a class="nav-item " href="../entities/index.html" data-tooltip="Entities">
-      <span class="material-symbols-outlined nav-icon">hub</span>
-      <span class="nav-label">Entities</span>
-    </a>
-    <a class="nav-item " href="../history/index.html" data-tooltip="History">
-      <span class="material-symbols-outlined nav-icon">history</span>
-      <span class="nav-label">History</span>
-    </a>
-    <a class="nav-item active" href="../database/index.html" data-tooltip="Database">
-      <span class="material-symbols-outlined nav-icon">database</span>
-      <span class="nav-label">Database</span>
-    </a>
-  </nav>
-  <div class="sidenav-divider"></div>
-  <nav class="sidenav-nav">
-    <a class="nav-item " href="../enrollment/index.html" data-tooltip="Enrollment">
-      <span class="material-symbols-outlined nav-icon">person_add</span>
-      <span class="nav-label">Enrollment</span>
-    </a>
-  </nav>
-  <div class="sidenav-spacer"></div>
-  <div class="sidenav-bottom">
-    <a class="nav-item " href="../settings/index.html" data-tooltip="Settings">
-      <span class="material-symbols-outlined nav-icon">settings</span>
-      <span class="nav-label">Settings</span>
-    </a>
-    <button class="nav-item nav-btn" type="button" data-tooltip="Admin">
-      <span class="material-symbols-outlined nav-icon">person</span>
-      <span class="nav-label">Admin</span>
-    </button>
-    <div class="sidenav-divider"></div>
-    <button class="nav-item nav-btn" type="button" data-tooltip="Help">
-      <span class="material-symbols-outlined nav-icon">help_outline</span>
-      <span class="nav-label">Help</span>
-    </button>
-    <button class="nav-item nav-btn" type="button" data-tooltip="Exit">
-      <span class="material-symbols-outlined nav-icon">logout</span>
-      <span class="nav-label">Exit</span>
-    </button>
-  </div>
-  <div class="sidenav-splitter" id="sidenav-splitter"></div>
-</aside>
+    <!-- SIDE NAV -->
+    <aside class="sidenav" id="sidenav">
+      <div class="sidenav-header">
+        <button class="hamburger-btn" id="sidenav-toggle" title="Toggle sidebar (Ctrl+B)">
+          <span class="material-symbols-outlined">dock_to_right</span>
+        </button>
+        <span class="sidenav-brand">TRACE-AML</span>
+      </div>
+      <div class="sidenav-status">
+        <span class="status-dot" id="connection-badge"></span>
+        <span class="status-label"></span>
+      </div>
+      <nav class="sidenav-nav">
+        <a class="nav-item " href="../live_ops/index.html" data-tooltip="Live Ops">
+          <span class="material-symbols-outlined nav-icon">monitoring</span>
+          <span class="nav-label">Live Ops</span>
+        </a>
+        <a class="nav-item " href="../incidents/index.html" data-tooltip="Incidents">
+          <span class="material-symbols-outlined nav-icon">timeline</span>
+          <span class="nav-label">Incidents</span>
+        </a>
+        <a class="nav-item " href="../entities/index.html" data-tooltip="Entities">
+          <span class="material-symbols-outlined nav-icon">hub</span>
+          <span class="nav-label">Entities</span>
+        </a>
+        <a class="nav-item " href="../history/index.html" data-tooltip="History">
+          <span class="material-symbols-outlined nav-icon">history</span>
+          <span class="nav-label">History</span>
+        </a>
+        <a class="nav-item active" href="../database/index.html" data-tooltip="Database">
+          <span class="material-symbols-outlined nav-icon">database</span>
+          <span class="nav-label">Database</span>
+        </a>
+      </nav>
+      <div class="sidenav-divider"></div>
+      <nav class="sidenav-nav">
+        <a class="nav-item " href="../enrollment/index.html" data-tooltip="Enrollment">
+          <span class="material-symbols-outlined nav-icon">person_add</span>
+          <span class="nav-label">Enrollment</span>
+        </a>
+      </nav>
+      <div class="sidenav-spacer"></div>
+      <div class="sidenav-bottom">
+        <a class="nav-item " href="../settings/index.html" data-tooltip="Settings">
+          <span class="material-symbols-outlined nav-icon">settings</span>
+          <span class="nav-label">Settings</span>
+        </a>
+        <button class="nav-item nav-btn" type="button" data-tooltip="Admin">
+          <span class="material-symbols-outlined nav-icon">person</span>
+          <span class="nav-label">Admin</span>
+        </button>
+        <div class="sidenav-divider"></div>
+        <button class="nav-item nav-btn" type="button" data-tooltip="Help">
+          <span class="material-symbols-outlined nav-icon">help_outline</span>
+          <span class="nav-label">Help</span>
+        </button>
+        <button class="nav-item nav-btn" type="button" data-tooltip="Exit">
+          <span class="material-symbols-outlined nav-icon">logout</span>
+          <span class="nav-label">Exit</span>
+        </button>
+      </div>
+      <div class="sidenav-splitter" id="sidenav-splitter"></div>
+    </aside>
 
-<!-- MAIN CANVAS — DATABASE EXPLORER -->
-<main class="main-content">
-  <div class="db-grid">
+    <!-- MAIN CANVAS — DATABASE EXPLORER -->
+    <main class="main-content">
+      <div class="db-grid">
 
-    <!-- TABLE SECTION (top) -->
-    <div class="db-table-section bg-surface">
 
-      <!-- Header with Database Health Compact Display -->
-      <header class="p-5 pb-4 border-b border-outline-variant/10 flex-shrink-0 mb-5">
-        <div class="mb-4">
-          <span class="flex items-center gap-2 mb-1">
-            <span class="w-1 h-1 bg-white inline-block"></span>
-            <span class="font-mono text-[0.6875rem] uppercase tracking-[0.2em] text-outline">Database Explorer</span>
-          </span>
-          <h1 class="text-2xl font-headline font-bold text-white tracking-tight uppercase">Database Explorer</h1>
-          <p class="font-mono text-[0.65rem] text-outline mt-1">LOCAL INTELLIGENCE NODE / CAM-SESSION-001</p>
-        </div>
-        
-        <!-- Top Control Bar -->
-        <div class="flex justify-between items-center gap-4 flex-wrap">
-          <div class="flex items-center gap-3 flex-1 min-w-0">
-            <div class="flex-1 relative">
-              <span class="material-symbols-outlined absolute left-3 top-2 text-outline-variant text-[18px]">search</span>
-              <input type="text" placeholder="Search entities by name, ID or category..." class="w-full bg-surface-high font-mono text-[0.7rem] text-white border-0 px-3 py-2 pl-9 placeholder-outline-variant focus:ring-1 focus:ring-primary rounded-sm" id="db-search" />
+        <!-- ── CONTROL BAR ─────────────────────────────────── -->
+        <div class="db-table-section bg-surface">
+
+          <header style="padding:1rem 1.25rem 0.85rem; border-bottom:1px solid rgba(255,255,255,0.06); flex-shrink:0;">
+
+            <!-- Page title -->
+            <div class="mb-3">
+              <div class="flex items-center gap-2 mb-1">
+                <span class="w-1 h-1 bg-primary inline-block"></span>
+                <span class="font-mono text-[0.62rem] uppercase tracking-[0.2em] text-outline">Database Explorer</span>
+              </div>
+              <h1 class="font-headline text-2xl font-bold tracking-tight text-white">DATABASE EXPLORER</h1>
+              <p class="font-mono text-[0.65rem] text-outline mt-1">Browse, inspect, and open entity profiles from the
+                registry</p>
             </div>
-            <button class="px-4 py-2 bg-white text-background font-mono text-[0.65rem] font-semibold uppercase hover:bg-gray-100 cursor-pointer border-0 transition-colors rounded-sm whitespace-nowrap" id="db-execute">🔄 REFRESH</button>
-          </div>
-          
-          <!-- Inline Filters -->
-          <div class="flex items-center gap-2">
-            <select class="bg-surface-high text-on-surface-variant font-mono text-[0.65rem] border-0 px-2 py-2 rounded-sm cursor-pointer hover:bg-surface-bright transition-colors" id="filter-type">
-              <option value="">All Types</option>
-              <option value="known">Known</option>
-              <option value="unknown">Unknown</option>
-            </select>
-            <select class="bg-surface-high text-on-surface-variant font-mono text-[0.65rem] border-0 px-2 py-2 rounded-sm cursor-pointer hover:bg-surface-bright transition-colors" id="filter-status">
-              <option value="">All Status</option>
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
-            </select>
-            <button class="px-3 py-2 bg-surface-high text-on-surface-variant font-mono text-[0.65rem] uppercase hover:bg-surface-bright cursor-pointer border-0 transition-colors whitespace-nowrap" id="filter-clear">Clear</button>
-          </div>
-          
-          <!-- Health Indicators (compact inline) -->
-          <div class="flex items-center gap-6 ml-auto flex-shrink-0">
-            <div class="flex items-center gap-2">
-              <span class="stat-label">Total Entities</span>
-              <span class="font-mono text-[0.9rem] text-white font-semibold" id="db-stat-entities">0</span>
-            </div>
-            <div class="flex items-center gap-2">
-              <span class="stat-label">Total Detections</span>
-              <span class="font-mono text-[0.9rem] text-white font-semibold" id="db-stat-detections">0</span>
-            </div>
-          </div>
-        </div>
-      </header>
 
-      <!-- Data Table -->
-      <div class="flex-1 overflow-auto">
-        <table class="db-table w-full">
-          <thead>
-            <tr class="bg-surface-low sticky top-0 z-10">
-              <th class="font-mono text-[0.6rem] text-outline uppercase tracking-widest font-medium">Entity ID</th>
-              <th class="font-mono text-[0.6rem] text-outline uppercase tracking-widest font-medium">Type</th>
-              <th class="font-mono text-[0.6rem] text-outline uppercase tracking-widest font-medium">Name</th>
-              <th class="font-mono text-[0.6rem] text-outline uppercase tracking-widest font-medium">Category</th>
-              <th class="font-mono text-[0.6rem] text-outline uppercase tracking-widest font-medium">Status</th>
-              <th class="font-mono text-[0.6rem] text-outline uppercase tracking-widest font-medium">Created</th>
-              <th class="font-mono text-[0.6rem] text-outline uppercase tracking-widest font-medium">Alerts</th>
-              <th class="font-mono text-[0.6rem] text-outline uppercase tracking-widest font-medium">Incidents</th>
-              <th class="font-mono text-[0.6rem] text-outline uppercase tracking-widest font-medium">Last Activity</th>
-            </tr>
-          </thead>
-          <tbody class="text-[0.75rem]">
-            <tr>
-              <td colspan="9" class="text-center py-20">
-                <div class="flex flex-col items-center gap-4">
-                  <div class="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
-                  <span class="font-mono text-[0.7rem] text-outline animate-pulse">SYNCHRONIZING GLOBAL INDEX...</span>
+            <!-- Search + Sync row -->
+            <div style="display:flex;align-items:flex-start;gap:0.75rem;margin-bottom:0.75rem;">
+              <div class="db-search-wrap">
+                <div class="db-search-field">
+                  <span class="material-symbols-outlined db-search-icon">search</span>
+                  <input type="text" id="db-search" placeholder="Search by name, ID or category…" autocomplete="off" />
                 </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+                <div class="db-search-hint">Try: &nbsp;<strong style="color:#666;">type:known</strong>&nbsp; or&nbsp;
+                  <strong style="color:#666;">type:unknown</strong>&nbsp; · matches name, ID, category</div>
+              </div>
+              <button class="db-sync-btn" id="db-execute">
+                <span class="material-symbols-outlined" style="font-size:15px;">sync</span>
+                SYNC
+              </button>
+            </div>
 
-      <!-- Table Footer -->
-      <div class="flex items-center justify-between px-5 py-3 flex-shrink-0 border-t border-outline-variant/10 bg-surface-container text-[0.6rem]">
-        <span class="font-mono text-outline">Showing 0 of 0 entities</span>
-        <div class="flex items-center gap-2">
-          <span class="font-mono text-outline">Rows per page:</span>
-          <select class="bg-surface-high font-mono text-[0.65rem] text-white border-0 px-2 py-1 cursor-pointer" id="db-limit">
-            <option value="25">25</option>
-            <option value="50">50</option>
-            <option value="100" selected>100</option>
-            <option value="500">500</option>
-          </select>
-        </div>
-      </div>
+            <!-- Filter chips row -->
+            <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;">
+              <span class="font-mono"
+                style="font-size:0.58rem;color:#444;text-transform:uppercase;letter-spacing:0.12em;white-space:nowrap;">Filter</span>
 
+              <!-- Type chips -->
+              <div class="db-filter-chips" id="chips-type">
+                <button class="db-chip active" data-filter="type" data-value="" id="chip-type-all">All Types</button>
+                <button class="db-chip" data-filter="type" data-value="known" id="chip-type-known">Known</button>
+                <button class="db-chip" data-filter="type" data-value="unknown" id="chip-type-unknown">Unknown</button>
+              </div>
 
-  </div>
-</main>
+              <span style="width:1px;height:16px;background:rgba(255,255,255,0.08);display:inline-block;"></span>
 
-</div><!-- /app-shell -->
+              <!-- Status chips -->
+              <div class="db-filter-chips" id="chips-status">
+                <button class="db-chip active" data-filter="status" data-value="" id="chip-status-all">All
+                  Status</button>
+                <button class="db-chip" data-filter="status" data-value="active" id="chip-status-active">Active</button>
+                <button class="db-chip" data-filter="status" data-value="inactive"
+                  id="chip-status-inactive">Inactive</button>
+              </div>
 
-<!-- Service Layer -->
-<script src="../shared/trace_client.js?v=20260417003"></script>
-<script src="../shared/trace_render.js?v=20260417003"></script>
-<script src="../shared/sidenav.js?v=20260417003"></script>
-<script src="./database.js?v=20260417003"></script>
+              <!-- Hidden selects kept for JS compat -->
+              <select id="filter-type" style="display:none;">
+                <option value="">All Types</option>
+                <option value="known">Known</option>
+                <option value="unknown">Unknown</option>
+              </select>
+              <select id="filter-status" style="display:none;">
+                <option value="">All Status</option>
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+              </select>
+              <button id="filter-clear" style="display:none;">Clear</button>
+            </div>
+          </header>
+
+          <!-- ── DATA TABLE ──────────────────────────────────── -->
+          <div style="flex:1;overflow:auto;">
+            <table class="db-table w-full">
+              <thead>
+                <tr class="bg-surface-low sticky top-0 z-10" style="border-bottom:1px solid rgba(255,255,255,0.06);">
+                  <th class="font-mono text-outline"
+                    style="font-size:0.58rem;text-transform:uppercase;letter-spacing:0.14em;font-weight:500;">Entity
+                  </th>
+                  <th class="font-mono text-outline"
+                    style="font-size:0.58rem;text-transform:uppercase;letter-spacing:0.14em;font-weight:500;">Type</th>
+                  <th class="font-mono text-outline"
+                    style="font-size:0.58rem;text-transform:uppercase;letter-spacing:0.14em;font-weight:500;">Category
+                  </th>
+                  <th class="font-mono text-outline"
+                    style="font-size:0.58rem;text-transform:uppercase;letter-spacing:0.14em;font-weight:500;">Status
+                  </th>
+                  <th class="font-mono text-outline"
+                    style="font-size:0.58rem;text-transform:uppercase;letter-spacing:0.14em;font-weight:500;">Created
+                  </th>
+                  <th class="font-mono text-outline"
+                    style="font-size:0.58rem;text-transform:uppercase;letter-spacing:0.14em;font-weight:500;">Alerts
+                  </th>
+                  <th class="font-mono text-outline"
+                    style="font-size:0.58rem;text-transform:uppercase;letter-spacing:0.14em;font-weight:500;">Incidents
+                  </th>
+                  <th class="font-mono text-outline"
+                    style="font-size:0.58rem;text-transform:uppercase;letter-spacing:0.14em;font-weight:500;">Last
+                    Activity</th>
+                  <th class="font-mono text-outline"
+                    style="font-size:0.58rem;text-transform:uppercase;letter-spacing:0.14em;font-weight:500;">Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody id="db-tbody" style="font-size:0.75rem;">
+                <tr>
+                  <td colspan="9" style="text-align:center;padding:5rem 1rem;">
+                    <div style="display:flex;flex-direction:column;align-items:center;gap:0.75rem;">
+                      <div class="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+                      <span class="font-mono animate-pulse" style="font-size:0.65rem;color:#555;">Fetching entity
+                        registry…</span>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- ── FOOTER ──────────────────────────────────────── -->
+          <div class="db-footer">
+            <span class="db-footer-count" id="db-footer-count">Showing 0 of 0 entities</span>
+            <div class="db-footer-right">
+              <div class="db-limit-wrap">
+                <span>Rows per page:</span>
+                <select id="db-limit">
+                  <option value="25">25</option>
+                  <option value="50">50</option>
+                  <option value="100" selected>100</option>
+                  <option value="500">500</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+        </div><!-- /db-table-section -->
+      </div><!-- /db-grid -->
+    </main>
+
+  </div><!-- /app-shell -->
+
+  <!-- Service Layer -->
+  <script src="../shared/trace_toast.js?v=20260417003"></script>
+  <script src="../shared/trace_client.js?v=20260417003"></script>
+  <script src="../shared/trace_render.js?v=20260417003"></script>
+  <script src="../shared/sidenav.js?v=20260417003"></script>
+  <script src="./database.js?v=20260425001"></script>
 
 </body>
+
 </html>

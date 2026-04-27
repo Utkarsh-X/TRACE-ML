@@ -22,6 +22,7 @@
   var _currentId  = null;
   var _offset     = 0;
   var _done       = false;
+  var _loading    = false;
   var _tlRaw      = []; // raw data from server
   var _tlSuppressed = []; // processed data after suppression
   var _tlShown    = 0;
@@ -31,8 +32,10 @@
   ════════════════════════════════════════════════ */
 
   function loadCards(initial) {
-    if (_done) return;
+    if (_done || _loading) return;
+    _loading = true;
     TraceClient.incidents({ limit: PAGE_SIZE, skip: _offset }).then(function (list) {
+      _loading = false;
       // Remove skeleton placeholders on first batch
       if (initial) {
         ["sk1","sk2","sk3"].forEach(function (id) {
@@ -61,6 +64,9 @@
       // This allows the timeline placeholder "Select an incident above" to remain visible
 
       updateArrows();
+    }).catch(function(err) {
+      _loading = false;
+      console.error("Failed to load incidents", err);
     });
   }
 
@@ -183,14 +189,46 @@
   function loadIncident(id) {
     if (!id) return;
     _currentId = id;
-    // Show left panel with incident details
+
+    // Show left panel immediately
     var leftPanel = $("inc-left-panel");
     if (leftPanel) leftPanel.style.display = "flex";
+
+    // ── Skeleton the intel block so nothing stale flashes ──
+    var skLine = 'background:linear-gradient(90deg,#1b1b1b 25%,#2a2a2a 50%,#1b1b1b 75%);background-size:200% 100%;animation:shimmer 1.4s infinite;border-radius:0;';
+    setText("inc-intel-type", "");
+    setText("inc-id-label",   "");
+    var titleEl = $("inc-title");
+    if (titleEl) { titleEl.innerHTML = '<div style="' + skLine + 'height:18px;width:80%;margin-bottom:4px;"></div>'; }
+    // Clear badge text only — do NOT replace innerHTML or the IDs are lost
+    var statusEl = $("inc-status");  if (statusEl) statusEl.textContent = '';
+    var sevEl    = $("inc-sev-badge"); if (sevEl)  sevEl.textContent    = '';
+    setText("ent-name",    "");
+    setText("ent-type-line", "");
+    setText("ent-activity-status", "");
+    setText("ent-last-rel", "");
+    var statsEl = document.querySelector(".intel-block__stats");
+    if (statsEl) {
+      ['ent-dets','inc-alert-count','inc-start-rel'].forEach(function(id) {
+        var el = $(id); if (el) el.innerHTML = '<div style="' + skLine + 'height:12px;width:24px;"></div>';
+      });
+    }
+    // Clear section roots
+    var alertsRoot = $("inc-alerts-root");
+    if (alertsRoot) alertsRoot.innerHTML = '<div style="' + skLine + 'height:52px;margin-bottom:3px;"></div><div style="' + skLine + 'height:52px;margin-bottom:3px;opacity:.6"></div><div style="' + skLine + 'height:52px;opacity:.35"></div>';
+    var actRoot = $("inc-actions-root");
+    if (actRoot)   actRoot.innerHTML   = '';
+    var sumEl = $("inc-alert-summary");
+    if (sumEl) sumEl.innerHTML = '';
+    var cntBadge = $("alerts-count-badge");
+    if (cntBadge) cntBadge.textContent = '—';
+    var actBadge = $("actions-count-badge");
+    if (actBadge) actBadge.textContent = '—';
+
     // Show skeleton in timeline while loading
     var tlEl = $("tl-events");
     if (tlEl) {
       tlEl.classList.remove("hidden");
-      // Clear all items including the "Show more" button during skeleton phase
       tlEl.innerHTML =
         '<div class="skeleton mb-2" style="height:72px;opacity:.35"></div>'
       + '<div class="skeleton mb-2" style="height:72px;opacity:.2"></div>'
@@ -230,14 +268,20 @@
   function handleResolution(entity) {
     var panel = $("inc-resolution-panel");
     if (!panel) return;
-    
+
     // Only show for unknown entities
     if (!entity || String(entity.type || "").toLowerCase() !== "unknown") {
       panel.classList.add("hidden");
       return;
     }
-    
+
     panel.classList.remove("hidden");
+    // Auto-expand resolution panel for unknown entities
+    var body = $("coll-body-resolution");
+    var chevron = $("coll-chevron-resolution");
+    if (body)    { body.classList.remove('is-closed'); body.classList.add('is-open'); }
+    if (chevron) { chevron.classList.add('is-open'); }
+
     var root = $("inc-resolution-root");
     root.innerHTML = '<div class="text-outline font-mono text-[0.62rem] py-2 text-center">Searching for matches...</div>';
     
@@ -270,7 +314,12 @@
       root.querySelectorAll(".btn-merge-entity").forEach(function(btn) {
         btn.addEventListener("click", function() {
           var targetId = btn.getAttribute("data-target");
-          if (confirm("Merge this unknown entity into " + targetId + "?\n\nAll detection history and incidents will be linked to this person.")) {
+          TraceDialog.confirm(
+            "Merge Intelligence",
+            "Merge this unknown entity into " + targetId + "?\n\nAll detection history and incidents will be linked to this person.",
+            { confirmText: "Merge" }
+          ).then(function(ok) {
+            if (!ok) return;
             btn.disabled = true;
             btn.textContent = "...";
             TraceClient.entityMerge(entity.entity_id, targetId).then(function(res) {
@@ -282,67 +331,199 @@
               } else {
                 btn.disabled = false;
                 btn.textContent = "Link";
-                alert("Merge failed. Check backend logs.");
+                if (window.TraceToast) {
+                  window.TraceToast.error("Merge Failed", "Could not link incidents. Check backend logs.");
+                } else {
+                  console.error("Merge failed. Check backend logs.");
+                }
               }
             });
-          }
+          });
         });
-      });
-    });
+      });    });
   }
 
   /* ════════════════════════════════════════════════
      RENDER HELPERS
   ════════════════════════════════════════════════ */
 
+  function relativeTime(isoStr) {
+    if (!isoStr) return "—";
+    var diff = Math.floor((Date.now() - new Date(isoStr).getTime()) / 1000);
+    if (diff < 60)   return diff + "s ago";
+    if (diff < 3600) return Math.floor(diff / 60) + "m ago";
+    if (diff < 86400)return Math.floor(diff / 3600) + "h ago";
+    return Math.floor(diff / 86400) + "d ago";
+  }
+
   function renderHeader(inc) {
     if (!inc) return;
     var shortId = String(inc.incident_id || "").slice(-8);
-    setText("inc-id-label",    "Case #" + shortId);
+    setText("inc-id-label",    "#" + shortId);
     setText("inc-title",       inc.summary || ("Incident " + inc.incident_id));
+
+    // Status badge
     var statusEl = $("inc-status");
     if (statusEl) {
-      statusEl.textContent = String(inc.status || "open").toUpperCase();
-      statusEl.className   = inc.status === "closed"
-        ? "font-mono text-[0.72rem] text-outline"
-        : "font-mono text-[0.72rem] text-primary";
+      var st = String(inc.status || "open").toLowerCase();
+      statusEl.textContent = st.toUpperCase();
+      statusEl.className = "intel-badge intel-badge--status-" + st;
     }
+
+    // Severity badge
+    var sevEl = $("inc-sev-badge");
+    if (sevEl) {
+      var sev = String(inc.severity || "low").toLowerCase();
+      sevEl.textContent = sev.toUpperCase();
+      sevEl.className = "intel-badge intel-badge--sev-" + sev;
+    }
+
+    // Alert count + opened relative
     setText("inc-alert-count", String(inc.alert_count || 0));
-    setText("inc-start",       TraceClient.formatTime(inc.start_time));
+    setText("inc-start-rel",   relativeTime(inc.start_time));
   }
 
   function renderEntity(e) {
     if (!e) return;
-    setText("ent-name",  e.name || e.entity_id || "—");
-    var typeEl = $("ent-type");
-    if (typeEl) typeEl.textContent = String(e.type || e.entity_type || "unknown").toUpperCase();
-    setText("ent-first", TraceClient.formatDateTime(e.created_at)   || "—");
-    setText("ent-last",  TraceClient.formatDateTime(e.last_seen_at) || "—");
-    setText("ent-dets",  String(e.detection_count || e.recent_alert_count || 0));
+    setText("ent-name", e.name || e.entity_id || "—");
+
+    // Type line under name
+    var typeLine = $("ent-type-line");
+    if (typeLine) typeLine.textContent = String(e.type || e.entity_type || "unknown").toUpperCase() + " ENTITY";
+
+    // Activity status — "active" if last seen < 10 min ago
+    var lastSeen = e.last_seen_at;
+    var actEl = $("ent-activity-status");
+    if (actEl && lastSeen) {
+      var minsAgo = (Date.now() - new Date(lastSeen).getTime()) / 60000;
+      var isActive = minsAgo < 10;
+      actEl.textContent = isActive ? "ACTIVE" : "DORMANT";
+      actEl.className   = "intel-entity__status " + (isActive ? "intel-entity__status--active" : "intel-entity__status--dormant");
+    }
+    setText("ent-last-rel", relativeTime(lastSeen));
+    setText("ent-dets",     String(e.detection_count || e.recent_alert_count || 0));
+
+    // Wire entity profile link
+    var profileBtn = $("btn-view-entity");
+    if (profileBtn && e.entity_id) {
+      profileBtn.href = "../entities/index.html?id=" + encodeURIComponent(e.entity_id);
+    }
   }
 
   function renderAlerts(alerts) {
     var root = $("inc-alerts-root");
     if (!root) return;
+
+    // Count badge
+    var countBadge = $("alerts-count-badge");
+    if (countBadge) countBadge.textContent = alerts ? alerts.length : 0;
+
     if (!alerts || alerts.length === 0) {
       root.innerHTML = '<div class="text-outline font-mono text-[0.62rem] py-3 text-center">No alerts linked</div>';
       return;
     }
+
+    // Summary chip bar — Material Symbol icon, no emoji
+    var sumEl = $("inc-alert-summary");
+    if (sumEl) {
+      var highCnt = alerts.filter(function(a){ return String(a.severity||'').toLowerCase() === 'high'; }).length;
+      var medCnt  = alerts.filter(function(a){ return String(a.severity||'').toLowerCase() === 'medium'; }).length;
+      var lowCnt  = alerts.length - highCnt - medCnt;
+      var chips = [];
+      if (highCnt) chips.push('<span class="alert-chip alert-chip--high"><span class="material-symbols-outlined" style="font-size:10px;">emergency</span>' + highCnt + ' High</span>');
+      if (medCnt)  chips.push('<span class="alert-chip alert-chip--medium">' + medCnt + ' Medium</span>');
+      if (lowCnt)  chips.push('<span class="alert-chip alert-chip--low">' + lowCnt + ' Low</span>');
+      sumEl.innerHTML = chips.join('');
+    }
+
+    // Material Symbols per alert type — no emojis
+    var TYPE_ICONS = {
+      'REAPPEARANCE':       'person_search',
+      'UNKNOWN_RECURRENCE': 'help_outline',
+      'INSTABILITY':        'bolt',
+    };
+
     root.innerHTML = alerts.slice(0, 8).map(function (a) {
-      var sev    = String(a.severity || "low");
-      var type   = TraceClient.escapeHtml(String(a.type || "ALERT").toUpperCase());
-      var reason = TraceClient.escapeHtml(a.reason || "");
-      var time   = TraceClient.escapeHtml(TraceClient.formatTime(a.timestamp_utc));
-      var cnt    = a.event_count ? " · " + a.event_count + " events" : "";
-      return '<div class="alert-row alert-row--' + sev + '">'
-        + '<div class="flex items-center justify-between mb-0.5">'
-        +   '<span class="font-mono text-[0.6rem] font-medium text-on-surface">' + type + '</span>'
-        +   '<span class="font-mono text-[0.55rem] text-outline">' + time + TraceClient.escapeHtml(cnt) + '</span>'
+      var sev     = String(a.severity || 'low');
+      var type    = String(a.type || 'ALERT').toUpperCase();
+      var reason  = TraceClient.escapeHtml(a.reason || '');
+      var time    = TraceClient.escapeHtml(TraceClient.formatTime(a.timestamp_utc));
+      var cnt     = a.event_count ? ' · ' + a.event_count + 'x' : '';
+      var iconKey = TYPE_ICONS[type] || 'notifications';
+      var alertId = TraceClient.escapeHtml(String(a.alert_id || ''));
+      var isAck   = a.acknowledged;
+
+      // Severity = left-border brightness only — no hue
+      var borderStyle = sev === 'high'
+        ? 'border-left:2px solid rgba(198,198,198,0.6);'
+        : sev === 'medium'
+          ? 'border-left:2px solid rgba(198,198,198,0.25);'
+          : 'border-left:2px solid rgba(71,71,71,0.35);';
+
+      return '<div class="alert-row alert-row--' + sev + '" style="' + borderStyle + (isAck ? 'opacity:0.4;' : '') + '" data-alert-id="' + alertId + '">'
+        + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2px;">'
+        +   '<div style="display:flex;align-items:center;gap:5px;">'
+        +     '<span class="material-symbols-outlined" style="font-size:11px;color:#919191;">' + iconKey + '</span>'
+        +     '<span class="font-mono text-[0.6rem] font-medium text-on-surface">' + TraceClient.escapeHtml(type) + '</span>'
+        +   '</div>'
+        +   '<div style="display:flex;align-items:center;gap:8px;">'
+        +     '<span class="font-mono text-[0.53rem] text-outline">' + time + TraceClient.escapeHtml(cnt) + '</span>'
+        +     (isAck
+                ? '<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.5rem;color:#474747;">ACK</span>'
+                : '<button class="btn-ack-alert" style="font-family:\'JetBrains Mono\',monospace;font-size:0.5rem;color:#474747;cursor:pointer;border:1px solid rgba(71,71,71,0.4);padding:1px 5px;background:transparent;text-transform:uppercase;letter-spacing:0.08em;" data-id="' + alertId + '">Ack</button>'
+              )
+        +   '</div>'
         + '</div>'
-        + '<p class="text-[0.68rem] text-on-surface-variant leading-snug">' + reason + '</p>'
+        + '<p style="font-size:0.67rem;color:var(--on-surface-variant);line-height:1.4;margin:0;">' + reason + '</p>'
         + '</div>';
-    }).join("");
+    }).join('');
+
+    // Wire acknowledge buttons
+    root.querySelectorAll('.btn-ack-alert').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        var aid = btn.getAttribute('data-id');
+        if (!aid) return;
+        btn.disabled = true;
+        btn.style.opacity = '0.4';
+        fetch('/api/v1/alerts/' + encodeURIComponent(aid) + '/acknowledge', { method: 'PATCH' })
+          .then(function(r) { return r.json(); })
+          .then(function(data) {
+            if (data.status === 'acknowledged') {
+              var row = root.querySelector('[data-alert-id="' + aid + '"]');
+              if (row) {
+                row.style.transition = 'opacity 0.2s ease, max-height 0.25s ease 0.15s, padding 0.25s ease 0.15s, margin 0.25s ease 0.15s';
+                row.style.overflow   = 'hidden';
+                row.style.maxHeight  = row.offsetHeight + 'px';
+                row.style.opacity    = '0';
+                setTimeout(function() {
+                  row.style.maxHeight = '0';
+                  row.style.padding   = '0';
+                  row.style.margin    = '0';
+                }, 150);
+                setTimeout(function() {
+                  if (row.parentNode) row.parentNode.removeChild(row);
+                  var badge = document.getElementById('alerts-count-badge');
+                  if (badge) {
+                    var n = parseInt(badge.textContent) || 0;
+                    if (n > 0) badge.textContent = n - 1;
+                  }
+                }, 420);
+              }
+              if (window.TraceToast) TraceToast.success('Alert Acknowledged', '');
+            } else {
+              btn.disabled = false;
+              btn.style.opacity = '1';
+            }
+          })
+          .catch(function() {
+            btn.disabled = false;
+            btn.style.opacity = '1';
+            if (window.TraceToast) TraceToast.error('Acknowledge Failed', 'Check backend.');
+          });
+      });
+    });
   }
+
 
   /* ── Event Grouping (Suppression) ──────────────── */
 
@@ -523,29 +704,102 @@
   function renderActions(actions) {
     var root = $("inc-actions-root");
     if (!root) return;
+
+    // Count badge
+    var countBadge = $("actions-count-badge");
+    if (countBadge) countBadge.textContent = actions ? actions.length : 0;
+
     if (!actions || actions.length === 0) {
       root.innerHTML = '<div class="text-outline font-mono text-[0.62rem] py-3 text-center">No actions recorded</div>';
       return;
     }
+
+    var ACTION_ICONS = {
+      'LOG':        'receipt_long',
+      'EMAIL':      'mail',
+      'WHATSAPP':   'chat',
+      'PDF_REPORT': 'picture_as_pdf',
+      'ALARM':      'notifications_active',
+    };
+
     root.innerHTML = actions.slice(0, 10).map(function (a) {
-      var type  = TraceClient.escapeHtml(String(a.action_type || a.type || "LOG").toUpperCase());
-      var trig  = TraceClient.escapeHtml(a.trigger || "");
-      var time  = TraceClient.escapeHtml(TraceClient.formatTime(a.timestamp_utc));
-      var id    = TraceClient.escapeHtml(String(a.action_id || "").slice(-6));
-      return '<div class="bg-surface-lowest border-l border-outline-variant/20 pl-2.5 pr-2 py-2 mb-1.5">'
-        + '<div class="flex items-center justify-between">'
-        +   '<span class="font-mono text-[0.6rem] text-on-surface font-medium">' + type + '</span>'
-        +   '<span class="font-mono text-[0.55rem] text-outline">' + time + '</span>'
+      var rawType = String(a.action_type || a.type || 'LOG').toUpperCase();
+      var type    = TraceClient.escapeHtml(rawType);
+      var trig    = TraceClient.escapeHtml(a.trigger || '');
+      var time    = TraceClient.escapeHtml(TraceClient.formatTime(a.timestamp_utc));
+      var id      = TraceClient.escapeHtml(String(a.action_id || '').slice(-6));
+      var status  = String(a.status || 'success').toLowerCase();
+      var iconKey = ACTION_ICONS[rawType] || 'settings';
+      var isOk    = status === 'success';
+
+      // Monochromatic status — brightness only
+      var dotStyle  = isOk
+        ? 'width:6px;height:6px;border-radius:50%;background:#c6c6c6;display:inline-block;margin-right:4px;flex-shrink:0;'
+        : 'width:6px;height:6px;border-radius:50%;border:1px solid #474747;display:inline-block;margin-right:4px;flex-shrink:0;';
+      var statusTxt = isOk ? '#919191' : '#474747';
+      // Left border: brighter = success, dimmer = failure
+      var borderL   = isOk ? 'border-left:2px solid rgba(198,198,198,0.35);' : 'border-left:2px solid rgba(71,71,71,0.4);';
+
+      // Pull PDF path from context if present
+      var ctx = a.context || {};
+      var pdfPath   = typeof ctx === 'string' ? '' : (ctx.pdf_report_path || '');
+      var htmlUrl   = '';
+      if (pdfPath) {
+        htmlUrl = pdfPath.replace(/\.pdf$/, '.html');
+      }
+      var reportLink = '';
+      if (rawType === 'PDF_REPORT' && status === 'success' && a.reason && a.reason.indexOf('pdf_generated:') === 0) {
+        var fname = a.reason.replace('pdf_generated:', '');
+        reportLink = '<a href="#" class="pdf-report-link" style="font-family:\'JetBrains Mono\',monospace;font-size:0.5rem;color:#919191;text-decoration:none;margin-top:3px;display:inline-flex;align-items:center;gap:3px;" '
+          + 'data-pdf-name="' + TraceClient.escapeHtml(fname) + '"><span class="material-symbols-outlined" style="font-size:11px;">open_in_new</span>View Report</a>';
+      }
+
+      return '<div style="background:#1b1b1b;' + borderL + 'padding:0.45rem 0.6rem;margin-bottom:3px;transition:background 0.12s;" '
+        + 'onmouseenter="this.style.background=\'#2a2a2a\'" onmouseleave="this.style.background=\'#1b1b1b\'">' 
+        + '<div style="display:flex;align-items:center;justify-content:space-between;">'
+        +   '<div style="display:flex;align-items:center;gap:5px;">'
+        +     '<span class="material-symbols-outlined" style="font-size:11px;color:#474747;">' + iconKey + '</span>'
+        +     '<span class="font-mono text-[0.6rem] font-medium text-on-surface">' + type + '</span>'
+        +   '</div>'
+        +   '<div style="display:flex;align-items:center;">'
+        +     '<span style="' + dotStyle + '"></span>'
+        +     '<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.52rem;color:' + statusTxt + ';text-transform:uppercase;">' + status + '</span>'
+        +     '<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.5rem;color:#474747;margin-left:6px;">' + time + '</span>'
+        +   '</div>'
         + '</div>'
-        + (trig ? '<p class="font-mono text-[0.58rem] text-on-surface-variant mt-0.5">' + trig + '</p>' : '')
-        + '<span class="font-mono text-[0.52rem] text-outline block mt-0.5">' + id + '</span>'
+        + (trig ? '<p style="font-family:\'JetBrains Mono\',monospace;font-size:0.56rem;color:var(--on-surface-variant);margin:2px 0 0;">' + trig + '</p>' : '')
+        + '<span style="font-family:\'JetBrains Mono\',monospace;font-size:0.5rem;color:#474747;display:block;margin-top:1px;">' + id + '</span>'
+        + reportLink
         + '</div>';
-    }).join("");
+    }).join('');
+
+    // Wire report links → open companion HTML in new tab
+    root.querySelectorAll('.pdf-report-link').forEach(function(link) {
+      link.addEventListener('click', function(e) {
+        e.preventDefault();
+        var fname = link.getAttribute('data-pdf-name');
+        if (!fname) return;
+        // Scan /api/v1/incidents/{id}/reports to get html_url
+        var incId = _currentId || '';
+        if (!incId) return;
+        fetch('/api/v1/incidents/' + encodeURIComponent(incId) + '/reports')
+          .then(function(r) { return r.json(); })
+          .then(function(list) {
+            var match = list.find(function(r) { return r.filename === fname || r.filename === fname + '.pdf'; });
+            if (match && match.html_url) {
+              window.open(match.html_url, '_blank');
+            } else if (list && list[0] && list[0].html_url) {
+              window.open(list[0].html_url, '_blank');
+            } else {
+              if (window.TraceToast) TraceToast.warning('Report Not Found', 'File may have been deleted.');
+            }
+          })
+          .catch(function() { if (window.TraceToast) TraceToast.error('Error', 'Could not load report list.'); });
+      });
+    });
   }
 
   function syncControls(inc) {
-    var el = $("sev-select");
-    if (el) el.value = inc.severity || "low";
     setText("ctrl-status", "");
   }
 
@@ -557,7 +811,7 @@
     if (!strip) return;
     var cards = strip.querySelectorAll(".inc-card");
     cards.forEach(function (c) { c.parentNode.removeChild(c); });
-    _offset = 0; _done = false;
+    _offset = 0; _done = false; _loading = false;
   }
 
   /* ════════════════════════════════════════════════
@@ -566,6 +820,7 @@
 
   var _flBytes = 0;
   var _flCollapsed = false;
+
 
   function flAppendLine(event) {
     var body = document.getElementById('inc-fl-body');
@@ -701,16 +956,6 @@
   ════════════════════════════════════════════════ */
 
   function wireControls() {
-    var applyBtn = $("btn-apply-sev");
-    if (applyBtn) applyBtn.addEventListener("click", function () {
-      if (!_currentId) return;
-      var sev = ($("sev-select") || {}).value || "low";
-      setText("ctrl-status", "Updating…");
-      TraceClient.setSeverity(_currentId, sev).then(function (result) {
-        setText("ctrl-status", result ? ("Severity → " + sev) : "Failed — offline");
-      });
-    });
-
     var closeBtn = $("btn-close-inc");
     if (closeBtn) closeBtn.addEventListener("click", function () {
       if (!_currentId) return;
@@ -724,6 +969,44 @@
           setText("ctrl-status", "Failed — offline");
         }
       });
+    });
+
+    var genReportBtn = $("btn-gen-report");
+    if (genReportBtn) genReportBtn.addEventListener("click", function () {
+      if (!_currentId) return;
+      genReportBtn.disabled = true;
+      setText("ctrl-status", "Generating report…");
+      fetch('/api/v1/incidents/' + encodeURIComponent(_currentId) + '/report', { method: 'POST' })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          genReportBtn.disabled = false;
+          if (data.status === 'generated') {
+            setText("ctrl-status", "Report ready");
+            if (window.TraceToast) {
+              TraceToast.success(
+                'Report Generated',
+                data.html_url ? 'Opening in new tab…' : 'PDF saved to exports.'
+              );
+            }
+            if (data.html_url) {
+              setTimeout(function() { window.open(data.html_url, '_blank'); }, 400);
+            }
+            // Reload actions panel to show new PDF_REPORT entry
+            setTimeout(function() {
+              TraceClient.getActions(_currentId).then(function(acts) {
+                if (acts) renderActions(acts);
+              });
+            }, 1000);
+          } else {
+            setText("ctrl-status", "Report failed: " + (data.detail || 'unknown'));
+            if (window.TraceToast) TraceToast.error('Report Failed', data.detail || data.reason || '');
+          }
+        })
+        .catch(function(e) {
+          genReportBtn.disabled = false;
+          setText("ctrl-status", "Network error");
+          if (window.TraceToast) TraceToast.error('Report Error', String(e));
+        });
     });
 
     // Suppression selector wiring
@@ -756,9 +1039,31 @@
     initSentinel();
     initForensicPanel();
 
+    // Read optional deep-link ?id=<incident_id> (set by Linked Cases on entity page)
+    var _deepLinkId = null;
+    try {
+      var _params = new URLSearchParams(window.location.search);
+      _deepLinkId = _params.get("id") || null;
+    } catch (e) { /* old browser */ }
+
     // Load cards immediately — no probe() gate
     loadCards(true);
     TraceClient.probe(); // fire-and-forget for connection badge
+
+    // If a specific incident was requested, auto-select it after cards render
+    if (_deepLinkId) {
+      // Give the DOM a tick to insert the cards, then find and activate
+      setTimeout(function () {
+        var strip = $("card-strip");
+        var card = strip && strip.querySelector('[data-id="' + _deepLinkId + '"]');
+        if (card) {
+          activateCard(card);
+          card.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+        }
+        // Load incident detail regardless of whether the card was found in this batch
+        loadIncident(_deepLinkId);
+      }, 300);
+    }
   }
 
   if (document.readyState === "loading") {

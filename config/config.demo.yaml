@@ -1,86 +1,123 @@
-app:
-  environment: demo
-
-# ── GPU / Execution-Provider Configuration ────────────────────────────────────
-# TRACE-AML will automatically probe for GPU providers at startup and select
-# the best available one (CUDA > DirectML > ROCm > OpenVINO > CPU fallback).
-#
-# To enable CUDA acceleration:
-#   1. pip uninstall onnxruntime
-#   2. pip install onnxruntime-gpu
-#   Then restart the service — CUDA will be detected automatically.
-#
-# To force CPU-only mode, set:  gpu.enabled: false
-# To force a specific backend:  gpu.preferred_provider: "DmlExecutionProvider"
-gpu:
-  enabled: true
-  preferred_provider: ""      # leave empty for auto-detection
-  cuda_device_id: 0           # GPU index (only relevant when multiple GPUs present)
-  log_provider_selection: true
-
-
-camera:
-  device_index: 0
-
-recognition:
-  accept_threshold: 0.60
-  review_threshold: 0.45
-  active_gallery_search_k: 96
-  log_cooldown_seconds: 2
-  persist_unknown: true
-  persist_review: true
-  robust_matching: true
-  enable_preprocess_fallback: true
-  low_quality_threshold: 0.40
-  threshold_relaxation: 0.12
-  unknown_reuse_threshold: 0.25
-  min_unknown_surface_threshold: 12.0
-  min_unknown_detector_score: 0.62
-
-temporal:
-  decision_window: 6
-  smoothing_alpha: 0.6
-  min_accept_votes: 1
-  track_ttl_seconds: 1.8
-  max_track_distance_px: 120
-  min_track_iou: 0.08
-  track_reuse_min_score: 0.35
-
-rules:
-  cooldown_sec: 12
-  reappearance:
-    window_sec: 10
-    min_events: 3
-  unknown:
-    window_sec: 10
-    min_events: 3
-  instability:
-    window_sec: 10
-    std_threshold: 0.16
-
 actions:
+  cooldown_sec: 20
   enabled: true
   on_create:
-    low: []
-    medium: [log]
-    high: [log, email, alarm]
+    high:
+    - log
+    - pdf_report
+    - email
+    - whatsapp
+    low:
+    - log
+    - pdf_report
+    - email
+    - whatsapp
+    medium:
+    - log
+    - pdf_report
+    - email
+    - whatsapp
   on_update:
+    high:
+    - log
+    - pdf_report
     low: []
-    medium: [log]
-    high: [log]
-  cooldown_sec: 20
-
-# ── Unknown Entity Deduplication ──────────────────────────────────────────────
-# Background clusterer that retroactively merges duplicate UNK entities.
-# Runs every interval_minutes. Uses global best-of-N embedding comparison
-# (one BLAS matmul over all stored embeddings — < 2ms for 100 unknowns).
-#
-# merge_threshold: Two entities merge if ANY embedding pair scores >= this.
-#   Slightly LOWER than unknown_reuse_threshold (0.25) so the cluster pass
-#   catches duplicates the real-time gate may have missed.
-# interval_minutes: How often the pass runs. 3m is a good balance.
+    medium:
+    - log
+app:
+  environment: demo
+camera:
+  device_index: 0
+  fps: 30
+  height: 720
+  width: 1280
+gpu:
+  cuda_device_id: 0
+  enabled: false
+  log_provider_selection: true
+  preferred_provider: DmlExecutionProvider
+liveness:
+  enabled: false
+  model_path: models/2.7_80x80_MiniFASNetV2.onnx
+  provider: minifas
+  strict_reject: false
+  threshold: 0.6
+notifications:
+  email:
+    attach_pdf: false
+    enabled: true
+    recipient_addresses:
+    - utkarshchandra170@gmail.com
+    sender_address: utkarshchandra170@gmail.com
+    sender_name: TRACE-AML Security
+    smtp_host: smtp.gmail.com
+    smtp_password: ENC:AQGartDFdyGfVx2DuoLTfHnaULLS5IQGV8J3sYmCKdhFQ1ValPWzCehK2vhNoNltew==
+    smtp_port: 587
+    smtp_user: utkarshchandra170@gmail.com
+    use_tls: false
+  pdf_report:
+    enabled: true
+    include_entity_portrait: false
+    include_screenshots: false
+    max_alert_rows: 50
+    max_detection_rows: 20
+  whatsapp:
+    bridge_url: http://localhost:3001
+    enabled: true
+    recipient_numbers:
+    - '917007111506'
+    send_pdf: false
+    send_text: false
+pipeline:
+  inference_resolution_scale: 0.75
+  inference_skip_frames: 2
+  live_state_publish_hz: 5.0
+quality:
+  blur_lap_saturation: 500.0
+  composite_gate_enabled: true
+  min_composite_score: 0.42
+  min_detector_score: 0.55
+  min_embeddings_active: 2
+  min_embeddings_ready: 1
+  min_quality_score: 0.25
+  min_sharpness: 8.0
+  min_valid_images: 2
+recognition:
+  accept_threshold: 0.6
+  active_gallery_search_k: 96
+  enable_preprocess_fallback: true
+  log_cooldown_seconds: 2
+  low_quality_threshold: 0.4
+  min_unknown_detector_score: 0.62
+  min_unknown_surface_threshold: 12.0
+  model_name: buffalo_l
+  persist_review: true
+  persist_unknown: true
+  review_threshold: 0.45
+  robust_matching: true
+  threshold_relaxation: 0.12
+  unknown_reuse_threshold: 0.45
+rules:
+  cooldown_sec: 12
+  instability:
+    std_threshold: 0.16
+    window_sec: 10
+  reappearance:
+    min_events: 3
+    window_sec: 10
+  unknown:
+    min_events: 3
+    window_sec: 10
+temporal:
+  decision_window: 6
+  max_track_distance_px: 120
+  min_accept_votes: 1
+  min_track_iou: 0.08
+  smoothing_alpha: 0.6
+  track_reuse_min_score: 0.35
+  track_ttl_seconds: 1.8
 unknown_clustering:
   enabled: true
   interval_minutes: 3.0
-  merge_threshold: 0.28
+  merge_threshold: 0.42
   min_embeddings_to_cluster: 1

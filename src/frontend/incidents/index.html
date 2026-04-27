@@ -7,6 +7,7 @@
   <link rel="stylesheet" href="../shared/tailwind-compiled.css" />
   <link rel="stylesheet" href="../shared/sidenav.css" />
   <link rel="stylesheet" href="../shared/base.css" />
+  <link rel="stylesheet" href="../shared/trace_toast.css" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 
@@ -160,6 +161,62 @@
     .tl-card--action   { border-left-color: var(--outline-variant); }
     .tl-card--event    { border-left-color: transparent; border: 1px solid rgba(71,71,71,0.2); }
 
+    /* ── Forensic panel action buttons (matches live ops) ── */
+    .fp-btn {
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      color: #474747;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.57rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 0 0.15rem;
+      transition: color 0.15s;
+      line-height: 1;
+    }
+    .fp-btn:hover { color: #c6c6c6; }
+    /* EXPAND toggle — bordered pill */
+    #inc-fl-toggle-btn {
+      color: #919191;
+      border: 1px solid rgba(255,255,255,0.1);
+      padding: 2px 8px;
+    }
+    #inc-fl-toggle-btn:hover { color: #fff; border-color: rgba(255,255,255,0.25); }
+
+    /* ── Suppression select (matches history fbar-select) ──── */
+    .tl-suppress-field {
+      display: flex;
+      flex-direction: row;
+      align-items: baseline;
+      gap: 8px;
+    }
+    .tl-suppress-label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.56rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--outline);
+      margin-bottom: 3px;
+      white-space: nowrap;
+    }
+    .tl-suppress-select {
+      background: transparent;
+      border: none;
+      border-bottom: 1px solid rgba(255,255,255,0.12);
+      color: var(--on-surface);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.68rem;
+      padding: 2px 0;
+      outline: none;
+      transition: border-color 0.15s;
+      cursor: pointer;
+      appearance: none;
+      -webkit-appearance: none;
+    }
+    .tl-suppress-select:focus { border-bottom-color: var(--primary); }
+    .tl-suppress-select option { background: #0e0e0e; }
+
     /* ── Skeleton shimmer ───────────────────────────── */
     .skeleton {
       background: linear-gradient(90deg, var(--surface-container) 25%, var(--surface-high) 50%, var(--surface-container) 75%);
@@ -171,16 +228,178 @@
     /* ── Alert row on left panel ────────────────── */
     .alert-row {
       border-left: 2px solid rgba(117,117,117,0.4);
-      border-radius: 2px;
       padding: 0.5rem 0.65rem;
-      background: var(--surface-low);
-      margin-bottom: 4px;
+      background: #1b1b1b;
+      margin-bottom: 3px;
       transition: background 0.12s;
     }
-    .alert-row:hover { background: #222; }
-    .alert-row--high   { border-left-color: #bdbdbd; background: rgba(189,189,189,0.08); }
+    .alert-row:hover { background: #2a2a2a; }
+    .alert-row--high   { border-left-color: #bdbdbd; }
     .alert-row--medium { border-left-color: #c6c6c6; }
     .alert-row--low    { border-left-color: var(--outline-variant); }
+
+    /* ── Intelligence Block (top of panel) ──────── */
+    .intel-block {
+      padding: 1rem 1rem 0.85rem;
+      background: #0e0e0e;
+      border-bottom: 1px solid rgba(255,255,255,0.07);
+    }
+    .intel-block__eyebrow {
+      display: flex; align-items: center; gap: 6px; margin-bottom: 0.5rem;
+    }
+    .intel-block__type {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.56rem; text-transform: uppercase;
+      letter-spacing: 0.18em; color: var(--outline);
+    }
+    .intel-block__id {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.56rem; color: var(--outline);
+    }
+    .intel-block__title {
+      font-size: 1.05rem; font-weight: 700; color: #fff;
+      line-height: 1.25; margin-bottom: 0.6rem;
+      letter-spacing: -0.01em;
+    }
+    .intel-block__badges {
+      display: flex; align-items: center; gap: 6px; margin-bottom: 0.75rem;
+    }
+    .intel-badge {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.56rem; font-weight: 600;
+      padding: 2px 8px; text-transform: uppercase; letter-spacing: 0.12em;
+      display: inline-flex; align-items: center;
+    }
+    /* Status badges — monochromatic */
+    .intel-badge--status-open   { background: rgba(255,255,255,0.08); color: #fff; border: 1px solid rgba(255,255,255,0.15); }
+    .intel-badge--status-closed { background: transparent; color: #919191; border: 1px solid rgba(255,255,255,0.08); }
+    /* Severity badges — purely tonal, no hue color */
+    .intel-badge--sev-high   { background: transparent; color: #c6c6c6; border: 1px dashed rgba(198,198,198,0.5); font-weight: 700; }
+    .intel-badge--sev-medium { background: transparent; color: #919191; border: 1px dashed rgba(198,198,198,0.25); }
+    .intel-badge--sev-low    { background: transparent; color: #474747; border: 1px solid rgba(71,71,71,0.4); }
+    .intel-block__entity {
+      display: flex; align-items: center; justify-content: space-between;
+      background: #1b1b1b; padding: 0.6rem 0.75rem;
+      margin-bottom: 0.6rem;
+    }
+    .intel-entity__name {
+      font-size: 0.9rem; font-weight: 600; color: var(--primary);
+      font-family: var(--font-headline); truncate overflow: hidden;
+      white-space: nowrap; text-overflow: ellipsis; max-width: 140px;
+    }
+    .intel-entity__meta { display: flex; flex-direction: column; gap: 2px; align-items: flex-end; }
+    .intel-entity__status {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.52rem; text-transform: uppercase; letter-spacing: 0.1em;
+      padding: 1px 6px;
+    }
+    .intel-entity__status--active { color: #86efac; background: rgba(134,239,172,0.1); }
+    .intel-entity__status--dormant { color: var(--outline); }
+    .intel-block__stats {
+      display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0;
+    }
+    .intel-stat {
+      text-align: center; padding: 0.4rem 0;
+      border-right: 1px solid rgba(255,255,255,0.06);
+    }
+    .intel-stat:last-child { border-right: none; }
+    .intel-stat__val {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85rem; font-weight: 700; color: #fff;
+      display: block; line-height: 1;
+    }
+    .intel-stat__label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.5rem; text-transform: uppercase;
+      letter-spacing: 0.12em; color: var(--outline);
+      display: block; margin-top: 3px;
+    }
+
+    /* ── Alert summary chips — monochromatic ────────── */
+    .alert-summary { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 0.6rem; }
+    .alert-chip {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.52rem; padding: 2px 7px; text-transform: uppercase;
+      letter-spacing: 0.08em; display: inline-flex; align-items: center; gap: 4px;
+    }
+    /* High = dashed border, bright text; medium = neutral; low = dim ghost */
+    .alert-chip--high   { color: #c6c6c6; border: 1px dashed rgba(198,198,198,0.45); }
+    .alert-chip--medium { color: #919191; border: 1px dashed rgba(145,145,145,0.3); }
+    .alert-chip--low    { color: #474747; border: 1px solid rgba(71,71,71,0.4); }
+
+    /* ── Collapsible section ─────────────────────── */
+    .coll-section { border-bottom: 1px solid rgba(255,255,255,0.05); background: #0e0e0e; }
+    .coll-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0.6rem 1rem; cursor: pointer;
+      background: #0e0e0e;
+      transition: background 0.12s; user-select: none;
+    }
+    .coll-header:hover { background: #131313; }
+    .coll-header__left { display: flex; align-items: center; gap: 8px; }
+    .coll-header__label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.6rem; text-transform: uppercase;
+      letter-spacing: 0.15em; color: var(--on-surface-variant);
+    }
+    .coll-header__count {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.56rem; color: var(--outline);
+      background: rgba(255,255,255,0.06); padding: 1px 5px;
+    }
+    .coll-chevron {
+      font-size: 14px !important; color: var(--outline);
+      transition: transform 0.2s;
+    }
+    .coll-chevron.is-open { transform: rotate(180deg); }
+    .coll-body { overflow: hidden; transition: max-height 0.25s ease; background: #0e0e0e; }
+    .coll-body.is-open  { max-height: 600px; }
+    .coll-body.is-closed { max-height: 0; }
+    .coll-body__inner { padding: 0.25rem 0.85rem 0.75rem; }
+
+    /* ── Prominent controls ──────────────────────── */
+    .ctrl-zone {
+      padding: 0.75rem 1rem;
+      background: #0e0e0e;
+      border-bottom: 1px solid rgba(255,255,255,0.07);
+    }
+    .ctrl-zone__btns { display: flex; gap: 8px; margin-bottom: 0.4rem; }
+    /* ── Primary action: white fill (matches history APPLY FILTERS) ── */
+    .ctrl-btn-close {
+      flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px;
+      padding: 0.55rem; cursor: pointer; transition: all 0.15s;
+      background: transparent;
+      border: 1px dashed rgba(198,198,198,0.35);
+      color: #919191; font-family: 'JetBrains Mono', monospace;
+      font-size: 0.62rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.12em;
+    }
+    .ctrl-btn-close:hover { border-color: rgba(198,198,198,0.6); color: #c6c6c6; }
+    .ctrl-btn-close .material-symbols-outlined { font-size: 13px; }
+    /* Report = primary (white fill) — same as history fbar-btn-primary */
+    .ctrl-btn-report {
+      flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px;
+      padding: 0.55rem; cursor: pointer; transition: all 0.15s;
+      background: var(--primary); border: 1px solid var(--primary);
+      color: var(--on-primary); font-family: 'JetBrains Mono', monospace;
+      font-size: 0.62rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em;
+    }
+    .ctrl-btn-report:hover { opacity: 0.82; }
+    .ctrl-btn-report .material-symbols-outlined { font-size: 13px; }
+    .ctrl-btn-profile {
+      width: 100%; display: flex; align-items: center; justify-content: center; gap: 6px;
+      padding: 0.45rem; cursor: pointer; transition: all 0.15s;
+      background: transparent; border: 1px solid rgba(255,255,255,0.08);
+      color: var(--outline); font-family: 'JetBrains Mono', monospace;
+      font-size: 0.58rem; text-transform: uppercase; letter-spacing: 0.1em;
+      text-decoration: none;
+    }
+    .ctrl-btn-profile:hover { background: rgba(255,255,255,0.04); color: var(--on-surface); }
+    .ctrl-btn-profile .material-symbols-outlined { font-size: 13px; }
+    .ctrl-status-line {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.56rem; color: var(--outline); min-height: 1rem;
+      display: flex; align-items: center;
+    }
   </style>
 </head>
 
@@ -192,7 +411,7 @@
 <aside class="sidenav" id="sidenav">
   <div class="sidenav-header">
     <button class="hamburger-btn" id="sidenav-toggle" title="Toggle sidebar (Ctrl+B)">
-      <span class="material-symbols-outlined">menu</span>
+      <span class="material-symbols-outlined">dock_to_right</span>
     </button>
     <span class="sidenav-brand">TRACE-AML</span>
   </div>
@@ -297,115 +516,122 @@
   <!-- ═══ CONTENT BODY ═══ -->
   <div class="inc-body" id="inc-body">
 
-    <!-- LEFT: Context + Controls -->
-    <div class="bg-surface-container flex flex-col gap-0 overflow-y-auto" id="inc-left-panel" style="display: none; border-right:1px solid rgba(255,255,255,0.05)">
+    <!-- LEFT: Investigation Control Panel -->
+    <div class="bg-surface-container flex flex-col overflow-y-auto" id="inc-left-panel" style="display:none; border-right:1px solid rgba(255,255,255,0.05)">
 
-      <!-- Incident meta header -->
-      <div class="p-4 border-b border-outline-variant/10">
-        <div class="flex items-center gap-2 mb-1">
-          <span class="w-1 h-1 bg-primary inline-block"></span>
-          <span class="font-mono text-[0.58rem] text-outline uppercase tracking-widest" id="inc-id-label">— select an incident —</span>
+      <!-- ① INTELLIGENCE BLOCK — "read in 2 seconds" zone -->
+      <div class="intel-block" id="inc-intel-block">
+        <div class="intel-block__eyebrow">
+          <span class="w-1 h-1 bg-primary inline-block flex-shrink-0"></span>
+          <span class="intel-block__type" id="inc-intel-type">INCIDENT</span>
+          <span class="intel-block__id" id="inc-id-label">—</span>
         </div>
-        <div class="text-[1rem] font-headline font-semibold text-white leading-snug mb-3" id="inc-title"> </div>
-        <div class="flex gap-5">
+        <div class="intel-block__title" id="inc-title"> </div>
+        <div class="intel-block__badges">
+          <span class="intel-badge intel-badge--status-open" id="inc-status">OPEN</span>
+          <span class="intel-badge intel-badge--sev-low" id="inc-sev-badge">LOW</span>
+        </div>
+
+        <!-- Entity sub-block -->
+        <div class="intel-block__entity">
           <div>
-            <span class="stat-label block">Status</span>
-            <span class="font-mono text-[0.72rem] text-primary" id="inc-status">—</span>
+            <div class="intel-entity__name" id="ent-name">—</div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:0.52rem;color:var(--outline);margin-top:2px;" id="ent-type-line">—</div>
           </div>
-          <div>
-            <span class="stat-label block">Alerts</span>
-            <span class="font-mono text-[0.72rem] text-on-surface" id="inc-alert-count">—</span>
+          <div class="intel-entity__meta">
+            <span class="intel-entity__status intel-entity__status--active" id="ent-activity-status">ACTIVE</span>
+            <span style="font-family:'JetBrains Mono',monospace;font-size:0.5rem;color:var(--outline);margin-top:3px;" id="ent-last-rel">—</span>
           </div>
-          <div>
-            <span class="stat-label block">Opened</span>
-            <span class="font-mono text-[0.72rem] text-outline" id="inc-start">—</span>
+        </div>
+
+        <!-- 3-stat bar -->
+        <div class="intel-block__stats">
+          <div class="intel-stat">
+            <span class="intel-stat__val" id="ent-dets">—</span>
+            <span class="intel-stat__label">Detections</span>
+          </div>
+          <div class="intel-stat">
+            <span class="intel-stat__val" id="inc-alert-count">—</span>
+            <span class="intel-stat__label">Alerts</span>
+          </div>
+          <div class="intel-stat">
+            <span class="intel-stat__val" id="inc-start-rel">—</span>
+            <span class="intel-stat__label">Opened</span>
           </div>
         </div>
       </div>
 
-      <!-- Entity context -->
-      <div class="p-4 border-b border-outline-variant/10">
-        <span class="stat-label block mb-2">Entity</span>
-        <div class="bg-surface-lowest p-3 space-y-2.5">
-          <div class="flex justify-between items-center">
-            <span class="text-[0.88rem] font-semibold text-primary font-headline truncate pr-2" id="ent-name">—</span>
-            <span class="badge badge--ghost flex-shrink-0 text-[0.55rem]" id="ent-type">—</span>
+      <!-- ② CONTROLS — primary action zone (most important: decision happens here) -->
+      <div class="ctrl-zone">
+        <div class="ctrl-zone__btns">
+          <button type="button" id="btn-close-inc" class="ctrl-btn-close" title="Mark incident as closed">
+            <span class="material-symbols-outlined">close</span>Close
+          </button>
+          <button type="button" id="btn-gen-report" class="ctrl-btn-report" title="Generate PDF + HTML forensic report">
+            <span class="material-symbols-outlined">picture_as_pdf</span>Report
+          </button>
+        </div>
+        <a href="#" class="ctrl-btn-profile" id="btn-view-entity" title="Open full entity profile">
+          <span class="material-symbols-outlined">person_search</span>View Entity Profile
+        </a>
+        <div class="ctrl-status-line mt-2" id="ctrl-status"></div>
+      </div>
+
+      <!-- ③ ALERTS — expanded by default -->
+      <div class="coll-section" id="coll-alerts">
+        <div class="coll-header" onclick="toggleColl('alerts')">
+          <div class="coll-header__left">
+            <span class="coll-header__label">Trigger Alerts</span>
+            <span class="coll-header__count" id="alerts-count-badge">—</span>
           </div>
-          <div class="grid grid-cols-2 gap-2">
-            <div>
-              <span class="stat-label block mb-0.5">First seen</span>
-              <span class="font-mono text-[0.62rem] text-on-surface-variant" id="ent-first">—</span>
+          <span class="material-symbols-outlined coll-chevron is-open" id="coll-chevron-alerts">expand_more</span>
+        </div>
+        <div class="coll-body is-open" id="coll-body-alerts">
+          <div class="coll-body__inner">
+            <div class="alert-summary" id="inc-alert-summary"></div>
+            <div id="inc-alerts-root">
+              <div class="text-outline font-mono text-[0.65rem] py-3 text-center">—</div>
             </div>
-            <div>
-              <span class="stat-label block mb-0.5">Last seen</span>
-              <span class="font-mono text-[0.62rem] text-on-surface-variant" id="ent-last">—</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ④ ACTIONS — collapsed by default -->
+      <div class="coll-section" id="coll-actions">
+        <div class="coll-header" onclick="toggleColl('actions')">
+          <div class="coll-header__left">
+            <span class="coll-header__label">Automated Actions</span>
+            <span class="coll-header__count" id="actions-count-badge">—</span>
+          </div>
+          <span class="material-symbols-outlined coll-chevron" id="coll-chevron-actions">expand_more</span>
+        </div>
+        <div class="coll-body is-closed" id="coll-body-actions">
+          <div class="coll-body__inner">
+            <div id="inc-actions-root">
+              <div class="text-outline font-mono text-[0.65rem] py-3 text-center">—</div>
             </div>
           </div>
-          <div class="flex items-baseline gap-2 pt-0.5">
-            <span class="font-headline text-[1.6rem] font-light text-primary leading-none" id="ent-dets">—</span>
-            <span class="stat-label">detections</span>
+        </div>
+      </div>
+
+      <!-- ⑤ IDENTITY RESOLUTION — collapsed, only for unknown entities -->
+      <div class="coll-section hidden" id="inc-resolution-panel">
+        <div class="coll-header" onclick="toggleColl('resolution')">
+          <div class="coll-header__left">
+            <span class="coll-header__label">Resolve Identity</span>
+            <span class="coll-header__count">UNKNOWN</span>
+          </div>
+          <span class="material-symbols-outlined coll-chevron" id="coll-chevron-resolution">expand_more</span>
+        </div>
+        <div class="coll-body is-closed" id="coll-body-resolution">
+          <div class="coll-body__inner">
+            <p class="text-[0.6rem] text-outline mb-3">Link this unknown entity to a known person based on feature similarity.</p>
+            <div id="inc-resolution-root" class="space-y-2">
+              <div class="text-outline font-mono text-[0.62rem] py-2 text-center">Searching for matches...</div>
+            </div>
           </div>
         </div>
       </div>
-
-      <!-- Controls & Response (Compact Horizontal Layout) - MOVED UP FOR ACCESSIBILITY -->
-      <div class="px-4 py-3 border-b border-outline-variant/10" style="background: linear-gradient(180deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.02) 100%);">
-        <div class="space-y-3">
-          <!-- Severity Control Row -->
-          <div class="flex items-center gap-3">
-            <select id="sev-select" class="flex-1 bg-surface-high text-on-surface font-mono text-[0.65rem] border border-outline-variant/40 px-3 py-2 cursor-pointer focus:ring-1 focus:ring-primary focus:border-primary transition-all hover:border-outline-variant/60 rounded h-8">
-              <option value="low">Low</option>
-              <option value="medium">Medium</option>
-              <option value="high">High</option>
-            </select>
-            <button type="button" id="btn-apply-sev" class="flex-1 px-4 py-2 bg-primary hover:bg-primary/90 border border-primary/60 text-on-primary font-mono font-semibold text-[0.70rem] uppercase tracking-wider rounded transition-all hover:shadow-md cursor-pointer h-8 flex items-center justify-center gap-2 active:scale-95" title="Apply severity level to incident">
-              <span class="material-symbols-outlined" style="font-size:16px;">flag</span>
-              <span>Apply</span>
-            </button>
-          </div>
-          
-          <!-- Action Buttons Row -->
-          <div class="flex items-center gap-3">
-            <button type="button" id="btn-close-inc" class="flex-1 px-4 py-2 bg-red-900/40 hover:bg-red-900/60 border border-red-700/50 hover:border-red-600/70 text-red-200 font-mono font-semibold text-[0.70rem] uppercase tracking-wider rounded transition-all hover:shadow-sm cursor-pointer h-8 flex items-center justify-center gap-2 active:scale-95" title="Close incident (no longer active)">
-              <span class="material-symbols-outlined" style="font-size:16px;">close</span>
-              <span>Close Incident</span>
-            </button>
-          </div>
-          
-          <!-- Status Message -->
-          <div class="h-5 flex items-center">
-            <p class="font-mono text-[0.58rem] text-outline/80" id="ctrl-status"></p>
-          </div>
-        </div>
-      </div>
-
-      <!-- Trigger Alerts -->
-      <div class="p-4 border-b border-outline-variant/10">
-        <span class="stat-label block mb-2">Trigger Alerts</span>
-        <div id="inc-alerts-root">
-          <div class="text-outline font-mono text-[0.65rem] py-3 text-center">—</div>
-        </div>
-      </div>
-
-      <!-- Incident Actions -->
-      <div class="p-4 border-b border-outline-variant/10">
-        <span class="stat-label block mb-2">Automated Actions</span>
-        <div id="inc-actions-root">
-          <div class="text-outline font-mono text-[0.65rem] py-3 text-center">—</div>
-        </div>
-      </div>
-
-      <!-- Identity Resolution (Hidden for known persons) -->
-      <div id="inc-resolution-panel" class="p-4 border-b border-outline-variant/10 hidden">
-        <span class="stat-label block mb-2">Resolve Identity</span>
-        <p class="text-[0.6rem] text-outline mb-3">Link this unknown entity to a known person profile based on feature similarity.</p>
-        <div id="inc-resolution-root" class="space-y-2">
-          <!-- Suggestions rendered here -->
-          <div class="text-outline font-mono text-[0.62rem] py-2 text-center">Searching for matches...</div>
-        </div>
-      </div>
-
-
 
     </div>
 
@@ -416,14 +642,16 @@
       <div class="flex items-center justify-between px-5 py-2.5 flex-shrink-0" style="border-bottom:1px solid rgba(255,255,255,0.05); background: rgba(255,255,255,0.01);">
         <div class="flex items-center gap-5">
           <span class="stat-label">Event Timeline</span>
-          <div class="flex items-center gap-2 ml-1 border-l border-outline-variant/20 pl-5">
-            <span class="font-mono text-[0.6rem] text-outline uppercase tracking-[0.15em] font-medium">Suppression</span>
-            <select id="tl-suppress-select" class="bg-surface-lowest text-on-surface font-mono text-[0.62rem] border border-white/10 px-2 py-0.5 cursor-pointer focus:border-primary/50 rounded-sm transition-all hover:bg-surface-high outline-none appearance-none pr-1">
-              <option value="0">OFF</option>
-              <option value="1" selected>1 MIN</option>
-              <option value="5">5 MIN</option>
-              <option value="15">15 MIN</option>
-            </select>
+          <div class="ml-1 border-l border-outline-variant/20 pl-5">
+            <div class="tl-suppress-field">
+              <span class="tl-suppress-label">Suppression</span>
+              <select id="tl-suppress-select" class="tl-suppress-select">
+                <option value="0">Off</option>
+                <option value="1" selected>1 Min Window</option>
+                <option value="5">5 Min Window</option>
+                <option value="15">15 Min Window</option>
+              </select>
+            </div>
           </div>
         </div>
         <span class="font-mono text-[0.58rem] text-outline tracking-wider" id="tl-count-label"></span>
@@ -468,9 +696,8 @@
         <span>BUFFER: <span id="inc-fl-buffer">0</span> KB</span>
         <span class="stream-live">STREAM: <span id="inc-fl-status">ACTIVE</span></span>
         <button type="button" id="inc-fl-clear" class="fp-btn" title="Clear log">[CLEAR]</button>
-        <button type="button" id="inc-fl-toggle-btn" class="fp-btn flex items-center gap-1" title="Expand / Collapse log">
-          <span class="material-symbols-outlined" id="inc-fl-toggle-icon" style="font-size:14px">expand_less</span>
-          <span id="inc-fl-toggle-text">EXPAND</span>
+        <button type="button" id="inc-fl-toggle-btn" class="fp-btn" title="Expand / Collapse log">
+          &uarr; <span id="inc-fl-toggle-text">EXPAND</span>
         </button>
       </div>
     </div>
@@ -485,9 +712,21 @@
 
 </main>
 
+<script src="../shared/trace_toast.js?v=20260412001"></script>
 <script src="../shared/trace_client.js?v=20260412001"></script>
 <script src="../shared/trace_render.js?v=20260412001"></script>
 <script src="../shared/sidenav.js?v=20260412001"></script>
+<script>
+  function toggleColl(key) {
+    var body    = document.getElementById('coll-body-' + key);
+    var chevron = document.getElementById('coll-chevron-' + key);
+    if (!body) return;
+    var opening = body.classList.contains('is-closed');
+    body.classList.toggle('is-open',   opening);
+    body.classList.toggle('is-closed', !opening);
+    if (chevron) chevron.classList.toggle('is-open', opening);
+  }
+</script>
 <script src="./incidents.js?v=20260412001"></script>
 
 </div><!-- /app-shell -->

@@ -453,6 +453,16 @@
     );
   }
 
+  /**
+   * POST /api/v1/system/factory-reset
+   * Wipe ALL data (tables, portraits, screenshots, person images) for a clean start.
+   * Camera must be disabled before calling — returns 409 if active.
+   * @returns {Promise<{status:string, detail:Object}|null>}
+   */
+  function factoryReset() {
+    return _fetchJsonMethod(_url("/api/v1/system/factory-reset"), "POST");
+  }
+
   /* ── Timeline ── */
 
   /**
@@ -682,6 +692,55 @@
     return true;
   }
 
+  /* ── Entity CRUD ── */
+
+  /**
+   * PATCH /api/v1/entities/{id}
+   * Updates metadata for a known entity, or promotes an unknown entity to known.
+   * @param {string} entityId
+   * @param {{name?:string, category?:string, severity?:string, notes?:string}} payload
+   * @returns {Promise<{status:string, entity_id?:string, new_entity_id?:string}|null>}
+   */
+  function updateEntity(entityId, payload) {
+    return _fetchJsonMethod(
+      _url("/api/v1/entities/" + encodeURIComponent(entityId)),
+      "PATCH",
+      payload
+    );
+  }
+
+  /**
+   * DELETE /api/v1/entities/{id}
+   * Deletes any entity (known or unknown) and all linked data.
+   * @param {string} entityId
+   * @returns {Promise<{status:string, entity_id:string}|null>}
+   */
+  function deleteEntity(entityId) {
+    return _fetchJsonMethod(
+      _url("/api/v1/entities/" + encodeURIComponent(entityId)),
+      "DELETE"
+    );
+  }
+
+  /**
+   * POST /api/v1/entities/{id}/portrait  (multipart/form-data)
+   * Upload a new portrait image for an entity, replacing the auto-captured one.
+   * @param {string} entityId
+   * @param {File} file
+   * @returns {Promise<{status:string, entity_id:string}|null>}
+   */
+  function uploadPortrait(entityId, file) {
+    var formData = new FormData();
+    formData.append("file", file);
+    var url = _url("/api/v1/entities/" + encodeURIComponent(entityId) + "/portrait");
+    return fetch(url, { method: "POST", body: formData })
+      .then(function (res) {
+        if (!res.ok) return null;
+        return res.json();
+      })
+      .catch(function () { return null; });
+  }
+
   /* ───────────────────────── Public API ──────────────────────────── */
 
   global.TraceClient = {
@@ -716,6 +775,9 @@
     entityIncidents: entityIncidents,
     entitySuggestions: entitySuggestions,
     entityMerge: entityMerge,
+    updateEntity: updateEntity,
+    deleteEntity: deleteEntity,
+    uploadPortrait: uploadPortrait,
 
     // Incidents
     incidents: incidents,
@@ -723,6 +785,7 @@
     setSeverity: setSeverity,
     closeIncident: closeIncident,
     deduplicateIncidents: deduplicateIncidents,
+    factoryReset: factoryReset,
 
     // Timeline
     globalTimeline: globalTimeline,

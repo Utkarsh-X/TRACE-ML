@@ -12,6 +12,7 @@ from collections import deque
 from pathlib import Path
 
 import cv2
+from loguru import logger
 
 from trace_aml.core.config import Settings
 from trace_aml.core.ids import new_detection_id
@@ -31,6 +32,7 @@ from trace_aml.pipeline.temporal import TemporalDecisionEngine
 from trace_aml.recognizers.arcface import ArcFaceRecognizer
 from trace_aml.store.vector_store import VectorStore
 from trace_aml.store.portrait_store import PortraitStore
+from trace_aml.store.data_vault import DataVault
 
 
 def draw_text(frame, text: str, xy: tuple[int, int], color: tuple[int, int, int], scale: float = 0.55) -> None:
@@ -53,11 +55,13 @@ def draw_box(frame, bbox: tuple[int, int, int, int], color: tuple[int, int, int]
 
 
 def _decision_color(decision: DecisionState) -> tuple[int, int, int]:
+    # Forensic overlay palette — muted, desaturated BGR values.
+    # Avoids full-saturation primaries that burn into the camera feed.
     if decision == DecisionState.accept:
-        return (0, 0, 255)
+        return (85, 85, 217)   # muted indigo-blue  (#D55555 → BGR)
     if decision == DecisionState.review:
-        return (0, 200, 255)
-    return (0, 255, 0)
+        return (160, 175, 196) # soft warm-grey-teal (#C4AF A0 → BGR)
+    return (107, 158, 74)      # muted sage-green   (#4A9E6B → BGR)
 
 
 class RecognitionSession:
@@ -79,9 +83,13 @@ class RecognitionSession:
         self.action_engine = ActionEngine(store, settings)
         self.temporal = TemporalDecisionEngine(settings)
         self.last_logged_at: dict[str, float] = {}
+        self.last_event_at: dict[str, float] = {}  # 1-second event/rules throttle
         self.screenshot_dir = Path(settings.store.screenshots_dir)
         self.screenshot_dir.mkdir(parents=True, exist_ok=True)
+        self._last_screenshot_ts: dict[str, float] = {}   # per-entity 5s throttle
         self.portrait_store = PortraitStore(settings)
+        # Reuse the vault that portrait_store already instantiated
+        self._vault = self.portrait_store.vault
         self.event_feed: deque[str] = deque(maxlen=8)
         self.recent_confidences: deque[float] = deque(maxlen=8)
         self.decision_counters = {"accept": 0, "review": 0, "reject": 0}
@@ -105,7 +113,25 @@ class RecognitionSession:
         # Track IDs that have passed the commitment gate and had their first
         # DB write. Prevents warmup-phase ghost entities.
         self._committed_tracks: set[str] = set()
+        # Entity IDs seen in THIS session. Used to clear stale on-disk portraits
+        # the first time an entity appears (prevents old high-score portraits from
+        # blocking the fresh face captured in the current session).
+        self._seen_entity_ids: set[str] = set()
+        # Entity IDs that existed in the DB BEFORE this recognition session.
+        # Used by the overlay box builder to classify REAPPEARING vs NEW UNKNOWN.
+        self._entities_before_session: set[str] = set()
         # ─────────────────────────────────────────────────────────────────────
+        # SSE throttle: timestamp of last session.state publish
+        self._last_state_publish: float = 0.0
+        # ── Async DB writer ────────────────────────────────────────────────────────────
+        # _save_detection() is moved off the hot result-consumption loop onto a
+        # dedicated single-threaded writer.  This means DB/disk latency (20-80ms
+        # per LanceDB write) no longer blocks the FPS counter loop.
+        # Bounded at 256 items: if the writer falls behind by more than ~25 s of
+        # detections at 10fps, newer items silently overwrite the oldest.
+        self._write_queue: queue.Queue[tuple | None] = queue.Queue(maxsize=256)
+        self._writer_stop = threading.Event()
+        self._writer_thread: threading.Thread | None = None
         # ── Unknown-entity background clusterer ───────────────────────────────
         # Runs every N minutes to retroactively merge duplicate UNK entities
         # created across session restarts or extreme lighting changes.
@@ -140,6 +166,7 @@ class RecognitionSession:
                     self.store,
                     self._frame_queue,
                     self._result_queue,
+                    settings=self.settings,
                 )
                 
                 self._capture.start()
@@ -230,11 +257,24 @@ class RecognitionSession:
                         self.store,
                         self._frame_queue,
                         self._result_queue,
+                        settings=self.settings,
                     )
                 
                 self._inference.start()
                 self._recognition_enabled = True
-                
+
+                # Snapshot all entity_ids already in DB so we can differentiate
+                # REAPPEARING unknowns (existed before) from NEW unknowns (created now).
+                try:
+                    _rows = self.store.list_entities(limit=10_000)
+                    self._entities_before_session = {
+                        str(r.get("entity_id", ""))
+                        for r in _rows
+                        if r.get("entity_id")
+                    }
+                except Exception:
+                    self._entities_before_session = set()
+
                 return {
                     "status": "enabled",
                     "message": "Face recognition started",
@@ -286,6 +326,128 @@ class RecognitionSession:
             return True
         return False
 
+    def _should_log_event(self, key: str, cooldown: float = 1.0) -> bool:
+        """Throttle entity-event + rules-engine calls to once per `cooldown` seconds.
+
+        Separate from _should_log (which gates heavy detection writes at 2 s).
+        A 1-second cooldown still delivers >= 10 events/window so rules fire correctly.
+        """
+        now = time.time()
+        last = self.last_event_at.get(key, 0.0)
+        if now - last >= cooldown:
+            self.last_event_at[key] = now
+            return True
+        return False
+
+    @staticmethod
+    def _save_screenshot_crop(
+        frame: "np.ndarray",
+        bbox: tuple,
+        path: "Path",
+        padding_ratio: float = 0.50,
+        max_size: int = 320,
+    ) -> None:
+        """Save a face-context crop of *frame* to *path* as JPEG-80.
+
+        The crop is the face bounding box expanded by *padding_ratio* on each side,
+        clamped to frame bounds, then downscaled so the longest edge ≤ *max_size* px.
+        This reduces per-image storage from ~80 KB (full JPEG-95 frame) to ~12 KB.
+
+        Falls back to saving the full frame at JPEG-60 if any error occurs.
+        """
+        try:
+            x1, y1, x2, y2 = int(bbox[0]), int(bbox[1]), int(bbox[2]), int(bbox[3])
+            h, w = frame.shape[:2]
+            # Expand bbox by padding_ratio relative to face dimensions
+            fw, fh = max(1, x2 - x1), max(1, y2 - y1)
+            px, py = int(fw * padding_ratio), int(fh * padding_ratio)
+            cx1 = max(0, x1 - px)
+            cy1 = max(0, y1 - py)
+            cx2 = min(w, x2 + px)
+            cy2 = min(h, y2 + py)
+            crop = frame[cy1:cy2, cx1:cx2]
+            if crop.size == 0:
+                raise ValueError("empty crop")
+            # Scale down to max_size on the longest side
+            ch, cw = crop.shape[:2]
+            scale = min(1.0, max_size / max(ch, cw, 1))
+            if scale < 1.0:
+                crop = cv2.resize(
+                    crop, (int(cw * scale), int(ch * scale)),
+                    interpolation=cv2.INTER_AREA,
+                )
+            cv2.imwrite(str(path), crop, [cv2.IMWRITE_JPEG_QUALITY, 80])
+        except Exception:
+            # Fallback: full frame at reduced quality
+            try:
+                cv2.imwrite(str(path), frame, [cv2.IMWRITE_JPEG_QUALITY, 60])
+            except Exception:
+                pass
+
+
+
+    # ── Async DB writer ──────────────────────────────────────────────────────
+
+    def _start_writer(self) -> None:
+        """Start the background persistence thread."""
+        self._writer_stop.clear()
+        self._writer_thread = threading.Thread(
+            target=self._writer_loop, daemon=True, name="trace-db-writer"
+        )
+        self._writer_thread.start()
+
+    def _stop_writer(self) -> None:
+        """Drain the write queue then stop the writer thread."""
+        self._write_queue.put_nowait(None)  # sentinel
+        if self._writer_thread and self._writer_thread.is_alive():
+            self._writer_thread.join(timeout=30.0)  # wait up to 30 s to drain
+
+    def _writer_loop(self) -> None:
+        """Background thread: drains _write_queue and calls _save_detection."""
+        while not self._writer_stop.is_set():
+            try:
+                item = self._write_queue.get(timeout=0.5)
+            except queue.Empty:
+                continue
+            if item is None:  # sentinel — normal shutdown
+                break
+            frame_bgr, match, emb, live = item
+            try:
+                self._save_detection(frame_bgr, match=match, embedding=emb, liveness=live)
+            except Exception:  # never crash the writer, but always log failures
+                logger.exception(
+                    "DB writer error (track={} decision={})",
+                    getattr(match, "track_id", "?"),
+                    getattr(match, "decision_state", "?"),
+                )
+
+    def _enqueue_write(
+        self,
+        frame_bgr,
+        match: RecognitionMatch,
+        embedding: list[float],
+        liveness: LivenessResult,
+    ) -> None:
+        """Fire-and-forget: hand off a detection write to the background thread.
+
+        If the queue is full (writer is behind), the oldest item is silently
+        evicted to make room for the newest — newest data is always preferred.
+        """
+        item = (frame_bgr, match, embedding, liveness)
+        try:
+            self._write_queue.put_nowait(item)
+        except queue.Full:
+            try:
+                self._write_queue.get_nowait()  # evict oldest
+            except queue.Empty:
+                pass
+            try:
+                self._write_queue.put_nowait(item)
+            except queue.Full:
+                pass  # give up gracefully
+
+    # ─────────────────────────────────────────────────────────────────────
+
     def _track_event(self, text: str) -> None:
         self.event_feed.appendleft(text)
 
@@ -293,6 +455,18 @@ class RecognitionSession:
         self.stream_publisher.publish(topic, payload)
 
     def _publish_live_state(self, fps: float) -> None:
+        # ── SSE rate-limiter ──────────────────────────────────────────────
+        # _publish_live_state was previously called on every result packet
+        # (~30×/s). Each call JSON-serialises the entire state dict and
+        # queues it for all connected SSE clients — pure CPU overhead.
+        # We cap it to live_state_publish_hz (default 5 Hz); the dashboard
+        # widgets don't need sub-200ms refresh to look live.
+        now = time.time()
+        min_interval = 1.0 / max(0.5, self.settings.pipeline.live_state_publish_hz)
+        if now - self._last_state_publish < min_interval:
+            return
+        self._last_state_publish = now
+        # ─────────────────────────────────────────────────────────────────
         self._publish(
             "session.state",
             {
@@ -349,6 +523,11 @@ class RecognitionSession:
                 score=float(match.similarity),
             )
         elif resolution.is_unknown and match.bbox:
+            # First sighting in this session → wipe any stale portrait from a
+            # previous session so the new face always wins the score gate.
+            if resolution.entity_id not in self._seen_entity_ids:
+                self.portrait_store.delete_portrait(resolution.entity_id)
+                self._seen_entity_ids.add(resolution.entity_id)
             self.portrait_store.try_update_portrait(
                 entity_id=resolution.entity_id,
                 frame_bgr=frame,
@@ -371,8 +550,55 @@ class RecognitionSession:
                 person_key = f"trk:{match.track_id or 'unknown'}:{decision.value}"
             if self._should_log(person_key):
                 detection_id = new_detection_id()
-                screenshot_path = self.screenshot_dir / f"{detection_id}.jpg"
-                cv2.imwrite(str(screenshot_path), frame)
+                # ── Evidence screenshot → DataVault (encrypted, no browsable file) ──
+                ss_key = match.person_id or match.track_id or "unknown"
+                import time as _time
+                _now_ts = _time.monotonic()
+                vault_screenshot_key = ""
+                if (_now_ts - self._last_screenshot_ts.get(ss_key, 0)) >= 5.0:
+                    self._last_screenshot_ts[ss_key] = _now_ts
+                    # Face-context crop path: encode to JPEG bytes then hand to vault
+                    import cv2 as _cv2
+                    import numpy as _np
+                    try:
+                        # Re-use the same crop logic as _save_screenshot_crop but in-memory
+                        x1, y1, x2, y2 = (
+                            int(match.bbox[0]), int(match.bbox[1]),
+                            int(match.bbox[2]), int(match.bbox[3]),
+                        ) if len(match.bbox) == 4 and match.bbox[2] > match.bbox[0] else (0, 0, 0, 0)
+                        if x2 > x1 and y2 > y1:
+                            fh, fw = frame.shape[:2]
+                            fw_b, fh_b = max(1, x2 - x1), max(1, y2 - y1)
+                            px, py = int(fw_b * 0.50), int(fh_b * 0.50)
+                            crop = frame[
+                                max(0, y1 - py) : min(fh, y2 + py),
+                                max(0, x1 - px) : min(fw, x2 + px),
+                            ]
+                        else:
+                            crop = frame
+                        if crop.size > 0:
+                            ch, cw = crop.shape[:2]
+                            scale = min(1.0, 320 / max(ch, cw, 1))
+                            if scale < 1.0:
+                                crop = _cv2.resize(
+                                    crop, (int(cw * scale), int(ch * scale)),
+                                    interpolation=_cv2.INTER_AREA,
+                                )
+                            ok, buf = _cv2.imencode(".jpg", crop, [_cv2.IMWRITE_JPEG_QUALITY, 80])
+                        else:
+                            ok = False
+                        if ok:
+                            from datetime import datetime as _dt, timezone as _tz
+                            vault_screenshot_key = self._vault.put_evidence(
+                                detection_id=detection_id,
+                                entity_id=resolution.entity_id,
+                                jpeg_bytes=buf.tobytes(),
+                                timestamp=_dt.now(_tz.utc).isoformat(),
+                            )
+                    except Exception as _ve:
+                        from loguru import logger as _log
+                        _log.warning("Evidence vault write failed for {}: {}", detection_id, _ve)
+                screenshot_ref = f"vault:{vault_screenshot_key}" if vault_screenshot_key else ""
 
                 event = DetectionEvent(
                     detection_id=detection_id,
@@ -390,7 +616,7 @@ class RecognitionSession:
                     quality_flags=match.quality_flags,
                     liveness_provider=liveness.provider,
                     liveness_score=liveness.score,
-                    screenshot_path=str(screenshot_path),
+                    screenshot_path=screenshot_ref,  # vault key prefix, not OS path
                     metadata=match.metadata,
                 )
                 self.store.add_detection(event, embedding=embedding)
@@ -410,36 +636,43 @@ class RecognitionSession:
                     f"{decision.value.upper()} {event.name} {event.smoothed_confidence:.1f}% [{match.track_id}]"
                 )
 
-        core_event = self.entity_resolver.create_event_record(
-            resolution=resolution,
-            match=match,
-            detection_id=detection_id,
-            source=source,
-        )
-        self.store.add_event(core_event)
-        self._publish("event", core_event.model_dump(mode="json"))
-        alerts = self.rules_engine.process_event(core_event)
-        for alert in alerts:
-            self.store.add_alert(alert)
-            self._publish("alert", alert.model_dump(mode="json"))
-            incident, trigger_label = self.incident_manager.handle_alert(alert)
-            self._publish("incident", incident.model_dump(mode="json"))
-            trigger = ActionTrigger(trigger_label)
-            planned_actions = self.policy_engine.evaluate(incident, trigger)
-            executed = self.action_engine.execute(incident, planned_actions, trigger)
-            self._track_event(
-                f"ALERT {alert.severity.value.upper()} {alert.type.value} {alert.entity_id} -> {incident.incident_id}"
+        # ── Entity event + rules engine ─────────────────────────────────────
+        # Throttled to once per second per entity to prevent the write queue
+        # from being flooded at the inference frame-rate (3+ fps × DB ops).
+        # Rules engine window is 10 s with min_events = 3, so a 1-second
+        # cooldown still delivers ≥ 10 events per window — well above threshold.
+        event_key = f"evt:{resolution.entity_id}"
+        if self._should_log_event(event_key, cooldown=3.0):
+            core_event = self.entity_resolver.create_event_record(
+                resolution=resolution,
+                match=match,
+                detection_id=detection_id,
+                source=source,
             )
-            if planned_actions:
-                action_names = ",".join([a.value for a in planned_actions])
+            self.store.add_event(core_event)
+            self._publish("event", core_event.model_dump(mode="json"))
+            alerts = self.rules_engine.process_event(core_event)
+            for alert in alerts:
+                self.store.add_alert(alert)
+                self._publish("alert", alert.model_dump(mode="json"))
+                incident, trigger_label = self.incident_manager.handle_alert(alert)
+                self._publish("incident", incident.model_dump(mode="json"))
+                trigger = ActionTrigger(trigger_label)
+                planned_actions = self.policy_engine.evaluate(incident, trigger)
+                executed = self.action_engine.execute(incident, planned_actions, trigger)
                 self._track_event(
-                    f"POLICY {incident.incident_id} {trigger.value} sev={incident.severity.value} -> [{action_names}]"
+                    f"ALERT {alert.severity.value.upper()} {alert.type.value} {alert.entity_id} -> {incident.incident_id}"
                 )
-            for action in executed:
-                self._publish("action", action.model_dump(mode="json"))
-                self._track_event(
-                    f"ACTION {action.action_type.value.upper()} {incident.incident_id} ({action.status.value})"
-                )
+                if planned_actions:
+                    action_names = ",".join([a.value for a in planned_actions])
+                    self._track_event(
+                        f"POLICY {incident.incident_id} {trigger.value} sev={incident.severity.value} -> [{action_names}]"
+                    )
+                for action in executed:
+                    self._publish("action", action.model_dump(mode="json"))
+                    self._track_event(
+                        f"ACTION {action.action_type.value.upper()} {incident.incident_id} ({action.status.value})"
+                    )
 
     def _apply_temporal_decision(self, match: RecognitionMatch, now: float) -> RecognitionMatch:
         temporal = self.temporal.evaluate(match, now_ts=now)
@@ -473,8 +706,8 @@ class RecognitionSession:
         cv2.addWeighted(overlay, 0.5, frame, 0.5, 0, frame)
 
         pulse = int(6 + (math.sin(time.time() * 4) + 1) * 4)
-        cv2.circle(frame, (18, 18), pulse, (0, 255, 200), 1)
-        draw_text(frame, "TRACE-AML // OPERATOR MODE", (40, 22), (0, 255, 200))
+        cv2.circle(frame, (18, 18), pulse, (180, 220, 180), 1)
+        draw_text(frame, "TRACE-AML // OPERATOR MODE", (40, 22), (180, 220, 180))
         draw_text(
             frame,
             f"FPS:{fps:.1f}  TRACKS:{self.temporal.active_track_count()}  LAT:{self.last_latency_ms:.0f}ms  CAMERA:device0",
@@ -511,7 +744,7 @@ class RecognitionSession:
         overlay2 = frame.copy()
         cv2.rectangle(overlay2, (x0, 0), (w, min(h, 200)), (0, 0, 0), -1)
         cv2.addWeighted(overlay2, 0.45, frame, 0.55, 0, frame)
-        draw_text(frame, "EVENT FEED", (x0 + 8, 22), (0, 255, 200), scale=0.52)
+        draw_text(frame, "EVENT FEED", (x0 + 8, 22), (180, 220, 180), scale=0.52)
         for idx, item in enumerate(list(self.event_feed)[:7]):
             draw_text(frame, f"{idx+1:02d} {item}", (x0 + 8, 44 + idx * 20), (210, 210, 210), scale=0.47)
 
@@ -608,6 +841,9 @@ class RecognitionSession:
                 if conf_ok and votes_ok:
                     self._committed_tracks.add(tid)
             # ─────────────────────────────────────────────────────────────────
+            # Resolve entity_id from the track→entity map (set by entity_resolver after commitment).
+            # May be empty string for warmup-phase tracks not yet committed to DB.
+            _eid = str(self.entity_resolver._track_entity_map.get(str(match.track_id or ""), ""))
             boxes.append(
                 {
                     "x": float(x) / max(w, 1),
@@ -621,6 +857,14 @@ class RecognitionSession:
                     "detector_score": float(match.metadata.get("detector_score", 0.0)),
                     "face_quality": float(match.metadata.get("face_quality", 0.0)),
                     "is_unknown": not bool(match.person_id),
+                    # ── Overlay type enrichment ──────────────────────────────────
+                    "entity_id": _eid,
+                    "person_category": str(
+                        getattr(match, "category", None) or "unknown"
+                    ).lower(),
+                    # True only if this entity existed in the DB before recognition
+                    # was enabled — distinguishes REAPPEARING from brand-new UNK.
+                    "is_repeated": bool(_eid and _eid in self._entities_before_session),
                 }
             )
         update_live_overlay(frame_width=w, frame_height=h, fps=fps, boxes=boxes)
@@ -630,7 +874,7 @@ class RecognitionSession:
         frame_q: queue.Queue = queue.Queue(maxsize=self.settings.pipeline.frame_queue_size)
         result_q: queue.Queue = queue.Queue(maxsize=self.settings.pipeline.result_queue_size)
         capture = CameraCapture(self.settings, frame_q)
-        inference = InferenceWorker(self.recognizer, self.store, frame_q, result_q)
+        inference = InferenceWorker(self.recognizer, self.store, frame_q, result_q, settings=self.settings)
 
         capture.start()
         inference.start()
@@ -660,7 +904,7 @@ class RecognitionSession:
                     # Only persist if track has passed the commitment gate.
                     if match.track_id and match.track_id not in self._committed_tracks:
                         continue
-                    self._save_detection(packet.frame, match=match, embedding=emb, liveness=live)
+                    self._enqueue_write(packet.frame, match=match, embedding=emb, liveness=live)
 
                 cv2.imshow(title, display)
                 if cv2.waitKey(1) & 0xFF == ord("q"):
@@ -672,12 +916,17 @@ class RecognitionSession:
 
     def run_headless(self) -> None:
         """Run recognition session loop (camera/recognition control is frontend-driven via API).
-        
+
         This method runs indefinitely:
         - If camera disabled: waits (no frame capture)
         - If camera enabled but recognition disabled: captures frames but doesn't process
         - If both enabled: processes frames normally
+
+        The DB-write path (_save_detection) runs on a separate background
+        thread via _enqueue_write() so LanceDB write latency (20-80ms) never
+        blocks the FPS counter or the overlay refresh.
         """
+        self._start_writer()
         prev = time.time()
         fps = 0.0
         self._headless_mode = True
@@ -719,8 +968,11 @@ class RecognitionSession:
                     # Only persist if track has passed the commitment gate.
                     if match.track_id and match.track_id not in self._committed_tracks:
                         continue
-                    self._save_detection(packet.frame, match=match, embedding=emb, liveness=live)
+                    # Fire-and-forget to background writer thread.
+                    # The main loop never blocks on LanceDB / disk again.
+                    self._enqueue_write(packet.frame, match=match, embedding=emb, liveness=live)
         finally:
+            self._stop_writer()
             self._headless_mode = False
             # Cleanup any active state on shutdown
             with self._camera_lock:

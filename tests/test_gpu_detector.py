@@ -22,6 +22,12 @@ def _reset_cache():
     gpu_module.reset_cache()
 
 
+@pytest.fixture(autouse=True)
+def _stable_provider_verification(monkeypatch):
+    """Keep tests deterministic by default; individual tests can override."""
+    monkeypatch.setattr(gpu_module, "_verify_provider", lambda provider, cuda_device_id=0: True)
+
+
 # ---------------------------------------------------------------------------
 # Helper
 # ---------------------------------------------------------------------------
@@ -140,6 +146,17 @@ class TestDetectProviders:
             with _mock_cuda(True, 1, ["RTX 3080"]):
                 result = gpu_module.detect_providers(preferred="DmlExecutionProvider", allow_gpu=True)
         assert result[0] == "DmlExecutionProvider"
+
+    def test_falls_back_to_cpu_when_cuda_verification_fails(self, monkeypatch):
+        monkeypatch.setattr(
+            gpu_module,
+            "_verify_provider",
+            lambda provider, cuda_device_id=0: provider != "CUDAExecutionProvider",
+        )
+        with _mock_providers(["CUDAExecutionProvider", "CPUExecutionProvider"]):
+            with _mock_cuda(True, 1, ["RTX 3080"]):
+                result = gpu_module.detect_providers(allow_gpu=True)
+        assert result == ["CPUExecutionProvider"]
 
 
 # ---------------------------------------------------------------------------

@@ -244,8 +244,11 @@ class VectorStore:
                     pa.field("first_seen_at", pa.string()),
                     pa.field("last_seen_at", pa.string()),
                     pa.field("event_count", pa.int32()),
+                    pa.field("acknowledged", pa.bool_()),
+                    pa.field("acknowledged_at", pa.string()),
                 ]
             ),
+            migration_defaults={"acknowledged": False, "acknowledged_at": ""},
         )
 
         self.unknown_profiles = self._open_or_create(
@@ -776,10 +779,123 @@ class VectorStore:
             created_at=existing.get("created_at", now) if existing else now,
             last_seen_at=last_seen_at or now,
         ).model_dump()
+        # Optimisation: if the entity already exists with the correct type, skip
+        # the delete+add round-trip and only update last_seen_at.
+        # This avoids 2 heavy LanceDB writes per frame per visible face.
+        existing_type = str(existing.get("type", "")) if existing else ""
+        type_ok = existing_type == str(entity_type.value)
+        if existing and type_ok:
+            try:
+                escaped = self._escape(entity_id)
+                self.entities.update(
+                    where=f"entity_id = '{escaped}'",
+                    values={"last_seen_at": now, "status": str(status.value)},
+                )
+                return payload
+            except Exception:
+                pass  # fall through to full replace below
         escaped = self._escape(entity_id)
         self.entities.delete(f"entity_id = '{escaped}'")
         self.entities.add([self._filtered_row(self.entities, payload)])
         return payload
+
+    def factory_reset(self) -> dict[str, Any]:
+        """Wipe ALL data and reset to a pristine first-run state.
+
+        Strategy (Windows-safe):
+          1. Use shutil.rmtree on the *entire* LanceDB vectors directory — this
+             is the only 100 % reliable way to flush LanceDB on Windows where
+             drop_table() can silently leave MVCC versions behind.
+          2. Reconnect self.db and recreate all empty tables.
+          3. Reset the in-memory gallery cache.
+          4. Wipe all file-system asset directories (portraits, screenshots,
+             person_images, exports) using absolute paths.
+
+        IMPORTANT: Only call when camera/recognition is disabled.
+        """
+        import shutil
+
+        results: dict[str, Any] = {}
+
+        # ── 1. Nuke the entire vectors directory & reconnect ──────────────────
+        # This is guaranteed-clean on Windows; drop_table() has MVCC tombstone
+        # issues that leave data rows visible after a reconnect.
+        vectors_dir_abs = self.vectors_dir.resolve()
+        try:
+            if vectors_dir_abs.exists():
+                shutil.rmtree(str(vectors_dir_abs))
+            vectors_dir_abs.mkdir(parents=True, exist_ok=True)
+            results["vectors_dir_wiped"] = True
+        except Exception as exc:
+            results["vectors_dir_error"] = str(exc)
+            logger.error("factory_reset: failed to wipe vectors dir: {}", exc)
+            # best-effort fall-through
+
+        # Reconnect LanceDB to the clean directory and recreate all tables
+        try:
+            self.db = lancedb.connect(str(vectors_dir_abs))
+        except Exception as exc:
+            results["db_reconnect_error"] = str(exc)
+            logger.error("factory_reset: DB reconnect failed: {}", exc)
+
+        self._ensure_tables()   # creates all tables empty + refreshes self.* refs
+        results["tables_recreated"] = True
+
+        # ── 2. Reset in-memory gallery cache ─────────────────────────────────
+        self.gallery_cache = EmbeddingGalleryCache()
+        results["gallery_cache_cleared"] = True
+
+        # ── 3. Wipe portraits directory ───────────────────────────────────────
+        portraits_dir = Path(self.settings.store.portraits_dir).resolve()
+        portraits_dir.mkdir(parents=True, exist_ok=True)
+        portrait_count = 0
+        for f in list(portraits_dir.glob("*")):
+            if f.is_file():
+                try:
+                    f.unlink()
+                    portrait_count += 1
+                except Exception:
+                    pass
+        results["portraits_deleted"] = portrait_count
+
+        # ── 4. Wipe screenshots directory ─────────────────────────────────────
+        screenshots_dir = Path(self.settings.store.screenshots_dir).resolve()
+        screenshots_dir.mkdir(parents=True, exist_ok=True)
+        ss_count = 0
+        for f in list(screenshots_dir.iterdir()):
+            if f.is_file():
+                try:
+                    f.unlink()
+                    ss_count += 1
+                except Exception:
+                    pass
+        results["screenshots_deleted"] = ss_count
+
+        # ── 5. Wipe person_images (enrollment upload photos) ──────────────────
+        # Use absolute path resolution so cwd never matters.
+        store_root = Path(self.settings.store.root).resolve()
+        person_images_dir = store_root / "person_images"
+        if person_images_dir.exists():
+            try:
+                shutil.rmtree(str(person_images_dir))
+                person_images_dir.mkdir(parents=True, exist_ok=True)
+                results["person_images_cleared"] = True
+            except Exception as exc:
+                results["person_images_error"] = str(exc)
+                logger.error("factory_reset: failed to wipe person_images: {}", exc)
+
+        # ── 6. Wipe exports directory ──────────────────────────────────────────
+        exports_dir = Path(self.settings.store.exports_dir).resolve()
+        if exports_dir.exists():
+            try:
+                shutil.rmtree(str(exports_dir))
+                exports_dir.mkdir(parents=True, exist_ok=True)
+                results["exports_cleared"] = True
+            except Exception as exc:
+                results["exports_error"] = str(exc)
+
+        logger.info("VectorStore.factory_reset() complete: {}", results)
+        return results
 
     def add_event(self, event: EventRecord) -> None:
         payload = event.model_dump()
@@ -816,7 +932,25 @@ class VectorStore:
         payload["type"] = str(payload["type"])
         payload["severity"] = str(payload["severity"])
         payload["event_count"] = int(payload.get("event_count", 1))
+        payload["acknowledged"] = bool(payload.get("acknowledged", False))
+        payload["acknowledged_at"] = str(payload.get("acknowledged_at", ""))
         self.alerts.add([self._filtered_row(self.alerts, payload)])
+
+    def acknowledge_alert(self, alert_id: str) -> bool:
+        """Mark an alert as acknowledged. Returns True if found and updated."""
+        escaped = self._escape(alert_id)
+        rows = self._query_rows(self.alerts, where=f"alert_id = '{escaped}'", limit=1)
+        if not rows:
+            return False
+        row = rows[0]
+        now = utc_now_iso()
+        # Delete and re-insert with updated fields (LanceDB update pattern)
+        self.alerts.delete(f"alert_id = '{escaped}'")
+        updated = dict(row)
+        updated["acknowledged"] = True
+        updated["acknowledged_at"] = now
+        self.alerts.add([self._filtered_row(self.alerts, updated)])
+        return True
 
     def list_alerts(
         self,
@@ -1027,6 +1161,12 @@ class VectorStore:
 
         now = utc_now_iso()
 
+        # Use a constant threshold — no adaptive relaxation here.
+        # Rationale: best-of-N comparison already gives MORE matching opportunities
+        # as an entity accumulates embeddings.  Relaxing the threshold ON TOP of
+        # that causes false-merges where different people are incorrectly grouped.
+        # The threshold itself (config: unknown_reuse_threshold) must therefore be
+        # calibrated for the worst-case best-of-8 scenario (see config notes).
         if best_entity and best_similarity >= similarity_threshold:
             # ── Reuse existing entity: add this embedding as an additional row ──
             escaped = self._escape(best_entity)
@@ -1084,8 +1224,16 @@ class VectorStore:
             )
             return best_entity
 
-        # ── No matching entity found: create new unknown entity ────────────────
-        existing_unknowns = [row.get("entity_id", "") for row in self.list_entities(type_filter=EntityType.unknown.value)]
+        # ── No matching entity found: create new unknown entity ────────────────────
+        # Use unknown_profiles as the source of existing entity IDs.
+        # Querying list_entities(type_filter='unknown') is unreliable when entity_type
+        # is NULL for rows created by older code (before the StrEnum serialisation fix).
+        # unknown_profiles is always the canonical record of which UNK entities exist.
+        existing_unknowns = list({
+            str(row.get("entity_id", ""))
+            for row in profiles
+            if row.get("entity_id")
+        })
         new_entity_id = next_unknown_entity_id(existing_unknowns)
         self.unknown_profiles.add(
             [

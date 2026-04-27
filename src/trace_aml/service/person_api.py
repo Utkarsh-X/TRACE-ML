@@ -34,6 +34,7 @@ from trace_aml.core.ids import next_person_id
 from trace_aml.core.models import PersonCategory, PersonLifecycleStatus, PersonRecord
 from trace_aml.pipeline.collect import person_image_dir
 from trace_aml.store.vector_store import VectorStore
+from trace_aml.store.data_vault import DataVault
 
 
 # ── Request / response models ──────────────────────────────────────────
@@ -85,6 +86,13 @@ _enrollment_lock = threading.Lock()
 _enrollment_worker_started = False
 _enrollment_per_person: dict[str, str] = {}  # pid → "queued"|"processing"|"done"|"error:…"
 _enrollment_recognizer: Any = None  # lazily-created ArcFaceRecognizer, reused
+
+
+def clear_enrollment_state() -> None:
+    """Wipe in-memory enrollment status — called during factory reset."""
+    with _enrollment_lock:
+        _enrollment_per_person.clear()
+
 
 
 def _start_enrollment_worker(settings: "Settings", store: "VectorStore") -> None:
@@ -284,7 +292,87 @@ def create_person_router(settings: "Settings", store: "VectorStore") -> Any:
             "updated_at": p.get("updated_at", ""),
         }
 
-    # ── PATCH /api/v1/persons/{person_id} ─────────────────────────────
+    # ── GET /api/v1/persons/{person_id}/enroll-debug ───────────────────
+
+    @router.get("/persons/{person_id}/enroll-debug")
+    def enroll_debug(person_id: str) -> dict[str, Any]:
+        """Run face-detection diagnosis on every uploaded image for this person.
+
+        Returns per-image detail: whether a face was found, detector score,
+        quality components, and the exact reason(s) for rejection.
+        Use this to diagnose BLOCKED enrollment without reading log files.
+        """
+        import cv2 as _cv2
+        from trace_aml.recognizers.arcface import ArcFaceRecognizer
+        from trace_aml.quality.scoring import build_assessment as _build_assessment
+
+        p = store.get_person(person_id)
+        if not p:
+            raise HTTPException(status_code=404, detail=f"Person not found: {person_id}")
+
+        img_dir = person_image_dir(settings, person_id)
+        if not img_dir.exists():
+            return {"person_id": person_id, "error": "no image directory", "images": []}
+
+        files = sorted([
+            f for f in img_dir.iterdir()
+            if f.suffix.lower() in {".jpg", ".jpeg", ".png", ".bmp"}
+        ])
+
+        recognizer = ArcFaceRecognizer(settings)
+        results = []
+        for f in files:
+            img = _cv2.imread(str(f))
+            if img is None:
+                results.append({"file": f.name, "status": "corrupt", "reason": "cv2.imread returned None"})
+                continue
+
+            h, w = img.shape[:2]
+            candidate = recognizer.primary_face_from_image(img)
+            if candidate is None:
+                results.append({
+                    "file": f.name,
+                    "size": f"{w}x{h}",
+                    "status": "no_face",
+                    "reason": "SCRFD face detector returned no detections",
+                })
+                continue
+
+            assessment = _build_assessment(
+                settings=settings, person_id=person_id,
+                source_path=str(f), frame_bgr=img, bbox=candidate.bbox
+            )
+            results.append({
+                "file": f.name,
+                "size": f"{w}x{h}",
+                "status": "passed" if assessment.passed else "quality_fail",
+                "detector_score": round(candidate.detector_score, 3),
+                "face_ratio": round(assessment.face_ratio, 4),
+                "sharpness": round(assessment.sharpness, 1),
+                "brightness": round(assessment.brightness, 1),
+                "pose_score": round(assessment.pose_score, 3),
+                "quality_score": round(assessment.quality_score, 3),
+                "reasons": assessment.reasons,
+                "thresholds": {
+                    "min_face_ratio": settings.quality.min_face_ratio,
+                    "min_sharpness": settings.quality.min_sharpness,
+                    "min_brightness": settings.quality.min_brightness,
+                    "max_brightness": settings.quality.max_brightness,
+                    "min_pose_score": settings.quality.min_pose_score,
+                    "min_quality_score": settings.quality.min_quality_score,
+                },
+            })
+
+        passed = sum(1 for r in results if r.get("status") == "passed")
+        return {
+            "person_id": person_id,
+            "name": p.get("name", ""),
+            "total_images": len(files),
+            "passed": passed,
+            "blocked_reason": p.get("lifecycle_reason", ""),
+            "images": results,
+        }
+
 
     @router.patch("/persons/{person_id}")
     def update_person(person_id: str, payload: PersonUpdatePayload) -> dict[str, Any]:
@@ -295,7 +383,7 @@ def create_person_router(settings: "Settings", store: "VectorStore") -> Any:
         updated = PersonRecord(
             person_id=current["person_id"],
             name=payload.name if payload.name is not None else current.get("name", ""),
-            category=PersonCategory(current.get("category", "criminal")),
+            category=payload.category if payload.category is not None else PersonCategory(current.get("category", "criminal")),
             severity=payload.severity if payload.severity is not None else current.get("severity", ""),
             dob=payload.dob if payload.dob is not None else current.get("dob", ""),
             gender=payload.gender if payload.gender is not None else current.get("gender", ""),
@@ -335,6 +423,10 @@ def create_person_router(settings: "Settings", store: "VectorStore") -> Any:
         if not current:
             raise HTTPException(status_code=404, detail=f"Person not found: {person_id}")
         store.delete_person(person_id, delete_detections=True)
+        # Remove vault enrollment images
+        _vault = DataVault(settings)
+        _vault.delete_person_enrollment(person_id)
+        # Remove legacy filesystem images if they still exist
         img_dir = person_image_dir(settings, person_id)
         if img_dir.exists():
             shutil.rmtree(img_dir, ignore_errors=True)
@@ -357,27 +449,20 @@ def create_person_router(settings: "Settings", store: "VectorStore") -> Any:
         current = store.get_person(person_id)
         if not current:
             raise HTTPException(status_code=404, detail=f"Person not found: {person_id}")
-        img_dir = person_image_dir(settings, person_id)
 
+        _vault = DataVault(settings)
         saved: list[str] = []
-        existing_count = len([
-            f for f in img_dir.iterdir()
-            if f.suffix.lower() in {".jpg", ".jpeg", ".png", ".bmp"}
-        ]) if img_dir.exists() else 0
+        existing_count = len(_vault.get_enrollment_image_bytes(person_id))
 
-        for i, upload in enumerate(files):
+        for upload in files:
             if not upload.content_type or not upload.content_type.startswith("image/"):
                 continue
-            ext = Path(upload.filename or "image.jpg").suffix.lower()
-            if ext not in {".jpg", ".jpeg", ".png", ".bmp"}:
-                ext = ".jpg"
-            out_path = img_dir / f"upload_{existing_count + i + 1:03d}{ext}"
             content = await upload.read()
-            out_path.write_bytes(content)
-            saved.append(str(out_path))
+            # Encrypt and store in vault — no plaintext JPEG ever written to disk
+            _vault.put_enrollment_image(person_id, content)
+            saved.append(upload.filename or "image")
 
         if saved:
-            # Update state to show images arrived (embedding still pending)
             store.set_person_state(
                 person_id=person_id,
                 lifecycle_state=PersonLifecycleStatus.draft,
@@ -387,15 +472,10 @@ def create_person_router(settings: "Settings", store: "VectorStore") -> Any:
                 valid_images=int(current.get("valid_images", 0)),
                 total_images=existing_count + len(saved),
             )
-            # ── AUTO-ENROLL ────────────────────────────────────────────
-            # Kick off incremental embedding for just this person.
-            # No other persons are touched.  The job runs in the background
-            # EnrollmentWorker thread and completes in a few seconds.
             queued = _queue_enrollment(person_id)
             enrollment_note = (
                 "enrollment queued" if queued else "enrollment already in progress"
             )
-            # ──────────────────────────────────────────────────────────
         else:
             enrollment_note = "no images saved"
 

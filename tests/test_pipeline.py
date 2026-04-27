@@ -30,10 +30,12 @@ class _FakeStore:
 def test_inference_worker_processes_frame() -> None:
     frame_q: queue.Queue = queue.Queue(maxsize=2)
     result_q: queue.Queue = queue.Queue(maxsize=2)
-    worker = InferenceWorker(_FakeRecognizer(), _FakeStore(), frame_q, result_q)
+    # Pass settings=None so the worker defaults to skip=0 (process every frame),
+    # which is correct for a unit test that sends exactly one frame.
+    worker = InferenceWorker(_FakeRecognizer(), _FakeStore(), frame_q, result_q, settings=None)
     worker.start()
     frame_q.put(FramePacket(frame=np.zeros((32, 32, 3), dtype=np.uint8), captured_at=time.time(), frame_index=1))
-    time.sleep(0.2)
+    time.sleep(0.3)
     worker.stop()
     assert not result_q.empty()
     packet = result_q.get_nowait()

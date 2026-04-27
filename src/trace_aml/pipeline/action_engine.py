@@ -1,13 +1,50 @@
-"""Synchronous action execution with cooldown and audit logging."""
+"""Synchronous action execution with cooldown, priority ordering, and audit logging.
+
+Architecture
+------------
+The ``ActionEngine`` is responsible for:
+  1. Checking the per-incident cooldown (skips if last action was too recent).
+  2. Sorting the requested action types by priority so that ``pdf_report``
+     always runs first — the generated PDF path is then available to the
+     ``email`` and ``whatsapp`` handlers via the shared ``context`` dict.
+  3. Dispatching each action to the ``ActionHandlerRegistry``.
+  4. Persisting an ``ActionRecord`` to the vector store regardless of outcome.
+  5. Updating ``incident.last_action_at`` if any action was emitted.
+
+Handler priority order (lower = runs first):
+  pdf_report: 0   → generates PDF, writes context["pdf_report_path"]
+  log:        1   → audit log entry (always fast)
+  email:      2   → sends email + PDF attachment (background thread)
+  whatsapp:   3   → sends WhatsApp message + PDF (background thread)
+  alarm:      3   → deprecated alias for whatsapp
+"""
 
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from typing import Any
+
+from loguru import logger
 
 from trace_aml.core.config import Settings
 from trace_aml.core.ids import new_action_id
-from trace_aml.core.models import ActionRecord, ActionStatus, ActionTrigger, ActionType, IncidentRecord
+from trace_aml.core.models import (
+    ActionRecord,
+    ActionStatus,
+    ActionTrigger,
+    ActionType,
+    IncidentRecord,
+)
 from trace_aml.store.vector_store import VectorStore
+
+# Lower number = executes first within a single execute() call.
+_PRIORITY: dict[str, int] = {
+    "pdf_report": 0,
+    "log":        1,
+    "email":      2,
+    "whatsapp":   3,
+    "alarm":      3,  # deprecated alias
+}
 
 
 def utc_now_iso() -> str:
@@ -15,9 +52,14 @@ def utc_now_iso() -> str:
 
 
 class ActionEngine:
+    """Dispatches actions through the handler registry with cooldown enforcement."""
+
     def __init__(self, store: VectorStore, settings: Settings) -> None:
         self.store = store
         self.config = settings
+        # Registry is instantiated once — handlers hold their config reference.
+        from trace_aml.actions.registry import ActionHandlerRegistry
+        self._registry = ActionHandlerRegistry(settings, store)
 
     @staticmethod
     def _parse_iso(value: str) -> datetime | None:
@@ -38,29 +80,23 @@ class ActionEngine:
         delta = (datetime.now(timezone.utc) - last).total_seconds()
         return delta >= float(self.config.actions.cooldown_sec)
 
-    def _run(self, action_type: ActionType, incident: IncidentRecord, trigger: ActionTrigger) -> tuple[bool, str]:
-        if action_type == ActionType.log:
-            print(f"[ACTION] log incident {incident.incident_id} ({trigger.value})")
-            return True, "logged"
-        if action_type == ActionType.email:
-            print(f"[ACTION] email sent for {incident.incident_id} ({trigger.value})")
-            return True, "email_sent"
-        if action_type == ActionType.alarm:
-            print(f"[ACTION] alarm triggered for {incident.incident_id} ({trigger.value})")
-            return True, "alarm_triggered"
-        return False, "unsupported_action_type"
-
     @staticmethod
-    def _context_for(incident: IncidentRecord, trigger: ActionTrigger, action_type: ActionType, reason: str) -> dict[str, str]:
+    def _context_for(
+        incident: IncidentRecord,
+        trigger: ActionTrigger,
+        action_type: ActionType,
+        reason: str,
+    ) -> dict[str, Any]:
+        """Build the base context dict stored in every ActionRecord."""
         return {
-            "incident_id": incident.incident_id,
-            "entity_id": incident.entity_id,
-            "incident_status": str(incident.status),
+            "incident_id":       incident.incident_id,
+            "entity_id":         incident.entity_id,
+            "incident_status":   str(incident.status),
             "incident_severity": str(incident.severity),
-            "incident_summary": str(incident.summary),
-            "trigger": trigger.value,
-            "action_type": action_type.value,
-            "explanation": reason,
+            "incident_summary":  str(incident.summary),
+            "trigger":           trigger.value,
+            "action_type":       action_type.value,
+            "explanation":       reason,
         }
 
     def execute(
@@ -69,16 +105,57 @@ class ActionEngine:
         actions: list[ActionType],
         trigger: ActionTrigger | str,
     ) -> list[ActionRecord]:
+        """Execute a list of action types for the given incident.
+
+        The method:
+          - Returns [] immediately if the action list is empty or cooldown blocks.
+          - Sorts actions by ``_PRIORITY`` so pdf_report runs before email/WA.
+          - Passes a shared mutable ``context`` dict through all handlers so
+            the PDF path generated by PdfReportHandler is visible to email/WA.
+          - Always persists an ActionRecord regardless of success/failure.
+
+        Args:
+            incident: The incident that triggered the actions.
+            actions:  List of ActionType values to execute.
+            trigger:  ``on_create`` or ``on_update``.
+
+        Returns:
+            List of ActionRecord objects that were persisted.
+        """
         if not actions:
             return []
 
         trigger_value = ActionTrigger(str(trigger))
         if not self._cooldown_allows(incident):
+            logger.info(
+                "[ActionEngine] cooldown active for {} (sev={} last_action={}) — skipping {} actions",
+                incident.incident_id[-8:],
+                getattr(incident.severity, "value", incident.severity),
+                incident.last_action_at or "never",
+                len(actions),
+            )
             return []
 
+        # Sort by execution priority (pdf_report first, then log, email, whatsapp)
+        sorted_actions = sorted(
+            actions,
+            key=lambda a: _PRIORITY.get(str(a.value if hasattr(a, "value") else a), 9),
+        )
+
+        # Shared mutable context — handlers can read/write across the batch.
+        # PdfReportHandler writes context["pdf_report_path"] here.
+        context: dict[str, Any] = {}
+
         emitted: list[ActionRecord] = []
-        for action_type in actions:
-            ok, reason = self._run(action_type, incident, trigger_value)
+
+        for action_type in sorted_actions:
+            ok, reason = self._registry.dispatch(action_type, incident, trigger_value, context)
+
+            # Build the record context — merge base info with whatever handlers wrote
+            record_ctx = self._context_for(incident, trigger_value, action_type, reason)
+            if "pdf_report_path" in context:
+                record_ctx["pdf_report_path"] = context["pdf_report_path"]
+
             record = ActionRecord(
                 action_id=new_action_id(),
                 incident_id=incident.incident_id,
@@ -86,11 +163,12 @@ class ActionEngine:
                 trigger=trigger_value,
                 status=ActionStatus.success if ok else ActionStatus.failed,
                 reason=reason,
-                context=self._context_for(incident, trigger_value, action_type, reason),
+                context=record_ctx,
             )
             self.store.insert_action(record)
             emitted.append(record)
 
         if emitted:
             self.store.set_incident_last_action(incident.incident_id, utc_now_iso())
+
         return emitted

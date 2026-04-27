@@ -223,16 +223,35 @@ class EmbeddingGalleryCache:
         # Single BLAS call — (N, 512) @ (512,) → (N,)
         sims: np.ndarray = matrix @ query_unit
 
-        # Filter + collect
+        # ── Full-NumPy top-k extraction ────────────────────────────────────
+        # OLD: iterate every element in Python, lambda-sort the whole list.
+        #      Cost = O(N) Python iterations + O(N log N) Python sort per frame.
+        # NEW: numpy argpartition picks the k largest in O(N) C-land, then we
+        #      only iterate over ≤top_k elements in Python (typically 96).
+        n = len(pids)
+        k = min(top_k, n)
+
+        if k == 0:
+            return []
+
+        # argpartition gives us k indices with the highest similarities —
+        # unsorted among themselves.  We then stable-sort only those k values.
+        top_idx: np.ndarray = np.argpartition(sims, n - k)[n - k:]
+        # Sort the k candidates descending by similarity (k ≤ 96 → negligible cost)
+        top_idx = top_idx[np.argsort(sims[top_idx])[::-1]]
+
         results: list[dict[str, Any]] = []
-        for i, sim in enumerate(sims.tolist()):
+        for i in top_idx.tolist():
+            sim = float(sims[i])
+            if sim <= 0.0:
+                continue
             pid = pids[i]
             if person_ids_filter is not None and pid not in person_ids_filter:
                 continue
-            results.append({"person_id": pid, "similarity": max(0.0, float(sim))})
+            results.append({"person_id": pid, "similarity": sim})
+        # ──────────────────────────────────────────────────────────────────
+        return results
 
-        results.sort(key=lambda r: r["similarity"], reverse=True)
-        return results[:top_k]
 
     # ── Diagnostics ────────────────────────────────────────────────────────
 

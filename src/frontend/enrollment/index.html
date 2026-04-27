@@ -11,378 +11,454 @@
   <link rel="stylesheet" href="../shared/tailwind-compiled.css" />
   <link rel="stylesheet" href="../shared/sidenav.css" />
   <link rel="stylesheet" href="../shared/base.css" />
+  <link rel="stylesheet" href="../shared/trace_toast.css" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<style>
-  :root {
-    --enroll-left-width: 320px;
-    --enroll-right-width: 300px;
-    --index-list-h: 1fr;  /* controlled by JS drag */
-  }
+  <style>
+    :root {
+      --enroll-left-width: 320px;
+      --enroll-right-width: 300px;
+      --index-list-h: 1fr;
+      /* controlled by JS drag */
+    }
 
-  /* Index list area — height controlled by JS */
-  #person-list-root {
-    overflow-y: auto;
-    transition: height 0.22s cubic-bezier(0.4, 0, 0.2, 1);
-  }
-  #person-list-root.animating {
-    transition: height 0.22s cubic-bezier(0.4, 0, 0.2, 1);
-  }
+    /* Index list area — height controlled by JS */
+    #person-list-root {
+      overflow-y: auto;
+      transition: height 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+    }
 
-  /* Horizontal index splitter — same visual as forensic splitter */
-  .index-hsplitter {
-    height: 4px;
-    flex-shrink: 0;
-    cursor: ns-resize;
-    background: transparent;
-    position: relative;
-    z-index: 10;
-    transition: background 0.15s;
-    border-top: 1px solid rgba(255,255,255,0.04);
-  }
-  .index-hsplitter:hover,
-  .index-hsplitter.is-dragging {
-    background: rgba(255,255,255,0.10);
-  }
-  /* Mini grip dots in centre of splitter */
-  .index-hsplitter::after {
-    content: '···';
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    font-size: 8px;
-    letter-spacing: 3px;
-    color: rgba(255,255,255,0.15);
-    pointer-events: none;
-    line-height: 1;
-  }
-  .index-hsplitter:hover::after,
-  .index-hsplitter.is-dragging::after {
-    color: rgba(255,255,255,0.35);
-  }
+    #person-list-root.animating {
+      transition: height 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+    }
 
-  .enroll-grid {
-    display: flex;
-    height: 100vh;
-    gap: 0;
-    overflow: hidden;
-    background: var(--md-background);
-  }
+    /* Horizontal index splitter — same visual as forensic splitter */
+    .index-hsplitter {
+      height: 4px;
+      flex-shrink: 0;
+      cursor: ns-resize;
+      background: transparent;
+      position: relative;
+      z-index: 10;
+      transition: background 0.15s;
+      border-top: 1px solid rgba(255, 255, 255, 0.04);
+    }
 
-  .enroll-left {
-    width: var(--enroll-left-width);
-    min-width: 240px;
-    flex-shrink: 0;
-    display: flex;
-    flex-direction: column;
-    background: #0a0a0a;
-    transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1), width 0.05s linear;
-    position: relative;
-  }
+    .index-hsplitter:hover,
+    .index-hsplitter.is-dragging {
+      background: rgba(255, 255, 255, 0.10);
+    }
 
-  .enroll-left.collapsed {
-    margin-left: calc(-1 * var(--enroll-left-width));
-  }
+    /* Mini grip dots in centre of splitter */
+    .index-hsplitter::after {
+      content: '···';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 8px;
+      letter-spacing: 3px;
+      color: rgba(255, 255, 255, 0.15);
+      pointer-events: none;
+      line-height: 1;
+    }
 
-  .enroll-center {
-    flex: 1;
-    min-width: 0;
-    display: flex;
-    flex-direction: column;
-    background: var(--md-surface);
-  }
+    .index-hsplitter:hover::after,
+    .index-hsplitter.is-dragging::after {
+      color: rgba(255, 255, 255, 0.35);
+    }
 
-  .enroll-right {
-    width: var(--enroll-right-width);
-    flex-shrink: 0;
-    display: flex;
-    flex-direction: column;
-    background: #0a0a0a;
-    border-left: 1px solid rgba(255, 255, 255, 0.05);
-    border-right: 1px solid rgba(255, 255, 255, 0.05);
-    max-width: var(--enroll-right-width);
-    overflow: hidden;
-    transition: max-width 0.3s cubic-bezier(0.4, 0, 0.2, 1),
-                border-color 0.3s;
-    position: relative;
-  }
+    .enroll-grid {
+      display: flex;
+      height: 100vh;
+      gap: 0;
+      overflow: hidden;
+      background: var(--md-background);
+    }
 
-  .enroll-right.collapsed {
-    max-width: 0;
-    border-left-color: transparent;
-    border-right-color: transparent;
-  }
+    .enroll-left {
+      width: var(--enroll-left-width);
+      min-width: 240px;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      background: #0a0a0a;
+      transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1), width 0.05s linear;
+      position: relative;
+    }
 
-  /* Show the reopen button when right panel is collapsed (JS adds class to center) */
-  .enroll-center.intel-hidden .intel-reopen-btn {
-    display: flex;
-  }
+    .enroll-left.collapsed {
+      margin-left: calc(-1 * var(--enroll-left-width));
+    }
 
-  /* Intel reopen btn: sits on LEFT edge of center header since panel is to our left */
-  .intel-reopen-btn {
-    position: absolute;
-    top: 50%;
-    left: 24px;
-    transform: translateY(-50%);
-    width: 36px;
-    height: 36px;
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    color: var(--md-outline-variant);
-    display: none;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-    z-index: 20;
-  }
+    .enroll-center {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      background: var(--md-surface);
+    }
 
-  /* Resizable Splitter */
-  .enroll-splitter {
-    width: 4px;
-    cursor: col-resize;
-    background: transparent;
-    transition: background 0.2s;
-    flex-shrink: 0;
-    z-index: 20;
-    position: relative;
-  }
+    .enroll-right {
+      width: var(--enroll-right-width);
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      background: #0a0a0a;
+      border-left: 1px solid rgba(255, 255, 255, 0.05);
+      border-right: 1px solid rgba(255, 255, 255, 0.05);
+      max-width: var(--enroll-right-width);
+      overflow: hidden;
+      transition: max-width 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+        border-color 0.3s;
+      position: relative;
+    }
 
-  .enroll-splitter::after {
-    content: "";
-    position: absolute;
-    left: 1px;
-    top: 0;
-    bottom: 0;
-    width: 1px;
-    background: rgba(255, 255, 255, 0.05);
-  }
+    .enroll-right.collapsed {
+      max-width: 0;
+      border-left-color: transparent;
+      border-right-color: transparent;
+    }
 
-  .enroll-splitter:hover, .enroll-splitter.dragging {
-    background: var(--md-primary);
-  }
+    /* Show the reopen button when right panel is collapsed (JS adds class to center) */
+    .enroll-center.intel-hidden .intel-reopen-btn {
+      display: flex;
+    }
 
-  /* Index Toggle Button - sticky, always visible */
-  /* Toggle Button - in header, hides when panel collapses */
-  .index-toggle-btn {
-    position: relative;
-    width: 32px;
-    height: 32px;
-    flex-shrink: 0;
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    color: var(--md-outline-variant);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-    border-radius: 4px;
-    z-index: 20;
-  }
+    /* Intel reopen btn: sits on LEFT edge of center header since panel is to our left */
+    .intel-reopen-btn {
+      position: absolute;
+      top: 50%;
+      left: 24px;
+      transform: translateY(-50%);
+      width: 36px;
+      height: 36px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: var(--md-outline-variant);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      z-index: 20;
+    }
 
-  .index-toggle-btn:hover {
-    color: white;
-    background: rgba(255, 255, 255, 0.1);
-    border-color: rgba(255, 255, 255, 0.2);
-  }
+    /* Resizable Splitter */
+    .enroll-splitter {
+      width: 4px;
+      cursor: col-resize;
+      background: transparent;
+      transition: background 0.2s;
+      flex-shrink: 0;
+      z-index: 20;
+      position: relative;
+    }
 
-  .index-toggle-btn:active {
-    background: rgba(255, 255, 255, 0.15);
-  }
+    .enroll-splitter::after {
+      content: "";
+      position: absolute;
+      left: 1px;
+      top: 0;
+      bottom: 0;
+      width: 1px;
+      background: rgba(255, 255, 255, 0.05);
+    }
 
-  .index-toggle-btn .material-symbols-outlined {
-    font-size: 18px;
-  }
+    .enroll-splitter:hover,
+    .enroll-splitter.dragging {
+      background: var(--md-primary);
+    }
 
-  /* Hide toggle button when panel is collapsed */
-  .enroll-left.collapsed .index-toggle-btn {
-    display: none;
-  }
+    /* Index Toggle Button - sticky, always visible */
+    /* Toggle Button - in header, hides when panel collapses */
+    .index-toggle-btn {
+      position: relative;
+      width: 32px;
+      height: 32px;
+      flex-shrink: 0;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: var(--md-outline-variant);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      border-radius: 4px;
+      z-index: 20;
+    }
 
-  /* Reopen Button - shown in center panel header when left panel is collapsed */
-  .index-reopen-btn {
-    position: absolute;
-    top: 50%;
-    right: 24px;
-    transform: translateY(-50%);
-    width: 36px;
-    height: 36px;
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    color: var(--md-outline-variant);
-    display: none;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-    border-radius: 4px;
-    z-index: 20;
-  }
+    .index-toggle-btn:hover {
+      color: white;
+      background: rgba(255, 255, 255, 0.1);
+      border-color: rgba(255, 255, 255, 0.2);
+    }
 
-  .index-reopen-btn:hover {
-    color: white;
-    background: rgba(255, 255, 255, 0.1);
-    border-color: rgba(255, 255, 255, 0.2);
-  }
+    .index-toggle-btn:active {
+      background: rgba(255, 255, 255, 0.15);
+    }
 
-  .index-reopen-btn:active {
-    background: rgba(255, 255, 255, 0.15);
-  }
+    .index-toggle-btn .material-symbols-outlined {
+      font-size: 18px;
+    }
 
-  .index-reopen-btn .material-symbols-outlined {
-    font-size: 20px;
-  }
+    /* Hide toggle button when panel is collapsed */
+    .enroll-left.collapsed .index-toggle-btn {
+      display: none;
+    }
 
-  /* Show reopen button when panel is collapsed */
-  .enroll-left.collapsed ~ .enroll-center .index-reopen-btn {
-    display: flex;
-  }
+    /* Reopen Button - shown in center panel header when left panel is collapsed */
+    .index-reopen-btn {
+      position: absolute;
+      top: 50%;
+      right: 24px;
+      transform: translateY(-50%);
+      width: 36px;
+      height: 36px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: var(--md-outline-variant);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      border-radius: 4px;
+      z-index: 20;
+    }
 
-  /* Enhanced Person Card */
-  .person-card {
-    padding: 12px;
-    cursor: pointer;
-    display: flex;
-    gap: 12px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.03);
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-    position: relative;
-    background: transparent;
-  }
+    .index-reopen-btn:hover {
+      color: white;
+      background: rgba(255, 255, 255, 0.1);
+      border-color: rgba(255, 255, 255, 0.2);
+    }
 
-  .person-card:hover {
-    background: rgba(255, 255, 255, 0.02);
-  }
+    .index-reopen-btn:active {
+      background: rgba(255, 255, 255, 0.15);
+    }
 
-  .person-card.active {
-    background: linear-gradient(90deg, rgba(0, 255, 200, 0.05) 0%, rgba(0, 255, 200, 0.01) 100%);
-  }
+    .index-reopen-btn .material-symbols-outlined {
+      font-size: 20px;
+    }
 
-  .person-card.active::before {
-    content: "";
-    position: absolute;
-    left: 0;
-    top: 0;
-    bottom: 0;
-    width: 2px;
-    background: var(--md-primary);
-    box-shadow: 0 0 10px var(--md-primary);
-  }
+    /* Show reopen button when panel is collapsed */
+    .enroll-left.collapsed~.enroll-center .index-reopen-btn {
+      display: flex;
+    }
 
-  .card-avatar-frame {
-    width: 44px;
-    height: 44px;
-    flex-shrink: 0;
-    background: #1a1a1a;
-    border: 1px solid rgba(255, 255, 255, 0.05);
-    position: relative;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    overflow: hidden;
-  }
+    /* Index search shell */
+    .index-search-shell {
+      display: flex;
+      align-items: center;
+      width: 100%;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 4px;
+      transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+    }
 
-  .card-avatar-frame img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    filter: grayscale(0.5) contrast(1.1);
-  }
+    .index-search-shell:focus-within {
+      border-color: rgba(255, 255, 255, 0.3);
+      background: rgba(255, 255, 255, 0.05);
+      box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.06);
+    }
 
-  .card-avatar-frame .material-symbols-outlined {
-    font-size: 20px;
-    color: rgba(255, 255, 255, 0.1);
-  }
+    .index-search-shell .material-symbols-outlined {
+      padding-left: 10px;
+      color: #7f7f7f;
+      flex-shrink: 0;
+      font-size: 15px;
+      line-height: 1;
+    }
 
-  /* Tactical Corners for Avatar */
-  .avatar-corner {
-    position: absolute;
-    width: 4px;
-    height: 4px;
-    border: 1px solid var(--md-primary);
-    opacity: 0.4;
-  }
-  .corner-tl { top: -1px; left: -1px; border-right: 0; border-bottom: 0; }
-  .corner-tr { top: -1px; right: -1px; border-left: 0; border-bottom: 0; }
-  .corner-bl { bottom: -1px; left: -1px; border-right: 0; border-top: 0; }
-  .corner-br { bottom: -1px; right: -1px; border-left: 0; border-top: 0; }
+    .index-search-shell input {
+      width: 100%;
+      min-width: 0;
+      border: 0;
+      background: transparent;
+      outline: none;
+      box-shadow: none;
+      padding: 9px 10px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.7rem;
+      color: #f2f2f2;
+      letter-spacing: 0.02em;
+    }
 
-  .card-content {
-    flex: 1;
-    min-width: 0;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-  }
+    .index-search-shell input::placeholder {
+      color: #777;
+      opacity: 1;
+    }
 
-  .card-id {
-    font-family: var(--font-mono);
-    font-size: 0.6rem;
-    font-weight: 700;
-    color: var(--md-outline);
-    letter-spacing: 0.05em;
-    margin-bottom: 2px;
-  }
+    /* Enhanced Person Card */
+    .person-card {
+      padding: 12px;
+      cursor: pointer;
+      display: flex;
+      gap: 12px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+      background: transparent;
+    }
 
-  .card-name {
-    font-family: var(--font-headline);
-    font-size: 0.85rem;
-    font-weight: 600;
-    color: #eee;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
+    .person-card:hover {
+      background: rgba(255, 255, 255, 0.02);
+    }
 
-  .card-meta {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-top: 4px;
-  }
+    .person-card.active {
+      background: linear-gradient(90deg, rgba(0, 255, 200, 0.05) 0%, rgba(0, 255, 200, 0.01) 100%);
+    }
 
-  .card-badge {
-    font-family: var(--font-mono);
-    font-size: 0.55rem;
-    font-weight: 700;
-    padding: 1px 4px;
-    text-transform: uppercase;
-    border-radius: 1px;
-  }
+    .person-card.active::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 2px;
+      background: var(--md-primary);
+      box-shadow: 0 0 10px var(--md-primary);
+    }
 
-  .badge-category {
-    background: rgba(255, 255, 255, 0.05);
-    color: var(--md-outline);
-  }
+    .card-avatar-frame {
+      width: 44px;
+      height: 44px;
+      flex-shrink: 0;
+      background: #1a1a1a;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
 
-  .card-metric {
-    display: flex;
-    align-items: center;
-    gap: 3px;
-    font-family: var(--font-mono);
-    font-size: 0.6rem;
-    color: var(--md-outline-variant);
-  }
+    .card-avatar-frame img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      filter: grayscale(0.5) contrast(1.1);
+    }
 
-  .card-metric .material-symbols-outlined {
-    font-size: 10px;
-  }
-  /* Scrollbar refinement */
-  .enroll-left::-webkit-scrollbar,
-  .enroll-center::-webkit-scrollbar,
-  .enroll-right::-webkit-scrollbar {
-    width: 4px;
-  }
-  .enroll-left::-webkit-scrollbar-thumb,
-  .enroll-center::-webkit-scrollbar-thumb,
-  .enroll-right::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.1);
-  }
-...
+    .card-avatar-frame .material-symbols-outlined {
+      font-size: 20px;
+      color: rgba(255, 255, 255, 0.1);
+    }
 
-    .drop-zone {
+    /* Tactical Corners for Avatar */
+    .avatar-corner {
+      position: absolute;
+      width: 4px;
+      height: 4px;
+      border: 1px solid var(--md-primary);
+      opacity: 0.4;
+    }
+
+    .corner-tl {
+      top: -1px;
+      left: -1px;
+      border-right: 0;
+      border-bottom: 0;
+    }
+
+    .corner-tr {
+      top: -1px;
+      right: -1px;
+      border-left: 0;
+      border-bottom: 0;
+    }
+
+    .corner-bl {
+      bottom: -1px;
+      left: -1px;
+      border-right: 0;
+      border-top: 0;
+    }
+
+    .corner-br {
+      bottom: -1px;
+      right: -1px;
+      border-left: 0;
+      border-top: 0;
+    }
+
+    .card-content {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .card-id {
+      font-family: var(--font-mono);
+      font-size: 0.6rem;
+      font-weight: 700;
+      color: var(--md-outline);
+      letter-spacing: 0.05em;
+      margin-bottom: 2px;
+    }
+
+    .card-name {
+      font-family: var(--font-headline);
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #eee;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .card-meta {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 4px;
+    }
+
+    .card-badge {
+      font-family: var(--font-mono);
+      font-size: 0.55rem;
+      font-weight: 700;
+      padding: 1px 4px;
+      text-transform: uppercase;
+      border-radius: 1px;
+    }
+
+    .badge-category {
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--md-outline);
+    }
+
+    .card-metric {
+      display: flex;
+      align-items: center;
+      gap: 3px;
+      font-family: var(--font-mono);
+      font-size: 0.6rem;
+      color: var(--md-outline-variant);
+    }
+
+    .card-metric .material-symbols-outlined {
+      font-size: 10px;
+    }
+
+    /* Scrollbar refinement */
+    .enroll-left::-webkit-scrollbar,
+    .enroll-center::-webkit-scrollbar,
+    .enroll-right::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    .enroll-left::-webkit-scrollbar-thumb,
+    .enroll-center::-webkit-scrollbar-thumb,
+    .enroll-right::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    ... .drop-zone {
       border: 2px dashed rgba(255, 255, 255, 0.15);
       transition: border-color 0.2s, background-color 0.2s;
       cursor: pointer;
@@ -890,7 +966,7 @@
     <aside class="sidenav" id="sidenav">
       <div class="sidenav-header">
         <button class="hamburger-btn" id="sidenav-toggle" title="Toggle sidebar (Ctrl+B)">
-          <span class="material-symbols-outlined">menu</span>
+          <span class="material-symbols-outlined">dock_to_right</span>
         </button>
         <span class="sidenav-brand">TRACE-AML</span>
       </div>
@@ -961,22 +1037,25 @@
             <header class="p-4 border-b border-outline-variant/10" style="flex-shrink:0">
               <div class="flex items-center justify-between mb-3 gap-2">
                 <h2 class="section-header flex-1">Enrollment Index</h2>
-                <button class="index-toggle-btn" id="index-toggle" title="Toggle Index (Ctrl+I)" aria-label="Toggle enrollment index panel">
+                <button class="index-toggle-btn" id="index-toggle" title="Toggle Index (Ctrl+I)"
+                  aria-label="Toggle enrollment index panel">
                   <span class="material-symbols-outlined">chevron_left</span>
                 </button>
                 <span class="font-mono text-[0.6rem] text-outline" id="person-count">--</span>
               </div>
-              <div class="relative">
-                <span class="material-symbols-outlined absolute left-3 top-2 text-outline-variant text-[16px]">search</span>
-                <input type="text" placeholder="Search index..." class="w-full bg-surface-high font-mono text-[0.7rem] text-white border-0 px-3 py-2 pl-9 placeholder-outline-variant focus:ring-1 focus:ring-primary rounded-sm" id="person-search" />
+              <div class="index-search-shell">
+                <span class="material-symbols-outlined">search</span>
+                <input type="text" placeholder="Search index..." id="person-search" />
               </div>
             </header>
             <!-- List area — height controlled by the horizontal splitter below -->
             <div class="overflow-y-auto" id="person-list-root" style="flex:1;min-height:0">
-              <div class="text-center py-12 text-outline text-[0.7rem] font-mono animate-pulse">SYNCHRONIZING INDEX...</div>
+              <div class="text-center py-12 text-outline text-[0.7rem] font-mono animate-pulse">SYNCHRONIZING INDEX...
+              </div>
             </div>
             <!-- Horizontal drag splitter at bottom of index list -->
-            <div class="index-hsplitter" id="index-hsplitter" title="Drag to resize list / Double-click to collapse"></div>
+            <div class="index-hsplitter" id="index-hsplitter" title="Drag to resize list / Double-click to collapse">
+            </div>
           </section>
 
           <div class="enroll-splitter" id="enroll-splitter"></div>
@@ -984,17 +1063,20 @@
           <!-- INTELLIGENCE PANEL: sits between index and form -->
           <section class="enroll-right bg-surface-low flex flex-col overflow-hidden collapsed" id="enroll-right">
             <!-- Panel header with close button -->
-            <div class="flex items-center justify-between px-4 py-3 border-b border-outline-variant/10 flex-shrink-0" style="min-width:var(--enroll-right-width)">
+            <div class="flex items-center justify-between px-4 py-3 border-b border-outline-variant/10 flex-shrink-0"
+              style="min-width:var(--enroll-right-width)">
               <span class="font-mono text-[0.6rem] text-outline uppercase tracking-widest">Entity Intelligence</span>
               <!-- chevron_right closes the panel (pushes it back toward the index) -->
-              <button class="index-toggle-btn" id="intel-toggle" title="Close intelligence panel" aria-label="Close intelligence panel">
+              <button class="index-toggle-btn" id="intel-toggle" title="Close intelligence panel"
+                aria-label="Close intelligence panel">
                 <span class="material-symbols-outlined">chevron_left</span>
               </button>
             </div>
             <!-- Entity detail content -->
             <div class="flex-1 flex flex-col overflow-hidden" style="min-width:var(--enroll-right-width)">
               <div class="flex-1 overflow-y-auto p-4" id="person-detail-panel">
-                <div class="flex flex-col items-center justify-center h-full text-center opacity-30" id="intel-empty-state">
+                <div class="flex flex-col items-center justify-center h-full text-center opacity-30"
+                  id="intel-empty-state">
                   <span class="material-symbols-outlined text-[48px] mb-2">person_search</span>
                   <p class="font-mono text-[0.65rem] uppercase tracking-widest">Select entity for detailed intel</p>
                 </div>
@@ -1006,17 +1088,20 @@
           <section class="enroll-center bg-surface flex flex-col overflow-hidden" id="enroll-center">
             <header class="p-6 border-b border-outline-variant/10 flex-shrink-0 relative">
               <!-- Left reopen button (index panel) -->
-              <button class="index-reopen-btn" id="index-reopen" title="Show Enrollment Index (Ctrl+I)" aria-label="Show enrollment index panel">
+              <button class="index-reopen-btn" id="index-reopen" title="Show Enrollment Index (Ctrl+I)"
+                aria-label="Show enrollment index panel">
                 <span class="material-symbols-outlined">chevron_right</span>
               </button>
               <!-- Left-side reopen button for intel panel (chevron_right = expand panel to the left of form) -->
-              <button class="intel-reopen-btn" id="intel-reopen" title="Show Intelligence Panel" aria-label="Show entity intelligence panel">
+              <button class="intel-reopen-btn" id="intel-reopen" title="Show Intelligence Panel"
+                aria-label="Show entity intelligence panel">
                 <span class="material-symbols-outlined">chevron_right</span>
               </button>
               <div class="mb-2">
                 <span class="flex items-center gap-2 mb-1">
                   <span class="w-1 h-1 bg-white inline-block"></span>
-                  <span class="font-mono text-[0.6875rem] uppercase tracking-[0.2em] text-outline">Person Enrollment Workspace</span>
+                  <span class="font-mono text-[0.6875rem] uppercase tracking-[0.2em] text-outline">Person Enrollment
+                    Workspace</span>
                 </span>
                 <h1 class="text-2xl font-headline font-bold text-white tracking-tight uppercase">Register Entity</h1>
               </div>
@@ -1030,11 +1115,12 @@
                   <h3 class="font-mono text-[0.65rem] text-outline uppercase tracking-wider">Entity Identification</h3>
                   <div class="h-[1px] bg-outline-variant/20 flex-1"></div>
                 </div>
-                
+
                 <div class="grid grid-cols-2 gap-4">
                   <div class="col-span-2">
                     <label class="stat-label mb-1 block">Full Legal Name / Alias *</label>
-                    <input type="text" id="enroll-name" class="enroll-input font-mono text-[0.75rem]" placeholder="Enter entity name" required />
+                    <input type="text" id="enroll-name" class="enroll-input font-mono text-[0.75rem]"
+                      placeholder="Enter entity name" required />
                   </div>
                   <div>
                     <label class="stat-label mb-1 block">Risk Category *</label>
@@ -1049,9 +1135,9 @@
                     <label class="stat-label mb-1 block">Watchlist Priority</label>
                     <select id="enroll-severity" class="enroll-input font-mono text-[0.75rem]">
                       <option value="">-- NONE --</option>
-                      <option value="1-low">LEVEL 1 - ROUTINE</option>
-                      <option value="2-medium">LEVEL 2 - ELEVATED</option>
-                      <option value="3-high">LEVEL 3 - CRITICAL</option>
+                      <option value="low">LEVEL 1 — ROUTINE (Low)</option>
+                      <option value="medium">LEVEL 2 — ELEVATED (Medium)</option>
+                      <option value="high">LEVEL 3 — CRITICAL (High)</option>
                     </select>
                   </div>
                 </div>
@@ -1064,11 +1150,12 @@
                   <h3 class="font-mono text-[0.65rem] text-outline uppercase tracking-wider">Demographics & Origin</h3>
                   <div class="h-[1px] bg-outline-variant/20 flex-1"></div>
                 </div>
-                
+
                 <div class="grid grid-cols-2 gap-4">
                   <div>
                     <label class="stat-label mb-1 block">Date of Birth</label>
-                    <input type="text" id="enroll-dob" class="enroll-input font-mono text-[0.75rem]" placeholder="YYYY-MM-DD" />
+                    <input type="text" id="enroll-dob" class="enroll-input font-mono text-[0.75rem]"
+                      placeholder="YYYY-MM-DD" />
                   </div>
                   <div>
                     <label class="stat-label mb-1 block">Gender Identity</label>
@@ -1081,15 +1168,18 @@
                   </div>
                   <div>
                     <label class="stat-label mb-1 block">Origin City</label>
-                    <input type="text" id="enroll-city" class="enroll-input font-mono text-[0.75rem]" placeholder="City" />
+                    <input type="text" id="enroll-city" class="enroll-input font-mono text-[0.75rem]"
+                      placeholder="City" />
                   </div>
                   <div>
                     <label class="stat-label mb-1 block">Nationality</label>
-                    <input type="text" id="enroll-country" class="enroll-input font-mono text-[0.75rem]" placeholder="Country" />
+                    <input type="text" id="enroll-country" class="enroll-input font-mono text-[0.75rem]"
+                      placeholder="Country" />
                   </div>
                   <div class="col-span-2">
                     <label class="stat-label mb-1 block">Intelligence Notes / Behavioral Profile</label>
-                    <textarea id="enroll-notes" class="enroll-input font-mono text-[0.75rem]" rows="3" placeholder="Additional biometric or behavioral observations..."></textarea>
+                    <textarea id="enroll-notes" class="enroll-input font-mono text-[0.75rem]" rows="3"
+                      placeholder="Additional biometric or behavioral observations..."></textarea>
                   </div>
                 </div>
               </div>
@@ -1101,27 +1191,36 @@
                   <h3 class="font-mono text-[0.65rem] text-outline uppercase tracking-wider">Biometric Acquisition</h3>
                   <div class="h-[1px] bg-outline-variant/20 flex-1"></div>
                 </div>
-                
+
                 <div>
                   <div class="flex items-center justify-between mb-3">
-                    <p class="font-mono text-[0.6rem] text-outline-variant">UPLOAD HIGH-RESOLUTION REFERENCE SAMPLES FOR EMBEDDING GENERATION</p>
-                    <button type="button" class="px-4 py-2 bg-white text-background font-mono text-[0.65rem] font-semibold uppercase hover:bg-gray-100 cursor-pointer border-0 transition-colors rounded-sm flex items-center gap-2" id="btn-open-camera">
+                    <p class="font-mono text-[0.6rem] text-outline-variant">UPLOAD HIGH-RESOLUTION REFERENCE SAMPLES FOR
+                      EMBEDDING GENERATION</p>
+                    <button type="button"
+                      class="px-4 py-2 bg-white text-background font-mono text-[0.65rem] font-semibold uppercase hover:bg-gray-100 cursor-pointer border-0 transition-colors rounded-sm flex items-center gap-2"
+                      id="btn-open-camera">
                       <span class="material-symbols-outlined text-[18px]">photo_camera</span>
                       Live Capture
                     </button>
                   </div>
-                  <div class="drop-zone flex flex-col items-center justify-center p-12 bg-surface-low/50 border-2 border-dashed border-outline-variant/10 hover:border-primary/30 transition-all rounded-sm group" id="drop-zone">
-                    <span class="material-symbols-outlined text-outline-variant group-hover:text-primary/50 text-[48px] mb-3 transition-colors">cloud_upload</span>
+                  <div
+                    class="drop-zone flex flex-col items-center justify-center p-12 bg-surface-low/50 border-2 border-dashed border-outline-variant/10 hover:border-primary/30 transition-all rounded-sm group"
+                    id="drop-zone">
+                    <span
+                      class="material-symbols-outlined text-outline-variant group-hover:text-primary/50 text-[48px] mb-3 transition-colors">cloud_upload</span>
                     <p class="font-mono text-[0.75rem] text-white font-medium mb-1">DRAG & DROP REFERENCE IMAGES</p>
                     <p class="font-mono text-[0.6rem] text-outline-variant">JPG, PNG, OR BMP FORMATS SUPPORTED</p>
-                    <input type="file" id="file-input" accept="image/jpeg,image/png,image/bmp" multiple style="display:none" />
+                    <input type="file" id="file-input" accept="image/jpeg,image/png,image/bmp" multiple
+                      style="display:none" />
                   </div>
-                  
+
                   <!-- Thumbnails Preview Area -->
                   <div class="mt-4 hidden" id="preview-area">
                     <div class="flex items-center justify-between mb-2">
-                      <span class="font-mono text-[0.6rem] text-primary uppercase tracking-widest" id="file-count">0 SAMPLES SELECTED</span>
-                      <button class="text-[0.6rem] font-mono text-outline-variant hover:text-white uppercase" id="btn-clear-images">[CLEAR ALL]</button>
+                      <span class="font-mono text-[0.6rem] text-primary uppercase tracking-widest" id="file-count">0
+                        SAMPLES SELECTED</span>
+                      <button class="text-[0.6rem] font-mono text-outline-variant hover:text-white uppercase"
+                        id="btn-clear-images">[CLEAR ALL]</button>
                     </div>
                     <div class="thumb-grid" id="thumb-preview"></div>
                   </div>
@@ -1132,8 +1231,12 @@
             <!-- Footer Actions -->
             <footer class="p-6 border-t border-outline-variant/10 bg-surface-low/30 flex items-center justify-between">
               <div class="flex items-center gap-3">
-                <button type="button" class="px-6 py-2.5 bg-primary text-on-primary font-mono text-[0.7rem] font-bold uppercase tracking-wider hover:bg-primary-container disabled:opacity-20 disabled:cursor-not-allowed transition-all rounded-sm" id="btn-create-upload" disabled>COMMIT ENROLLMENT</button>
-                <button type="button" class="px-6 py-2.5 bg-surface-high text-outline font-mono text-[0.7rem] font-bold uppercase tracking-wider hover:bg-surface-bright transition-all rounded-sm border-0" id="btn-clear-form">CANCEL</button>
+                <button type="button"
+                  class="px-6 py-2.5 bg-primary text-on-primary font-mono text-[0.7rem] font-bold uppercase tracking-wider hover:bg-primary-container disabled:opacity-20 disabled:cursor-not-allowed transition-all rounded-sm"
+                  id="btn-create-upload" disabled>COMMIT ENROLLMENT</button>
+                <button type="button"
+                  class="px-6 py-2.5 bg-surface-high text-outline font-mono text-[0.7rem] font-bold uppercase tracking-wider hover:bg-surface-bright transition-all rounded-sm border-0"
+                  id="btn-clear-form">CANCEL</button>
               </div>
               <div id="enroll-status" class="font-mono text-[0.65rem] text-primary animate-pulse"></div>
             </footer>
@@ -1142,7 +1245,8 @@
       </main>
 
       <!-- Camera Capture Modal -->
-      <div id="camera-modal" class="fixed inset-0 z-[9999] hidden items-center justify-center bg-black/82 backdrop-blur-md">
+      <div id="camera-modal"
+        class="fixed inset-0 z-[9999] hidden items-center justify-center bg-black/82 backdrop-blur-md">
         <div class="cam-modal-box">
           <!-- Modal Header -->
           <div class="cam-modal-header">
@@ -1204,6 +1308,7 @@
         </div>
       </div>
 
+      <script src="../shared/trace_toast.js"></script>
       <script src="../shared/trace_client.js"></script>
       <script src="../shared/trace_render.js"></script>
       <script src="../shared/sidenav.js"></script>

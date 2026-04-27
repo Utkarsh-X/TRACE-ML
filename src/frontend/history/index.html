@@ -9,22 +9,462 @@
   <link rel="stylesheet" href="../shared/tailwind-compiled.css" />
   <link rel="stylesheet" href="../shared/sidenav.css" />
   <link rel="stylesheet" href="../shared/base.css" />
+  <link rel="stylesheet" href="../shared/trace_toast.css" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 
   <style>
+    /* ── Layout ── */
     .history-grid {
       display: grid;
       grid-template-columns: 1fr;
       height: 100vh;
       gap: 0;
+      transition: grid-template-columns 0.3s ease;
+    }
+    .history-grid.panel-open {
+      grid-template-columns: 1fr 420px;
+    }
+
+    /* ── Tactical Filter Bar ── */
+    #hist-filter-bar {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      flex-shrink: 0;
+      background: var(--background);
+    }
+    .fbar-field {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 10px 20px;
+      border-right: 1px solid rgba(255,255,255,0.05);
+      min-width: 0;
+    }
+    .fbar-label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.6rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--outline);
+      margin-bottom: 4px;
+      white-space: nowrap;
+    }
+    .fbar-input, .fbar-select {
+      background: transparent;
+      border: none;
+      border-bottom: 1px solid rgba(255,255,255,0.12);
+      color: var(--on-surface);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.7rem;
+      padding: 2px 0;
+      outline: none;
+      transition: border-color 0.15s;
+      width: 100%;
+    }
+    .fbar-input:focus, .fbar-select:focus { border-bottom-color: var(--primary); }
+    .fbar-select option { background: var(--surface-lowest); }
+    .fbar-time-range {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.7rem;
+      color: var(--on-surface);
+    }
+    .fbar-time-range .material-symbols-outlined { font-size: 14px; color: var(--outline); }
+    #fbar-action-zone {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 0 16px 0 12px;
+      margin-left: auto;
+    }
+    .fbar-btn {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.6rem;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      padding: 7px 14px;
+      border: none;
+      cursor: pointer;
+      transition: opacity 0.15s;
+    }
+    .fbar-btn:hover { opacity: 0.75; }
+    .fbar-btn-primary { background: var(--primary); color: var(--on-primary); font-weight: 700; }
+    .fbar-btn-ghost   { background: transparent; color: var(--outline); border: 1px solid rgba(255,255,255,0.1); }
+    .fbar-btn-export  { background: var(--primary); color: var(--on-primary); font-weight: 700; letter-spacing: 0.16em; }
+
+    /* ── Global Density Section ── */
+    #global-density-section {
+      background: var(--surface-lowest);
+      padding: 16px 20px 12px;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      flex-shrink: 0;
+    }
+    #density-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      margin-bottom: 10px;
+    }
+    #density-title {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 1.1rem;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+      text-transform: uppercase;
+      color: var(--on-surface);
+    }
+    #density-subtitle {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.58rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--outline);
+      margin-top: 2px;
+    }
+    #density-total-count {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 1.4rem;
+      color: var(--primary);
+      font-weight: 700;
+      text-align: right;
+    }
+    #density-total-label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.58rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--outline);
+      text-align: right;
+    }
+    #density-chart-wrap {
+      position: relative;
+      height: 210px;
+      background: var(--surface-lowest);
+      border: 1px solid rgba(255,255,255,0.06);
+      overflow: visible;
+    }
+    /* ── Line chart elements ── */
+    #lc-tooltip {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.65rem;
+      background: var(--surface-container);
+      border: 1px solid rgba(255,255,255,0.12);
+      padding: 6px 10px;
+      pointer-events: none;
+      position: absolute;
+      z-index: 100;
+      min-width: 100px;
+      line-height: 1.5;
+    }
+    .lc-marker { cursor: crosshair; }
+
+    /* ── Time window pill buttons ── */
+    .tw-pills {
+      display: flex;
+      gap: 1px;
+    }
+    .tw-pill {
+      background: transparent;
+      border: 1px solid rgba(255,255,255,0.08);
+      color: var(--outline);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.55rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      padding: 3px 8px;
+      cursor: pointer;
+      transition: all 0.12s;
+      line-height: 1;
+    }
+    .tw-pill:first-child { border-radius: 2px 0 0 2px; }
+    .tw-pill:last-child  { border-radius: 0 2px 2px 0; }
+    .tw-pill:hover:not(.active) {
+      border-color: rgba(255,255,255,0.2);
+      color: var(--on-surface-variant);
+      background: rgba(255,255,255,0.03);
+    }
+    .tw-pill.active {
+      background: var(--primary);
+      border-color: var(--primary);
+      color: var(--on-primary);
+      font-weight: 700;
+    }
+    /* ── Chart bucket filter bar ── */
+    #chart-filter-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 5px 16px;
+      background: rgba(255,255,255,0.04);
+      border-top: 1px solid rgba(255,255,255,0.08);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.6rem;
+      color: var(--on-surface-variant);
+      letter-spacing: 0.08em;
+    }
+    #chart-clear-btn {
+      margin-left: auto;
+      background: transparent;
+      border: 1px solid rgba(255,255,255,0.15);
+      color: var(--outline);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.58rem;
+      padding: 2px 8px;
+      cursor: pointer;
+      letter-spacing: 0.08em;
+      transition: all 0.15s;
+    }
+    #chart-clear-btn:hover { border-color: rgba(255,255,255,0.4); color: var(--on-surface); }
+
+    /* ── Timeline Section ── */
+    #timeline-section {
+      padding: 0;
+      background: var(--background);
+    }
+
+    /* Date Group Header */
+    .tl-day-header {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 18px 20px 8px;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      background: var(--background);
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+    }
+    .tl-day-title {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 1.05rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      text-transform: uppercase;
+      color: var(--on-surface);
+      flex-shrink: 0;
+      line-height: 1;
+    }
+    .tl-day-title.is-older { color: var(--surface-bright); }
+    .tl-day-rule {
+      flex: 1;
+      height: 1px;
+      background: rgba(255,255,255,0.06);
+    }
+    .tl-day-count {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.58rem;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--outline);
+      flex-shrink: 0;
+    }
+    .tl-day-group { margin-bottom: 4px; }
+    .tl-day-cards { display: flex; flex-direction: column; gap: 1px; }
+
+    /* ── Insight Strip ── */
+    #insight-strip {
+      display: flex;
+      gap: 0;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      flex-shrink: 0;
+      background: var(--surface-lowest);
+    }
+    .istrip-stat {
+      flex: 1;
+      padding: 10px 16px;
+      border-right: 1px solid rgba(255,255,255,0.05);
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+    }
+    .istrip-stat:last-child { border-right: none; }
+    .istrip-label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.55rem;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--outline);
+    }
+    .istrip-value {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--on-surface);
+      line-height: 1;
+      letter-spacing: -0.02em;
+    }
+    .istrip-value.is-alert    { color: var(--primary); }
+    .istrip-value.is-incident { color: var(--on-surface); }
+    .istrip-sub {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.55rem;
+      color: var(--outline);
+    }
+
+    /* Event Card — visual hierarchy: incident > alert > action > event */
+    .tl-card {
+      display: flex;
+      align-items: center;
+      padding: 10px 20px;
+      background: var(--surface-low);
+      cursor: pointer;
+      transition: background 0.12s, border-left-color 0.12s;
+      border-left: 2px solid transparent;
+      gap: 0;
+      opacity: 1;
+    }
+    .tl-card:hover { background: var(--surface-container); }
+
+    /* INCIDENT — highest weight: white border, elevated bg, full opacity */
+    .tl-card.kind-incident {
+      border-left-color: var(--primary);
+      background: rgba(255,255,255,0.03);
+    }
+    .tl-card.kind-incident:hover { background: rgba(255,255,255,0.06); }
+
+    /* ALERT — dashed gray border, full opacity */
+    .tl-card.kind-alert {
+      border-left-color: var(--outline-variant);
+      border-left-style: dashed;
+    }
+
+    /* ACTION — subtle solid border, slightly reduced opacity */
+    .tl-card.kind-action {
+      border-left-color: var(--surface-bright);
+      opacity: 0.85;
+    }
+
+    /* EVENT — minimal, recedes visually */
+    .tl-card.kind-event {
+      border-left-color: transparent;
+      border: 1px solid rgba(71,71,71,0.15);
+      opacity: 0.65;
+    }
+    .tl-card.kind-event:hover { opacity: 1; }
+
+    /* ACTIVE (selected) state */
+    .tl-card.active {
+      background: var(--surface-high) !important;
+      border-left: 2px solid var(--primary) !important;
+      border-left-style: solid !important;
+      opacity: 1 !important;
+    }
+    .tl-card.active .tl-card-title { color: var(--on-surface); }
+    .tl-card.active .tl-card-chevron { color: var(--primary); }
+
+    .tl-card-time {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.63rem;
+      color: var(--outline);
+      width: 72px;
+      flex-shrink: 0;
+    }
+    .tl-card.kind-alert .tl-card-time,
+    .tl-card.kind-incident .tl-card-time { color: var(--on-surface-variant); font-weight: 500; }
+
+    .tl-card-badge { width: 130px; flex-shrink: 0; padding-right: 12px; }
+
+    /* Badge system */
+    .tl-badge-pill {
+      display: inline-block;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.58rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 2px 8px;
+      font-weight: 500;
+    }
+    .tl-badge-pill.kind-alert    { background: var(--primary); color: var(--on-primary); }
+    .tl-badge-pill.kind-event    { background: transparent; border: 1px dashed rgba(198,198,198,0.25); color: var(--outline); }
+    .tl-badge-pill.kind-incident { background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.2); color: var(--on-surface); font-weight: 700; }
+    .tl-badge-pill.kind-action   { background: transparent; border: 1px solid rgba(71,71,71,0.3); color: var(--outline); }
+
+    .tl-card-title {
+      flex: 1;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.68rem;
+      color: var(--on-surface-variant);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      padding-right: 12px;
+    }
+    /* Incident title gets full white weight */
+    .tl-card.kind-incident .tl-card-title { color: var(--on-surface); font-weight: 600; font-size: 0.7rem; }
+    .tl-card.kind-alert    .tl-card-title { color: var(--on-surface-variant); }
+
+    .tl-card-chevron {
+      font-size: 16px !important;
+      color: var(--outline-variant);
+      transition: color 0.12s;
+      flex-shrink: 0;
+    }
+    .tl-card:hover .tl-card-chevron { color: var(--outline); }
+
+    /* Panel nav buttons */
+    .panel-nav-btn {
+      background: transparent;
+      border: 1px solid rgba(255,255,255,0.08);
+      color: var(--outline);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.58rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      padding: 5px 10px;
+      cursor: pointer;
+      transition: all 0.15s;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .panel-nav-btn:hover { border-color: rgba(255,255,255,0.2); color: var(--on-surface); }
+    .panel-nav-btn:disabled { opacity: 0.2; cursor: default; }
+
+    /* ── Skeleton shimmer — matches incidents.css ── */
+    .tl-skeleton-bar {
+      height: 40px;
+      background: linear-gradient(90deg, var(--surface-container) 25%, var(--surface-high) 50%, var(--surface-container) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.4s infinite;
+      margin-bottom: 1px;
+    }
+    @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+
+    /* ── Right detail panel ── */
+    #detail-panel {
+      border-left: 1px solid rgba(255,255,255,0.06);
+      background: var(--surface-container);
+    }
+    #detail-panel header {
+      background: var(--surface-low);
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      flex-shrink: 0;
+    }
+    #panel-nav {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 16px;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+      background: var(--surface-lowest);
+      flex-shrink: 0;
+    }
+    #panel-nav-pos {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.58rem;
+      color: var(--outline);
+      flex: 1;
+      text-align: center;
     }
   </style>
 </head>
 
 <body class="bg-background text-on-surface font-body overflow-hidden">
-
-
 
 <div class="app-shell">
 
@@ -32,7 +472,7 @@
 <aside class="sidenav" id="sidenav">
   <div class="sidenav-header">
     <button class="hamburger-btn" id="sidenav-toggle" title="Toggle sidebar (Ctrl+B)">
-      <span class="material-symbols-outlined">menu</span>
+      <span class="material-symbols-outlined">dock_to_right</span>
     </button>
     <span class="sidenav-brand">TRACE-AML</span>
   </div>
@@ -94,167 +534,158 @@
 
 <!-- MAIN CANVAS -->
 <main class="main-content">
-<!-- MAIN CANVAS — HISTORY -->
-<main class="main-content">
   <div class="history-grid">
 
     <!-- CENTER: Timeline (PRIMARY) -->
-    <section class="bg-surface p-5 overflow-y-auto flex flex-col">
+    <section class="bg-surface flex flex-col overflow-y-auto">
 
-      <!-- Header + Filters -->
-      <header class="flex justify-between items-start mb-5 flex-shrink-0">
-        <div>
-          <span class="flex items-center gap-2 mb-1">
-            <span class="w-1 h-1 bg-primary inline-block"></span>
-            <span class="font-mono text-[0.6875rem] uppercase tracking-[0.2em] text-outline">Global History</span>
-          </span>
-          <h1 class="text-3xl font-headline font-bold text-white tracking-tight uppercase">Event Timeline</h1>
+      <!-- Page Title Row -->
+      <header class="p-5 pb-4 flex-shrink-0 bg-background" style="border-bottom:1px solid rgba(255,255,255,0.05);">
+        <div class="flex items-center gap-2 mb-1">
+          <span class="w-1 h-1 bg-primary inline-block"></span>
+          <span class="font-mono text-[0.6875rem] uppercase tracking-[0.2em] text-outline">Global History</span>
         </div>
+        <h1 class="text-3xl font-headline font-bold text-white tracking-tight uppercase">Event Timeline</h1>
       </header>
 
-      <!-- Filter Bar -->
-      <div class="flex flex-wrap gap-3 items-end mb-6 flex-shrink-0">
-        <div>
-          <label class="font-mono text-[0.6rem] text-outline uppercase block mb-1">Entity ID</label>
-          <input type="text" placeholder="e.g. ENT-KN-0001" class="bg-surface-high font-mono text-[0.75rem] text-white border-0 px-3 py-2 w-48 placeholder-outline-variant focus:ring-1 focus:ring-white" id="filter-entity" />
+      <!-- Insight Strip -->
+      <div id="insight-strip">
+        <div class="istrip-stat">
+          <span class="istrip-label">Total Events</span>
+          <span class="istrip-value" id="ins-total">—</span>
+          <span class="istrip-sub" id="ins-window">all time</span>
         </div>
-        <div>
-          <label class="font-mono text-[0.6rem] text-outline uppercase block mb-1">Event Kind</label>
-          <select class="bg-surface-high font-mono text-[0.75rem] text-white border-0 px-3 py-2 cursor-pointer focus:ring-1 focus:ring-white" id="filter-kind">
-            <option value="">All</option>
-            <option value="event">Events</option>
-            <option value="alert">Alerts</option>
-            <option value="incident">Incidents</option>
-            <option value="action">Actions</option>
+        <div class="istrip-stat">
+          <span class="istrip-label">Actions</span>
+          <span class="istrip-value" id="ins-alerts">&#8212;</span>
+          <span class="istrip-sub">dispatched</span>
+        </div>
+        <div class="istrip-stat">
+          <span class="istrip-label">Incidents</span>
+          <span class="istrip-value is-incident" id="ins-incidents">—</span>
+          <span class="istrip-sub">open cases</span>
+        </div>
+        <div class="istrip-stat">
+          <span class="istrip-label">Peak Activity</span>
+          <span class="istrip-value" id="ins-peak">—</span>
+          <span class="istrip-sub" id="ins-peak-count">events at peak</span>
+        </div>
+      </div>
+
+      <!-- Filter Bar -->
+      <div id="hist-filter-bar">
+        <div class="fbar-field" style="padding-left:20px;">
+          <span class="fbar-label">Event Type</span>
+          <select class="fbar-select" id="filter-kind" style="width:140px;">
+            <option value="">ALL CHANNELS</option>
+            <option value="event">EVENTS</option>
+            <option value="alert">ALERTS</option>
+            <option value="incident">INCIDENTS</option>
+            <option value="action">ACTIONS</option>
           </select>
         </div>
-        <button class="px-4 py-2 bg-primary text-on-primary font-mono text-[0.65rem] uppercase tracking-widest cursor-pointer border-0 hover:bg-on-surface transition-colors" id="filter-go">Query</button>
-        <button class="px-4 py-2 bg-surface-high text-on-surface-variant font-mono text-[0.65rem] uppercase tracking-widest cursor-pointer border-0 hover:bg-surface-bright transition-colors" id="filter-refresh">Refresh</button>
+        <div class="fbar-field">
+          <span class="fbar-label">Group By</span>
+          <select class="fbar-select" id="filter-suppress" style="width:110px;">
+            <option value="0">No Grouping</option>
+            <option value="1" selected>1 Min Window</option>
+            <option value="5">5 Min Window</option>
+            <option value="15">15 Min Window</option>
+          </select>
+        </div>
+        <div class="fbar-field">
+          <span class="fbar-label">View Range</span>
+          <div class="tw-pills" id="tw-pill-group">
+            <button class="tw-pill" data-window="1h">1H</button>
+            <button class="tw-pill" data-window="1d">1D</button>
+            <button class="tw-pill" data-window="10d">10D</button>
+            <button class="tw-pill" data-window="1m">1M</button>
+            <button class="tw-pill active" data-window="all">ALL</button>
+          </div>
+          <!-- kept hidden so density chart JS can still update them -->
+          <span id="fbar-time-start" style="display:none;">&#8212;</span>
+          <span id="fbar-time-end"   style="display:none;">Present</span>
+        </div>
+        <div id="fbar-action-zone">
+          <button class="fbar-btn fbar-btn-ghost" id="export-log-btn" title="Export current view as CSV">
+            <span class="material-symbols-outlined" style="font-size:13px;vertical-align:middle;">download</span> Export
+          </button>
+          <button class="fbar-btn fbar-btn-primary" id="filter-go">Apply Filters</button>
+        </div>
+      </div>
+
+      <!-- Global Density Chart -->
+      <div id="global-density-section">
+        <div id="density-header">
+          <div>
+            <div id="density-title">Global_Density</div>
+            <div id="density-subtitle">Aggregate frequency over selected temporal window</div>
+          </div>
+          <div>
+            <div id="density-total-count">—</div>
+            <div id="density-total-label">Total Events</div>
+          </div>
+        </div>
+        <div id="density-chart-wrap">
+          <!-- Line chart injected by JS -->
+        </div>
+        <!-- Active bucket filter indicator -->
+        <div id="chart-filter-bar" style="display:none;">
+          <span class="material-symbols-outlined" style="font-size:12px;">filter_alt</span>
+          <span id="chart-filter-label">Filtered to bucket</span>
+          <button id="chart-clear-btn">× Clear</button>
+        </div>
       </div>
 
       <!-- Timeline Events -->
-      <div class="flex-1 space-y-2 overflow-y-auto" id="timeline-results">
-
-        <div class="bg-surface-container p-4 hover:bg-surface-high transition-colors">
-          <div class="flex items-center justify-between mb-2">
-            <div class="flex items-center gap-2">
-              <span class="badge badge--filled">INCIDENT</span>
-              <span class="font-headline font-semibold text-[0.8rem] text-primary">INC-018 Opened</span>
+      <div id="timeline-section" id="timeline-results-outer">
+        <!-- Skeleton -->
+        <div id="timeline-results">
+          <div style="padding:20px 24px 0;">
+            <div style="display:flex;align-items:center;gap:16px;margin-bottom:10px;">
+              <div style="width:160px;height:28px;background:#111;" class="tl-skeleton-bar"></div>
+              <div style="flex:1;height:1px;background:#111;"></div>
             </div>
-            <span class="font-mono text-[0.6rem] text-outline">2026-04-15 14:21:45</span>
           </div>
-          <p class="text-[0.75rem] text-on-surface-variant leading-relaxed">Incident created for entity UNK-0042. Trigger: repeated_unknown. Severity: high.</p>
-          <div class="mt-2 flex items-center gap-3">
-            <span class="font-mono text-[0.6rem] text-outline">Entity: UNK-0042</span>
-            <span class="font-mono text-[0.6rem] text-outline">Source: rules_engine</span>
-          </div>
+          <div class="tl-skeleton-bar" style="margin:0 0 1px;"></div>
+          <div class="tl-skeleton-bar" style="margin:0 0 1px;opacity:0.7"></div>
+          <div class="tl-skeleton-bar" style="margin:0 0 1px;opacity:0.5"></div>
+          <div class="tl-skeleton-bar" style="margin:0 0 1px;opacity:0.35"></div>
         </div>
-
-        <div class="bg-surface-container p-4 hover:bg-surface-high transition-colors">
-          <div class="flex items-center justify-between mb-2">
-            <div class="flex items-center gap-2">
-              <span class="badge badge--neutral">ALERT</span>
-              <span class="font-headline font-semibold text-[0.8rem] text-primary">Repeated Unknown Detection</span>
-            </div>
-            <span class="font-mono text-[0.6rem] text-outline">2026-04-15 14:21:45</span>
-          </div>
-          <p class="text-[0.75rem] text-on-surface-variant leading-relaxed">Unknown subject UNK-0042 detected 5 times in 10-second window.</p>
-          <div class="mt-2 flex items-center gap-3">
-            <span class="font-mono text-[0.6rem] text-outline">Entity: UNK-0042</span>
-            <span class="font-mono text-[0.6rem] text-outline">Alert: ALR-0891</span>
-            <span class="badge badge--neutral">HIGH</span>
-          </div>
-        </div>
-
-        <div class="bg-surface-container p-4 hover:bg-surface-high transition-colors">
-          <div class="flex items-center justify-between mb-2">
-            <div class="flex items-center gap-2">
-              <span class="badge badge--ghost">EVENT</span>
-              <span class="font-headline font-semibold text-[0.8rem] text-on-surface">Detection Confirmed</span>
-            </div>
-            <span class="font-mono text-[0.6rem] text-outline">2026-04-15 14:22:09</span>
-          </div>
-          <p class="text-[0.75rem] text-on-surface-variant leading-relaxed">ENT-KN-0001 detected. Confidence: 0.89. Decision: accept. Track: T004. Source: CAM_01.</p>
-          <div class="mt-2 flex items-center gap-3">
-            <span class="font-mono text-[0.6rem] text-outline">Entity: ENT-KN-0001</span>
-          </div>
-        </div>
-
-        <div class="bg-surface-container p-4 hover:bg-surface-high transition-colors">
-          <div class="flex items-center justify-between mb-2">
-            <div class="flex items-center gap-2">
-              <span class="badge badge--filled">ACTION</span>
-              <span class="font-headline font-semibold text-[0.8rem] text-on-surface">Log Executed</span>
-            </div>
-            <span class="font-mono text-[0.6rem] text-outline">2026-04-15 14:19:33</span>
-          </div>
-          <p class="text-[0.75rem] text-on-surface-variant leading-relaxed">Action type: log. Incident: INC-017. Trigger: on_update. Status: executed.</p>
-          <div class="mt-2 flex items-center gap-3">
-            <span class="font-mono text-[0.6rem] text-outline">Entity: ENT-KN-0001</span>
-            <span class="font-mono text-[0.6rem] text-outline">Action: ACT-0410</span>
-          </div>
-        </div>
-
-        <div class="bg-surface-container p-4 hover:bg-surface-high transition-colors">
-          <div class="flex items-center justify-between mb-2">
-            <div class="flex items-center gap-2">
-              <span class="badge badge--neutral">ALERT</span>
-              <span class="font-headline font-semibold text-[0.8rem] text-primary">Reappearance Alert</span>
-            </div>
-            <span class="font-mono text-[0.6rem] text-outline">2026-04-15 14:18:44</span>
-          </div>
-          <p class="text-[0.75rem] text-on-surface-variant leading-relaxed">Entity ENT-KN-0001 reappeared. 3 detections in 10s window. Pattern matches reappearance rule.</p>
-          <div class="mt-2 flex items-center gap-3">
-            <span class="font-mono text-[0.6rem] text-outline">Entity: ENT-KN-0001</span>
-            <span class="font-mono text-[0.6rem] text-outline">Alert: ALR-0889</span>
-            <span class="badge badge--ghost">MEDIUM</span>
-          </div>
-        </div>
-
-        <div class="bg-surface-container p-4 hover:bg-surface-high transition-colors">
-          <div class="flex items-center justify-between mb-2">
-            <div class="flex items-center gap-2">
-              <span class="badge badge--ghost">EVENT</span>
-              <span class="font-headline font-semibold text-[0.8rem] text-on-surface">Entity Resolved</span>
-            </div>
-            <span class="font-mono text-[0.6rem] text-outline">2026-04-15 14:21:30</span>
-          </div>
-          <p class="text-[0.75rem] text-on-surface-variant leading-relaxed">Unknown face assigned entity ID UNK-0042. No match in active gallery (96 embeddings searched).</p>
-        </div>
-
-        <div class="bg-surface-container p-4 hover:bg-surface-high transition-colors">
-          <div class="flex items-center justify-between mb-2">
-            <div class="flex items-center gap-2">
-              <span class="badge badge--ghost">EVENT</span>
-              <span class="font-headline font-semibold text-[0.8rem] text-on-surface">Detection Confirmed</span>
-            </div>
-            <span class="font-mono text-[0.6rem] text-outline">2026-04-15 14:18:20</span>
-          </div>
-          <p class="text-[0.75rem] text-on-surface-variant leading-relaxed">ENT-KN-0001 detected. Confidence: 0.91. Decision: accept. Track: T004.</p>
-        </div>
-
-        <div class="bg-surface-container p-4 hover:bg-surface-high transition-colors">
-          <div class="flex items-center justify-between mb-2">
-            <div class="flex items-center gap-2">
-              <span class="badge badge--ghost">EVENT</span>
-              <span class="font-headline font-semibold text-[0.8rem] text-on-surface">Health Check</span>
-            </div>
-            <span class="font-mono text-[0.6rem] text-outline">2026-04-15 14:17:55</span>
-          </div>
-          <p class="text-[0.75rem] text-on-surface-variant leading-relaxed">Pipeline health OK. FPS: 28.4. Active tracks: 3. Queue: 0.</p>
-        </div>
-
       </div>
+
     </section>
+
+    <!-- RIGHT: Detail Panel (Hidden by default) -->
+    <aside id="detail-panel" class="flex flex-col overflow-hidden" style="display: none;">
+      <header class="flex justify-between items-center p-4">
+        <h2 class="font-mono text-[0.6875rem] uppercase tracking-[0.2em] text-primary">Event Details</h2>
+        <button id="close-panel-btn" class="material-symbols-outlined text-outline hover:text-white cursor-pointer transition-colors bg-transparent border-0" style="font-size:18px;">close</button>
+      </header>
+      <!-- Prev / Next navigation -->
+      <div id="panel-nav">
+        <button class="panel-nav-btn" id="panel-prev-btn" disabled>
+          <span class="material-symbols-outlined" style="font-size:13px;">arrow_upward</span> Prev
+        </button>
+        <span id="panel-nav-pos">— / —</span>
+        <button class="panel-nav-btn" id="panel-next-btn" disabled>
+          Next <span class="material-symbols-outlined" style="font-size:13px;">arrow_downward</span>
+        </button>
+      </div>
+      <div id="detail-panel-content" class="p-4 overflow-y-auto flex-1 flex flex-col gap-4">
+        <div class="text-center text-outline font-mono text-[0.7rem] py-10">Select an event to view details</div>
+      </div>
+    </aside>
 
   </div>
 </main>
 
 <!-- Service Layer -->
-<script src="../shared/trace_client.js"></script>
-<script src="../shared/trace_render.js"></script>
-<script src="../shared/sidenav.js"></script>
-<script src="./history.js"></script>
+<script src="../shared/trace_toast.js?v=2"></script>
+<script src="../shared/trace_client.js?v=2"></script>
+<script src="../shared/trace_render.js?v=2"></script>
+<script src="../shared/sidenav.js?v=2"></script>
+<script src="./history.js?v=6"></script>
 
 </div><!-- /app-shell -->
 </body>
