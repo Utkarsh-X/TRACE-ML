@@ -300,7 +300,7 @@ class PdfReportSettings(BaseModel):
     """PDF/HTML incident report generation configuration."""
     enabled: bool = True
     library: str = "fpdf2"            # fpdf2 = pure Python, no OS deps
-    output_dir: str = "data/exports"
+    output_dir: str = f"{_DATA_ROOT}/exports"
     include_screenshots: bool = True
     include_entity_portrait: bool = True
     max_detection_rows: int = 20
@@ -316,7 +316,7 @@ class NotificationsSettings(BaseModel):
 
 class LoggingSettings(BaseModel):
     level: str = "INFO"
-    file_path: str = "data/logs/trace_aml.log"
+    file_path: str = f"{_DATA_ROOT}/logs/trace_aml.log"
     rotation: str = "10 MB"
     retention: str = "14 days"
 

@@ -1,0 +1,111 @@
+actions:
+  cooldown_sec: 20
+  enabled: true
+  on_create:
+    high:
+    - log
+    low:
+    - log
+    medium:
+    - log
+  on_update:
+    high:
+    - log
+    low: []
+    medium:
+    - log
+app:
+  environment: desktop
+camera:
+  device_index: 0
+  fps: 30
+  height: 720
+  width: 1280
+gpu:
+  cuda_device_id: 0
+  enabled: false
+  log_provider_selection: true
+  preferred_provider: DmlExecutionProvider
+liveness:
+  enabled: false
+  model_path: models/2.7_80x80_MiniFASNetV2.onnx
+  provider: minifas
+  strict_reject: false
+  threshold: 0.6
+notifications:
+  email:
+    attach_pdf: false
+    enabled: false
+    recipient_addresses: []
+    sender_address: ""
+    sender_name: TRACE-AML Security
+    smtp_host: smtp.gmail.com
+    smtp_password: ""
+    smtp_port: 587
+    smtp_user: ""
+    use_tls: false
+  pdf_report:
+    enabled: false
+    include_entity_portrait: false
+    include_screenshots: false
+    max_alert_rows: 50
+    max_detection_rows: 20
+  whatsapp:
+    bridge_url: http://localhost:3001
+    enabled: false
+    recipient_numbers: []
+    send_pdf: false
+    send_text: false
+pipeline:
+  inference_resolution_scale: 0.75
+  inference_skip_frames: 2
+  live_state_publish_hz: 5.0
+quality:
+  blur_lap_saturation: 500.0
+  composite_gate_enabled: true
+  min_composite_score: 0.42
+  min_detector_score: 0.55
+  min_embeddings_active: 2
+  min_embeddings_ready: 1
+  min_quality_score: 0.25
+  min_sharpness: 8.0
+  min_valid_images: 2
+recognition:
+  accept_threshold: 0.6
+  active_gallery_search_k: 96
+  enable_preprocess_fallback: true
+  log_cooldown_seconds: 2
+  low_quality_threshold: 0.4
+  min_unknown_detector_score: 0.62
+  min_unknown_surface_threshold: 12.0
+  model_name: buffalo_l
+  persist_review: true
+  persist_unknown: true
+  review_threshold: 0.45
+  robust_matching: true
+  threshold_relaxation: 0.12
+  unknown_reuse_threshold: 0.45
+rules:
+  cooldown_sec: 12
+  instability:
+    std_threshold: 0.16
+    window_sec: 10
+  reappearance:
+    min_events: 3
+    window_sec: 10
+  unknown:
+    min_events: 3
+    window_sec: 10
+temporal:
+  decision_window: 6
+  max_track_distance_px: 120
+  min_accept_votes: 1
+  min_track_iou: 0.08
+  smoothing_alpha: 0.6
+  track_reuse_min_score: 0.35
+  track_ttl_seconds: 1.8
+unknown_clustering:
+  enabled: true
+  interval_minutes: 3.0
+  merge_threshold: 0.42
+  min_embeddings_to_cluster: 1

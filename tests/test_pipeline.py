@@ -3,6 +3,7 @@ import time
 
 import numpy as np
 
+from trace_aml.core.errors import DependencyError
 from trace_aml.core.models import RecognitionMatch
 from trace_aml.liveness.base import LivenessResult
 from trace_aml.pipeline.capture import FramePacket
@@ -27,6 +28,11 @@ class _FakeStore:
     pass
 
 
+class _BrokenRecognizer:
+    def match(self, frame, store):
+        raise DependencyError("missing runtime dependency")
+
+
 def test_inference_worker_processes_frame() -> None:
     frame_q: queue.Queue = queue.Queue(maxsize=2)
     result_q: queue.Queue = queue.Queue(maxsize=2)
@@ -41,3 +47,26 @@ def test_inference_worker_processes_frame() -> None:
     packet = result_q.get_nowait()
     assert len(packet.matches) == 1
     assert packet.matches[0].is_match is True
+
+
+def test_inference_worker_reports_fatal_dependency_errors_and_stops() -> None:
+    frame_q: queue.Queue = queue.Queue(maxsize=2)
+    result_q: queue.Queue = queue.Queue(maxsize=2)
+    failures: list[str] = []
+
+    worker = InferenceWorker(
+        _BrokenRecognizer(),
+        _FakeStore(),
+        frame_q,
+        result_q,
+        settings=None,
+        on_fatal_error=lambda exc: failures.append(str(exc)),
+    )
+    worker.start()
+    frame_q.put(FramePacket(frame=np.zeros((32, 32, 3), dtype=np.uint8), captured_at=time.time(), frame_index=1))
+    time.sleep(0.3)
+
+    assert failures == ["missing runtime dependency"]
+    assert worker._thread is not None
+    worker._thread.join(timeout=1.0)
+    assert not worker._thread.is_alive()

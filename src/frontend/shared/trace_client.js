@@ -14,6 +14,10 @@
 
   /** @type {"online"|"offline"|"connecting"} */
   var connectionState = "connecting";
+  /** @type {number} */
+  var _connectionFailureStreak = 0;
+  /** @type {number} */
+  var OFFLINE_FAILURE_THRESHOLD = 3;
 
   /** @type {EventSource|null} */
   var _sse = null;
@@ -37,6 +41,11 @@
       var params = new URLSearchParams(global.location.search);
       var fromQuery = (params.get("api") || "").trim();
       if (fromQuery) return fromQuery.replace(/\/$/, "");
+    } catch (_) { /* ignore */ }
+    try {
+      if (global.location && global.location.origin && /^https?:/i.test(global.location.origin)) {
+        return String(global.location.origin).replace(/\/$/, "");
+      }
     } catch (_) { /* ignore */ }
     return "http://127.0.0.1:8080";
   }
@@ -148,7 +157,10 @@
    * @param {RequestInit} [init]
    * @returns {Promise<*>}
    */
-  function _fetchJson(url, init) {
+  function _fetchJson(url, init, options) {
+    var opts = options || {};
+    var affectConnectionState = opts.affectConnectionState !== false;
+    var markOnlineOnSuccess = opts.markOnlineOnSuccess !== false;
     var controller = new AbortController();
     var timeoutId = setTimeout(function () { controller.abort(); }, 10000);
     var merged = Object.assign(
@@ -159,13 +171,17 @@
       .then(function (res) {
         clearTimeout(timeoutId);
         if (!res.ok) {
+          if (affectConnectionState) {
+            _recordConnectionFailure();
+          }
           return res.text().then(function (body) {
             console.warn("[TraceClient] HTTP " + res.status + " " + url, body.slice(0, 200));
             return null;
           });
         }
-        connectionState = "online";
-        _dispatchStateChange();
+        if (affectConnectionState && markOnlineOnSuccess) {
+          _recordConnectionSuccess();
+        }
         return res.json();
       })
       .catch(function (err) {
@@ -173,8 +189,9 @@
         if (err.name === "AbortError") {
           console.warn("[TraceClient] Request timeout: " + url);
         }
-        connectionState = "offline";
-        _dispatchStateChange();
+        if (affectConnectionState) {
+          _recordConnectionFailure();
+        }
         return null;
       });
   }
@@ -214,6 +231,24 @@
     });
   }
 
+  function _setConnectionState(nextState) {
+    if (connectionState === nextState) return;
+    connectionState = nextState;
+    _dispatchStateChange();
+  }
+
+  function _recordConnectionSuccess() {
+    _connectionFailureStreak = 0;
+    _setConnectionState("online");
+  }
+
+  function _recordConnectionFailure() {
+    _connectionFailureStreak += 1;
+    if (_connectionFailureStreak >= OFFLINE_FAILURE_THRESHOLD) {
+      _setConnectionState("offline");
+    }
+  }
+
   /* ─────────────────────── API Methods ───────────────────────────── */
 
   /**
@@ -221,8 +256,8 @@
    * @returns {Promise<{name:string, environment:string, version:string, status:string}|null>}
    */
   function probe() {
-    connectionState = "connecting";
-    _dispatchStateChange();
+    _connectionFailureStreak = 0;
+    _setConnectionState("connecting");
     return _fetchJson(_url("/"));
   }
 
@@ -230,8 +265,8 @@
    * System health. GET /health
    * @returns {Promise<Object|null>}
    */
-  function health() {
-    return _fetchJson(_url("/health"));
+  function health(options) {
+    return _fetchJson(_url("/health"), undefined, options);
   }
 
   /* ── Live Ops ── */
@@ -250,7 +285,7 @@
    * @returns {Promise<Object|null>}
    */
   function liveOverlay() {
-    return _fetchJson(_url("/api/v1/live/overlay"));
+    return _fetchJson(_url("/api/v1/live/overlay"), undefined, { affectConnectionState: false });
   }
 
   /**
@@ -269,7 +304,7 @@
    * @returns {Promise<{enabled:boolean, camera_index:number, resolution:string, fps:number}|null>}
    */
   function cameraStatus() {
-    return _fetchJson(_url("/api/v1/camera/status"));
+    return _fetchJson(_url("/api/v1/camera/status"), undefined, { affectConnectionState: false });
   }
 
   /**
@@ -296,7 +331,7 @@
    * @returns {Promise<{enabled:boolean, camera_enabled:boolean}|null>}
    */
   function recognitionStatus() {
-    return _fetchJson(_url("/api/v1/recognition/status"));
+    return _fetchJson(_url("/api/v1/recognition/status"), undefined, { affectConnectionState: false });
   }
 
   /**
@@ -470,8 +505,8 @@
    * @param {{start?:string, end?:string, limit?:number, entity_id?:string, incident_id?:string, kinds?:string[]}} [opts]
    * @returns {Promise<Array|null>}
    */
-  function globalTimeline(opts) {
-    return _fetchJson(_url("/api/v1/timeline", opts));
+  function globalTimeline(opts, options) {
+    return _fetchJson(_url("/api/v1/timeline", opts), undefined, options);
   }
 
   /* ── Alerts & Actions ── */
@@ -523,8 +558,7 @@
 
     _sse.onerror = function () {
       if (_sse) { _sse.close(); _sse = null; }
-      connectionState = "offline";
-      _dispatchStateChange();
+      console.warn("[TraceClient] SSE connection lost; retrying background stream");
       // Reconnect with exponential backoff
       _sseReconnectTimer = setTimeout(function () {
         connectSSE(onEvent, opts);

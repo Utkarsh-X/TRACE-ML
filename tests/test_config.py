@@ -1,8 +1,9 @@
+import importlib
 from pathlib import Path
 
 import pytest
 
-from trace_aml.core.config import ConfigError, load_settings
+import trace_aml.core.config as config_module
 
 
 def test_load_settings_defaults(tmp_path: Path) -> None:
@@ -19,7 +20,7 @@ store:
 """.strip(),
         encoding="utf-8",
     )
-    settings = load_settings(cfg)
+    settings = config_module.load_settings(cfg)
     assert settings.camera.device_index == 0
     assert settings.store.vectors_dir == "demo_data/vectors"
     assert settings.quality.min_valid_images >= 1
@@ -36,5 +37,17 @@ camera:
 """.strip(),
         encoding="utf-8",
     )
-    with pytest.raises(ConfigError):
-        load_settings(cfg)
+    with pytest.raises(config_module.ConfigError):
+        config_module.load_settings(cfg)
+
+
+def test_portable_defaults_follow_trace_data_root(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("TRACE_DATA_ROOT", "portable_data")
+    importlib.reload(config_module)
+    try:
+        assert config_module.StoreSettings().vectors_dir == "portable_data/vectors"
+        assert config_module.PdfReportSettings().output_dir == "portable_data/exports"
+        assert config_module.LoggingSettings().file_path == "portable_data/logs/trace_aml.log"
+    finally:
+        monkeypatch.delenv("TRACE_DATA_ROOT", raising=False)
+        importlib.reload(config_module)

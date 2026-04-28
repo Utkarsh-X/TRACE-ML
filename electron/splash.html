@@ -1,0 +1,555 @@
+<!doctype html>
+<html class="dark" lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>TRACE-AML | Initializing</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #0e0e0e;
+        --surface: #131313;
+        --surface-low: #1b1b1b;
+        --surface-high: #2a2a2a;
+        --outline: #474747;
+        --muted: #919191;
+        --text: #e2e2e2;
+        --strong: #ffffff;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        overflow: hidden;
+        font-family: Inter, "Segoe UI", sans-serif;
+        color: var(--text);
+        background:
+          radial-gradient(circle at center, transparent 0%, rgba(0, 0, 0, 0.4) 100%),
+          linear-gradient(180deg, #0f0f0f 0%, var(--bg) 100%);
+      }
+
+      body::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        opacity: 0.03;
+        background-image: radial-gradient(#ffffff 0.5px, transparent 0.5px);
+        background-size: 24px 24px;
+        pointer-events: none;
+      }
+
+      .layout {
+        position: relative;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .topbar,
+      .footer {
+        position: relative;
+        z-index: 1;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .topbar {
+        padding: 18px 28px 0;
+      }
+
+      .footer {
+        padding: 0 28px 28px;
+        gap: 24px;
+      }
+
+      .status-row,
+      .node-row {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+      }
+
+      .mono {
+        font-family: "JetBrains Mono", Consolas, monospace;
+      }
+
+      .tiny {
+        font-size: 10px;
+        letter-spacing: 0.22em;
+        text-transform: uppercase;
+        color: var(--muted);
+      }
+
+      .dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 999px;
+        background: var(--strong);
+        animation: pulse 1.4s ease-in-out infinite;
+      }
+
+      .main {
+        position: relative;
+        z-index: 1;
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 36px 28px;
+      }
+
+      .hero {
+        text-align: center;
+      }
+
+      .hero-art {
+        display: flex;
+        justify-content: center;
+        margin-bottom: 24px;
+      }
+
+      .hero-art-frame {
+        position: relative;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 18px;
+        background:
+          radial-gradient(circle at 50% 18%, rgba(255, 255, 255, 0.035), transparent 44%),
+          radial-gradient(circle at 16% 84%, rgba(255, 255, 255, 0.02), transparent 38%),
+          radial-gradient(circle at 84% 84%, rgba(255, 255, 255, 0.02), transparent 38%),
+          #0f0f0f;
+        border-radius: 26px;
+        box-shadow:
+          0 24px 46px rgba(0, 0, 0, 0.34),
+          inset 0 0 0 1px rgba(255, 255, 255, 0.03);
+        overflow: hidden;
+      }
+
+      .hero-art-frame::before {
+        content: "";
+        position: absolute;
+        inset: -8%;
+        background:
+          radial-gradient(circle at top, rgba(255, 255, 255, 0.045), transparent 26%),
+          radial-gradient(circle at bottom left, rgba(255, 255, 255, 0.03), transparent 24%),
+          radial-gradient(circle at bottom right, rgba(255, 255, 255, 0.03), transparent 24%);
+        opacity: 0.72;
+        pointer-events: none;
+      }
+
+      .hero-art img {
+        position: relative;
+        z-index: 1;
+        width: min(252px, 28vw);
+        min-width: 156px;
+        height: auto;
+        display: block;
+        mix-blend-mode: screen;
+        opacity: 0.9;
+        filter:
+          drop-shadow(0 16px 34px rgba(0, 0, 0, 0.38))
+          contrast(1.06)
+          brightness(1.04);
+      }
+
+      .hero h1 {
+        margin: 0;
+        font-size: clamp(4rem, 10vw, 7rem);
+        line-height: 0.92;
+        letter-spacing: -0.06em;
+        color: var(--strong);
+        font-weight: 900;
+      }
+
+      .hero-meta {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+        margin-top: 10px;
+      }
+
+      .hero-meta span {
+        width: 34px;
+        height: 1px;
+        background: var(--outline);
+      }
+
+      .hero-meta p {
+        margin: 0;
+      }
+
+      .progress-shell {
+        width: min(100%, 520px);
+        margin-top: 54px;
+      }
+
+      .progress-copy {
+        display: flex;
+        justify-content: space-between;
+        align-items: end;
+        gap: 24px;
+        margin-bottom: 10px;
+      }
+
+      .progress-copy p,
+      .progress-copy strong,
+      .module-label,
+      .module-value,
+      .log-title,
+      .chip,
+      .detail {
+        margin: 0;
+      }
+
+      .progress-copy strong {
+        font-size: 18px;
+        color: var(--strong);
+      }
+
+      .track {
+        width: 100%;
+        height: 1px;
+        overflow: hidden;
+        background: var(--surface-high);
+      }
+
+      .fill {
+        height: 100%;
+        width: 0;
+        background: var(--strong);
+        transition: width 260ms ease;
+      }
+
+      .detail {
+        margin-top: 18px;
+        min-height: 20px;
+        color: var(--text);
+        font-size: 14px;
+      }
+
+      .modules {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 14px;
+        padding-top: 22px;
+      }
+
+      .module-label {
+        font-size: 9px;
+        color: rgba(226, 226, 226, 0.38);
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+      }
+
+      .module-value {
+        margin-top: 5px;
+        font-size: 11px;
+        color: var(--strong);
+        letter-spacing: 0.08em;
+      }
+
+      .logbox {
+        width: min(100%, 420px);
+        padding: 14px 16px;
+        border-radius: 10px;
+        border: 1px solid rgba(71, 71, 71, 0.35);
+        background: rgba(27, 27, 27, 0.88);
+        box-shadow: 0 18px 40px rgba(0, 0, 0, 0.28);
+      }
+
+      .log-title {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid rgba(71, 71, 71, 0.38);
+      }
+
+      .log-title::before {
+        content: ">";
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      .logs {
+        margin: 12px 0 0;
+        padding: 0;
+        list-style: none;
+        height: 118px;
+        overflow: hidden;
+      }
+
+      .logs li {
+        font-size: 10px;
+        line-height: 1.55;
+        color: rgba(226, 226, 226, 0.76);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .meta-block {
+        display: flex;
+        flex-direction: column;
+        align-items: end;
+        gap: 6px;
+      }
+
+      .chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 12px;
+        border-radius: 999px;
+        background: var(--surface-high);
+      }
+
+      .chip::before {
+        content: "";
+        width: 6px;
+        height: 6px;
+        border-radius: 999px;
+        background: var(--strong);
+      }
+
+      .version {
+        opacity: 0.34;
+      }
+
+      .error {
+        color: #ffb4ab;
+      }
+
+      @keyframes pulse {
+        0%, 100% {
+          opacity: 0.4;
+          transform: scale(0.82);
+        }
+        50% {
+          opacity: 1;
+          transform: scale(1);
+        }
+      }
+
+      @media (max-width: 900px) {
+        .footer {
+          flex-direction: column;
+          align-items: stretch;
+        }
+
+        .meta-block {
+          align-items: flex-start;
+        }
+
+        .modules {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="layout">
+      <header class="topbar">
+        <div class="status-row">
+          <span class="tiny mono">Session: DESKTOP_BOOT</span>
+          <span class="dot" aria-hidden="true"></span>
+        </div>
+        <div class="node-row">
+          <span class="tiny mono">Node: LOCALHOST</span>
+          <span class="tiny mono" id="service-port">Port: 127.0.0.1</span>
+        </div>
+      </header>
+
+      <main class="main">
+        <section class="hero">
+          <div class="hero-art">
+            <div class="hero-art-frame">
+              <img src="./renderer/46561.gif" alt="TRACE-AML loading animation" />
+            </div>
+          </div>
+          <h1>TRACE-AML</h1>
+          <div class="hero-meta">
+            <span aria-hidden="true"></span>
+            <p class="tiny mono" id="stage">System Initializing</p>
+            <span aria-hidden="true"></span>
+          </div>
+        </section>
+
+        <section class="progress-shell">
+          <div class="progress-copy">
+            <p class="tiny mono" id="status-line">Loading core engine components ...</p>
+            <strong class="mono" id="progress">0%</strong>
+          </div>
+          <div class="track" aria-hidden="true">
+            <div class="fill" id="fill"></div>
+          </div>
+          <p class="detail mono" id="detail">Initializing TRACE-AML desktop runtime.</p>
+
+          <div class="modules">
+            <div>
+              <p class="module-label mono">Desktop Shell</p>
+              <p class="module-value mono" id="module-shell">Bootstrapping</p>
+            </div>
+            <div>
+              <p class="module-label mono">Service Bridge</p>
+              <p class="module-value mono" id="module-bridge">Pending</p>
+            </div>
+            <div>
+              <p class="module-label mono">Workspace State</p>
+              <p class="module-value mono" id="module-state">Preparing</p>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <footer class="footer">
+        <section class="logbox">
+          <p class="log-title tiny mono">Kernel Logs</p>
+          <ul class="logs mono" id="logs">
+            <li>[BOOT] Waiting for runtime output ...</li>
+          </ul>
+        </section>
+
+        <div class="meta-block">
+          <div class="chip tiny mono" id="status-chip">Bootstrapping</div>
+          <p class="tiny mono version">TRACE-AML DESKTOP SESSION</p>
+        </div>
+      </footer>
+    </div>
+
+    <script>
+      const stageEl = document.getElementById("stage");
+      const statusLineEl = document.getElementById("status-line");
+      const detailEl = document.getElementById("detail");
+      const progressEl = document.getElementById("progress");
+      const fillEl = document.getElementById("fill");
+      const logsEl = document.getElementById("logs");
+      const chipEl = document.getElementById("status-chip");
+      const shellModuleEl = document.getElementById("module-shell");
+      const bridgeModuleEl = document.getElementById("module-bridge");
+      const stateModuleEl = document.getElementById("module-state");
+      const portEl = document.getElementById("service-port");
+
+      function escapeHtml(value) {
+        return String(value)
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#39;");
+      }
+
+      function render(state) {
+        if (!state) {
+          return;
+        }
+
+        const progress = Math.max(0, Math.min(100, Math.round(state.progress || 0)));
+        const failed = Boolean(state.failed);
+        const ready = Boolean(state.ready);
+
+        stageEl.textContent = state.stage || "System Initializing";
+        statusLineEl.textContent = `${state.stage || "Loading modules"} ...`;
+        detailEl.textContent = state.detail || "Initializing TRACE-AML desktop runtime.";
+        detailEl.className = failed ? "detail mono error" : "detail mono";
+        progressEl.textContent = `${progress}%`;
+        fillEl.style.width = `${progress}%`;
+
+        chipEl.textContent = failed ? "Attention Required" : ready ? "Ready" : "Bootstrapping";
+        shellModuleEl.textContent = ready ? "Ready" : failed ? "Review" : "Bootstrapping";
+        bridgeModuleEl.textContent = ready ? "Bound" : failed ? "Retry Needed" : "Mounting";
+        stateModuleEl.textContent = ready ? "Live Ops Ready" : failed ? "Blocked" : "Preparing";
+
+        const detailText = String(state.detail || "");
+        const portMatch = detailText.match(/127\.0\.0\.1:\d+/);
+        if (portMatch) {
+          portEl.textContent = `Port: ${portMatch[0]}`;
+        }
+
+        const lines = Array.isArray(state.logs) && state.logs.length
+          ? state.logs.slice(-5)
+          : ["[BOOT] Waiting for runtime output ..."];
+
+        logsEl.innerHTML = lines
+          .map((line) => `<li>${escapeHtml(line)}</li>`)
+          .join("");
+      }
+
+      function runPreviewLoop() {
+        const demoStates = [
+          {
+            stage: "Preparing desktop shell",
+            detail: "Loading Electron shell and startup assets.",
+            progress: 12,
+            logs: [
+              "[BOOT] TRACE-AML shell attached.",
+              "[BOOT] Preparing operator workspace.",
+            ],
+          },
+          {
+            stage: "Launching local service",
+            detail: "trace-aml-backend.exe --config config.desktop.yaml",
+            progress: 38,
+            logs: [
+              "[BOOT] TRACE-AML shell attached.",
+              "[LINK] Starting local FastAPI bridge.",
+              "[LINK] Waiting for health check.",
+            ],
+          },
+          {
+            stage: "Warming operator workspace",
+            detail: "Connecting to http://127.0.0.1:18080/health",
+            progress: 72,
+            logs: [
+              "[BOOT] TRACE-AML shell attached.",
+              "[LINK] Local bridge active.",
+              "[SYNC] Validating seeded data store.",
+              "[SYNC] Priming forensic workspace.",
+            ],
+          },
+          {
+            stage: "Workspace ready",
+            detail: "FastAPI bridge responded successfully. Desktop session is ready.",
+            progress: 100,
+            ready: true,
+            logs: [
+              "[BOOT] TRACE-AML shell attached.",
+              "[LINK] Local bridge active.",
+              "[SYNC] Seeded state verified.",
+              "[READY] Launching Live Ops workspace.",
+            ],
+          },
+        ];
+
+        let index = 0;
+        render(demoStates[index]);
+        window.setInterval(() => {
+          index = (index + 1) % demoStates.length;
+          render(demoStates[index]);
+        }, 1600);
+      }
+
+      async function init() {
+        if (!window.traceDesktop) {
+          runPreviewLoop();
+          return;
+        }
+
+        window.traceDesktop.notifyReady();
+        render(await window.traceDesktop.getSplashState());
+        const unsubscribe = window.traceDesktop.onSplashStatus(render);
+        window.addEventListener("beforeunload", unsubscribe, { once: true });
+      }
+
+      init();
+    </script>
+  </body>
+</html>

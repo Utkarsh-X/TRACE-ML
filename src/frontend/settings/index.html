@@ -367,11 +367,11 @@
           <span class="nav-label">Admin</span>
         </button>
         <div class="sidenav-divider"></div>
-        <button class="nav-item nav-btn" type="button" data-tooltip="Help">
+        <a class="nav-item" href="../about/index.html" data-tooltip="About">
           <span class="material-symbols-outlined nav-icon">help_outline</span>
-          <span class="nav-label">Help</span>
-        </button>
-        <button class="nav-item nav-btn" type="button" data-tooltip="Exit">
+          <span class="nav-label">About</span>
+        </a>
+        <button class="nav-item nav-btn" id="desktop-exit-button" type="button" data-tooltip="Exit">
           <span class="material-symbols-outlined nav-icon">logout</span>
           <span class="nav-label">Exit</span>
         </button>
@@ -618,6 +618,7 @@
     <script src="../shared/trace_client.js"></script>
     <script src="../shared/trace_render.js"></script>
     <script src="../shared/sidenav.js"></script>
+    <script src="../shared/desktop_shell.js?v=20260427001"></script>
     <script src="./settings.js"></script>
     <script>
       document.addEventListener('DOMContentLoaded', function () {

@@ -118,3 +118,45 @@ pytest
 - Liveness is scaffolded and disabled by default (hooks and metrics are in place for later enforcement).
 - Records that do not pass quality/lifecycle gates are blocked from active recognition by default.
 - GUI integration (Electron or other framework) can call these same core services later.
+
+## Electron Desktop Demo
+An Electron shell now lives in `electron/package.json`. The stable packaging path is:
+- build a standalone Python backend artifact
+- package that backend artifact into Electron
+- launch the desktop app against `config/config.desktop.yaml`
+
+This avoids shipping a full development virtualenv inside the app bundle.
+
+### Local Run
+```powershell
+.\scripts\run_electron_demo.ps1
+```
+
+Manual equivalent:
+```powershell
+cd .\electron
+npm install
+npm test
+npm start
+```
+
+Notes:
+- The Electron shell defaults to `127.0.0.1:18080` so it does not collide with a browser-mode service already running on `127.0.0.1:8080`.
+- Desktop data is redirected into the OS user-data directory through `TRACE_DATA_ROOT`.
+- The Electron launcher forwards values from `.env` into the child Python process so the vault key remains available.
+- The shareable desktop profile is `config/config.desktop.yaml`, which disables outbound email/WhatsApp channels by default.
+
+### Windows Packaging
+```powershell
+.\.venv311\Scripts\python.exe -m pip install pytest pyinstaller
+cd .\electron
+npm install
+npm run dist
+```
+
+Expected outputs land in `electron/dist/`:
+- NSIS installer
+- Portable Windows executable
+
+Packaging now targets a compiled backend artifact rather than bundling `.venv` directly.
+See `docs/desktop-build.md` for the full rebuild and smoke-test workflow.

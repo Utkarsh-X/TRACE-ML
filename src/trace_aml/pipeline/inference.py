@@ -12,6 +12,7 @@ import numpy as np
 from loguru import logger
 
 from trace_aml.core.config import Settings
+from trace_aml.core.errors import DependencyError, RecognitionError
 from trace_aml.core.models import RecognitionMatch
 from trace_aml.liveness.base import LivenessResult
 from trace_aml.pipeline.capture import FramePacket
@@ -38,6 +39,7 @@ class InferenceWorker:
         frame_queue: queue.Queue[FramePacket],
         result_queue: queue.Queue[InferencePacket],
         settings: Settings | None = None,
+        on_fatal_error=None,
     ) -> None:
         self.recognizer = recognizer
         self.store = store
@@ -45,6 +47,7 @@ class InferenceWorker:
         self.result_queue = result_queue
         self._stop_event = threading.Event()
         self._thread: threading.Thread | None = None
+        self._on_fatal_error = on_fatal_error
 
         # ── CPU offload settings ──────────────────────────────────────────
         # How many frames to skip between each inference call.
@@ -98,6 +101,16 @@ class InferenceWorker:
             except Exception as exc:
                 # Keep pipeline alive even if a provider crashes at runtime.
                 logger.exception("Inference worker recovered from recognizer failure: {}", exc)
+                if isinstance(exc, (DependencyError, RecognitionError)):
+                    if self._on_fatal_error is not None:
+                        try:
+                            self._on_fatal_error(exc)
+                        except Exception as callback_exc:
+                            logger.exception(
+                                "Inference worker fatal-error callback failed: {}",
+                                callback_exc,
+                            )
+                    return
                 continue
             matches = [item[0] for item in recognized]
             embeddings = [item[1] for item in recognized]

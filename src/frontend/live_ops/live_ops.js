@@ -337,8 +337,8 @@
         renderSnapshot(snap);
 
         // If snapshot's system_health was empty, fetch health directly
-        if (snap && (!snap.system_health || !snap.system_health.active_entity_count)) {
-          TraceClient.health().then(function (h) {
+        if (snap && (!snap.system_health || snap.system_health.active_entity_count == null)) {
+          TraceClient.health({ affectConnectionState: false }).then(function (h) {
             if (h) renderHealth(h);
           });
         }
@@ -349,7 +349,7 @@
   function pollTimeline() {
     if (_timelineInFlight) return;
     _timelineInFlight = true;
-    TraceClient.globalTimeline({ limit: 20 }).then(function (items) {
+    TraceClient.globalTimeline({ limit: 20 }, { affectConnectionState: false }).then(function (items) {
       _timelineInFlight = false;
       if (!items) return;
       _lastTimelineData = items;
@@ -1019,7 +1019,7 @@
       pollTimeline();
 
       // Also load health directly as a fallback
-      TraceClient.health().then(function (h) {
+      TraceClient.health({ affectConnectionState: false }).then(function (h) {
         if (h) renderHealth(h);
       });
 

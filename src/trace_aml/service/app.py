@@ -7,6 +7,7 @@ from queue import Empty, Full, Queue
 from typing import Any
 import os
 import base64
+import sys
 
 from fastapi import Query, Request
 from fastapi.responses import FileResponse
@@ -35,6 +36,37 @@ def _event_to_sse(event: StreamEvent) -> str:
     return f"event: {event.topic}\nid: {event.timestamp_utc}\ndata: {data}\n\n"
 
 
+def _resolve_frontend_dir() -> Path | None:
+    candidates: list[Path] = []
+
+    if getattr(sys, "frozen", False):
+        meipass = getattr(sys, "_MEIPASS", "")
+        if meipass:
+            bundle_root = Path(meipass)
+            candidates.extend([
+                bundle_root / "src" / "frontend",
+                bundle_root / "frontend",
+            ])
+
+    source_root = Path(__file__).resolve().parent.parent.parent
+    candidates.extend([
+        source_root / "frontend",
+        Path.cwd() / "src" / "frontend",
+        Path.cwd() / "frontend",
+    ])
+
+    seen: set[str] = set()
+    for candidate in candidates:
+        candidate_key = str(candidate.resolve()) if candidate.exists() else str(candidate)
+        if candidate_key in seen:
+            continue
+        seen.add(candidate_key)
+        if candidate.is_dir():
+            return candidate
+
+    return None
+
+
 def create_service_app(
     settings: Settings,
     store: VectorStore,
@@ -46,6 +78,7 @@ def create_service_app(
         from fastapi import FastAPI, HTTPException, Query, Request
         from fastapi.middleware.cors import CORSMiddleware
         from fastapi.responses import StreamingResponse
+        from fastapi.staticfiles import StaticFiles
     except ImportError as exc:  # pragma: no cover - environment-dependent.
         raise RuntimeError(
             "Service layer requires FastAPI. Install extras: pip install fastapi uvicorn"
@@ -53,6 +86,20 @@ def create_service_app(
 
     publisher = stream_publisher or NullEventStreamPublisher()
     read_models = IntelligenceReadModelService(store, publisher)
+
+    class _NoCacheStaticFiles(StaticFiles):
+        def file_response(
+            self,
+            full_path: str | os.PathLike[str],
+            stat_result: Any,
+            scope: dict[str, Any],
+            status_code: int = 200,
+        ) -> Any:
+            response = super().file_response(full_path, stat_result, scope, status_code=status_code)
+            response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate"
+            response.headers["Pragma"] = "no-cache"
+            response.headers["Expires"] = "0"
+            return response
 
     # ── Person management & training routes ──
     from trace_aml.service.person_api import create_person_router
@@ -1381,8 +1428,6 @@ def create_service_app(
 
     # ── Exports static mount ──
     # Serve generated PDF/HTML reports from data/exports/ at /ui/exports/
-    from fastapi.staticfiles import StaticFiles
-
     _exports_dir = Path(settings.notifications.pdf_report.output_dir).resolve()
     _exports_dir.mkdir(parents=True, exist_ok=True)
     app.mount(
@@ -1394,18 +1439,23 @@ def create_service_app(
     # ── Static frontend mount ──
     # Serve the frontend UI from /ui/ so both API and UI run on the same port.
     # API routes are registered first and take priority over the static mount.
-    import importlib.resources
-
     from fastapi.responses import RedirectResponse
 
-    # Locate frontend directory relative to the package
-    _frontend_dir = Path(__file__).resolve().parent.parent.parent / "frontend"
-    if _frontend_dir.is_dir():
+    # Locate frontend directory in both source-tree and packaged layouts.
+    _frontend_dir = _resolve_frontend_dir()
+    if _frontend_dir is not None:
         @app.get("/ui")
         @app.get("/ui/")
         def _ui_redirect() -> RedirectResponse:
-            return RedirectResponse(url="/ui/live_ops/index.html")
+            return RedirectResponse(
+                url="/ui/live_ops/index.html",
+                headers={
+                    "Cache-Control": "no-store, no-cache, must-revalidate",
+                    "Pragma": "no-cache",
+                    "Expires": "0",
+                },
+            )
 
-        app.mount("/ui", StaticFiles(directory=str(_frontend_dir), html=True), name="frontend")
+        app.mount("/ui", _NoCacheStaticFiles(directory=str(_frontend_dir), html=True), name="frontend")
 
     return app

@@ -3,17 +3,45 @@
 from __future__ import annotations
 
 import shutil
+import sys
 import threading
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
+
+def _dotenv_candidates() -> list[Path]:
+    candidates: list[Path] = []
+    if getattr(sys, "frozen", False):
+        meipass = getattr(sys, "_MEIPASS", "")
+        if meipass:
+            candidates.append(Path(meipass) / ".env")
+        exe_dir = Path(sys.executable).resolve().parent
+        candidates.append(exe_dir / ".env")
+        candidates.append(exe_dir / "_internal" / ".env")
+
+    candidates.append(Path(__file__).resolve().parents[2] / ".env")
+    candidates.append(Path.cwd() / ".env")
+
+    unique_candidates: list[Path] = []
+    seen: set[str] = set()
+    for candidate in candidates:
+        candidate_str = str(candidate)
+        if candidate_str in seen:
+            continue
+        seen.add(candidate_str)
+        unique_candidates.append(candidate)
+    return unique_candidates
+
 
 # Load .env FIRST — before any trace_aml imports so that TRACE_VAULT_KEY and
 # TRACE_DATA_ROOT are in os.environ when config.py evaluates _DATA_ROOT at
 # module import time.
 try:
     from dotenv import load_dotenv as _load_dotenv
-    _load_dotenv(dotenv_path=Path(__file__).resolve().parents[2] / ".env", override=False)
+    for _dotenv_path in _dotenv_candidates():
+        if _dotenv_path.exists():
+            _load_dotenv(dotenv_path=_dotenv_path, override=False)
+            break
 except ImportError:
     pass  # python-dotenv not installed — env vars must be set externally
 
