@@ -1,0 +1,82 @@
+{
+  "name": "trace-aml-desktop",
+  "version": "3.0.0",
+  "private": true,
+  "description": "Electron desktop shell for TRACE-AML",
+  "main": "main.js",
+  "author": "TRACE-AML",
+  "license": "UNLICENSED",
+  "scripts": {
+    "start": "electron .",
+    "test": "node ./test/runtime.test.js",
+    "build:backend": "powershell -ExecutionPolicy Bypass -File ..\\scripts\\build_backend.ps1",
+    "pack": "npm run build:backend && electron-builder --dir",
+    "dist": "npm run build:backend && electron-builder --win nsis portable"
+  },
+  "devDependencies": {
+    "electron": "41.3.0",
+    "electron-builder": "26.8.1"
+  },
+  "build": {
+    "appId": "com.traceaml.desktop",
+    "productName": "TRACE-AML",
+    "afterPack": "build/afterPack.js",
+    "asar": true,
+    "npmRebuild": false,
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "runtime.js",
+      "splash.html",
+      "welcome.html",
+      "renderer/**/*",
+      "../(1).ico"
+    ],
+    "extraResources": [
+      {
+        "from": "../(1).ico",
+        "to": "app.ico"
+      },
+      {
+        "from": "../build/backend/trace_aml_backend",
+        "to": "backend/backend-dist"
+      },
+      {
+        "from": "../.env",
+        "to": "backend/backend-dist/.env"
+      },
+      {
+        "from": "../data",
+        "to": "seed-data",
+        "filter": [
+          "index/**/*",
+          "vectors/**/*",
+          "vault/**/*",
+          "person_images/**/*",
+          "portraits/**/*"
+        ]
+      }
+    ],
+    "win": {
+      "icon": "../(1).ico",
+      "signAndEditExecutable": false,
+      "target": [
+        "nsis",
+        "portable"
+      ]
+    },
+    "nsis": {
+      "artifactName": "TRACE-AML-Setup-${version}-${arch}.${ext}",
+      "installerIcon": "../(1).ico",
+      "installerHeaderIcon": "../(1).ico",
+      "uninstallerIcon": "../(1).ico",
+      "include": "build/installer.nsh"
+    },
+    "portable": {
+      "artifactName": "TRACE-AML-Portable-${version}-${arch}.${ext}"
+    }
+  }
+}

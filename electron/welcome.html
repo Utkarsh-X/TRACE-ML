@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>TRACE-AML | Welcome</title>
+    <link rel="stylesheet" href="./renderer/welcome.css" />
+  </head>
+  <body>
+    <main class="welcome-shell">
+      <section class="welcome-card">
+        <div class="eyebrow">TRACE-AML Desktop Session</div>
+        <h1 id="greeting">Welcome</h1>
+        <p class="subtitle" id="subtitle">Preparing your local operator workspace.</p>
+        <p class="detail" id="detail">The desktop bridge is ready. Launch the workspace when you want to continue.</p>
+
+        <div class="meta-grid">
+          <article class="meta-card">
+            <span class="meta-label">Service URL</span>
+            <strong class="meta-value" id="service-url">Loading…</strong>
+          </article>
+          <article class="meta-card">
+            <span class="meta-label">Desktop Data Root</span>
+            <strong class="meta-value" id="data-root">Loading…</strong>
+          </article>
+          <article class="meta-card">
+            <span class="meta-label">Session Target</span>
+            <strong class="meta-value" id="system-label">Loading…</strong>
+          </article>
+        </div>
+
+        <div class="actions">
+          <button class="primary" id="launch-button" type="button">Launch Workspace</button>
+          <button class="secondary" id="skip-button" type="button">Skip Intro</button>
+        </div>
+      </section>
+    </main>
+
+    <script src="./renderer/welcome.js"></script>
+  </body>
+</html>

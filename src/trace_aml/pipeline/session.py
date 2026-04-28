@@ -103,6 +103,7 @@ class RecognitionSession:
         # Recognition: Controls inference processing (requires camera on)
         self._camera_enabled = False
         self._recognition_enabled = False
+        self._recognition_error = ""
         self._camera_lock = threading.Lock()
         self._capture: CameraCapture | None = None
         self._inference: InferenceWorker | None = None
@@ -236,6 +237,14 @@ class RecognitionSession:
             }
 
     # ── Recognition/Inference Control (requires camera to be enabled first) ──
+    def _handle_inference_fatal_error(self, exc: Exception) -> None:
+        message = f"Recognition worker stopped: {exc}"
+        with self._camera_lock:
+            self._recognition_enabled = False
+            self._recognition_error = message
+            self._inference = None
+        logger.error(message)
+
     def enable_recognition(self) -> dict[str, Any]:
         """Enable face recognition inference. Requires camera to be enabled."""
         with self._camera_lock:
@@ -249,19 +258,25 @@ class RecognitionSession:
                 return {"status": "already_enabled", "message": "Recognition is already enabled"}
             
             try:
+                # Preflight recognizer startup so missing packaged dependencies
+                # fail here instead of leaving the UI stuck in a fake enabled state.
+                self.recognizer._ensure_app()
                 if self._inference is None:
                     # Create new inference worker if it doesn't exist
                     assert self._frame_queue is not None
+                    assert self._result_queue is not None
                     self._inference = InferenceWorker(
                         self.recognizer,
                         self.store,
                         self._frame_queue,
                         self._result_queue,
                         settings=self.settings,
+                        on_fatal_error=self._handle_inference_fatal_error,
                     )
                 
                 self._inference.start()
                 self._recognition_enabled = True
+                self._recognition_error = ""
 
                 # Snapshot all entity_ids already in DB so we can differentiate
                 # REAPPEARING unknowns (existed before) from NEW unknowns (created now).
@@ -280,6 +295,7 @@ class RecognitionSession:
                     "message": "Face recognition started",
                 }
             except Exception as e:
+                self._recognition_error = f"Failed to enable recognition: {str(e)}"
                 return {
                     "status": "error",
                     "message": f"Failed to enable recognition: {str(e)}",
@@ -297,6 +313,7 @@ class RecognitionSession:
                     self._inference = None
                 
                 self._recognition_enabled = False
+                self._recognition_error = ""
                 
                 return {
                     "status": "disabled",
@@ -314,7 +331,11 @@ class RecognitionSession:
             return {
                 "enabled": self._recognition_enabled,
                 "camera_enabled": self._camera_enabled,
-                "message": "Can only enable recognition if camera is enabled" if not self._camera_enabled else "Ready",
+                "message": (
+                    "Can only enable recognition if camera is enabled"
+                    if not self._camera_enabled
+                    else (self._recognition_error or "Ready")
+                ),
             }
     # ─────────────────────────────────────────────────────────────────────────
 
@@ -932,20 +953,22 @@ class RecognitionSession:
         self._headless_mode = True
         try:
             while True:
-                # Check if camera is enabled
+                # Snapshot camera/recognition state quickly under the lock so
+                # status endpoints are never blocked behind the headless loop.
                 with self._camera_lock:
-                    if not self._camera_enabled or self._result_queue is None:
-                        # Camera is disabled, just wait and continue
-                        time.sleep(0.1)
-                        continue
-                    
-                    # Camera is enabled - now check if recognition is enabled
-                    if not self._recognition_enabled:
-                        # Camera on, but recognition off - skip processing, just keep polling
-                        time.sleep(0.1)
-                        continue
-                    
+                    camera_enabled = self._camera_enabled
+                    recognition_enabled = self._recognition_enabled
                     result_queue = self._result_queue
+
+                if not camera_enabled or result_queue is None:
+                    # Camera is disabled, just wait and continue.
+                    time.sleep(0.1)
+                    continue
+
+                if not recognition_enabled:
+                    # Camera on, but recognition off - skip processing and keep polling.
+                    time.sleep(0.1)
+                    continue
                 
                 # Both camera AND recognition are enabled, try to get a result packet
                 try:

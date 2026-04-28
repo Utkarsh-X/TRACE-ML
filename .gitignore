@@ -77,3 +77,9 @@ color_theme_inpiration/
 # Node modules
 node_modules/
 whatsapp-bridge/
+
+# Run logs and test data
+debug.log
+output/
+wordreportfiles/
+portable_data_smoke/

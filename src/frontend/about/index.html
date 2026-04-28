@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+  <title>TRACE-AML | About</title>
+
+  <link rel="stylesheet" href="../shared/tailwind-compiled.css" />
+  <link rel="stylesheet" href="../shared/sidenav.css" />
+  <link rel="stylesheet" href="../shared/base.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+
+  <style>
+    .about-shell {
+      min-height: 100%;
+      display: flex;
+      flex-direction: column;
+      background:
+        radial-gradient(circle at top right, rgba(255, 255, 255, 0.04), transparent 24%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.015), transparent 42%);
+    }
+
+    .about-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.2fr) minmax(320px, 0.8fr);
+      gap: 1.5rem;
+    }
+
+    .about-panel {
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    .about-kicker {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.55rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.62rem;
+      text-transform: uppercase;
+      letter-spacing: 0.22em;
+      color: rgba(255, 255, 255, 0.55);
+    }
+
+    .about-kicker::before {
+      content: "";
+      width: 0.42rem;
+      height: 0.42rem;
+      background: #ffffff;
+      display: inline-block;
+    }
+
+    .about-title {
+      font-size: clamp(2.4rem, 4vw, 4.6rem);
+      line-height: 0.96;
+      letter-spacing: -0.05em;
+      font-weight: 800;
+      color: #ffffff;
+      margin: 0;
+    }
+
+    .about-copy {
+      font-size: 0.95rem;
+      line-height: 1.8;
+      color: rgba(255, 255, 255, 0.74);
+      max-width: 54rem;
+    }
+
+    .about-meta-label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.62rem;
+      text-transform: uppercase;
+      letter-spacing: 0.2em;
+      color: rgba(255, 255, 255, 0.45);
+    }
+
+    .about-meta-value {
+      margin-top: 0.4rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.92rem;
+      line-height: 1.6;
+      color: #ffffff;
+      word-break: break-word;
+    }
+
+    .signal-list {
+      display: grid;
+      gap: 0.85rem;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .signal-list li {
+      padding: 0.85rem 0 0;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.72rem;
+      line-height: 1.7;
+      letter-spacing: 0.04em;
+      color: rgba(255, 255, 255, 0.72);
+      text-transform: uppercase;
+    }
+
+    .signal-list li:first-child {
+      padding-top: 0;
+      border-top: 0;
+    }
+
+    .about-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.85rem;
+    }
+
+    .about-link {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 12rem;
+      padding: 0.9rem 1.1rem;
+      text-decoration: none;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      background: rgba(255, 255, 255, 0.04);
+      color: #ffffff;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.72rem;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      transition: background 120ms ease, border-color 120ms ease;
+    }
+
+    .about-link:hover {
+      background: rgba(255, 255, 255, 0.08);
+      border-color: rgba(255, 255, 255, 0.22);
+    }
+
+    .about-link--primary {
+      background: #ffffff;
+      color: #131313;
+      border-color: #ffffff;
+    }
+
+    .about-link--primary:hover {
+      background: #e8e8e8;
+    }
+
+    @media (max-width: 1100px) {
+      .about-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+
+<body class="bg-background text-on-surface font-body overflow-hidden">
+<div class="app-shell">
+  <aside class="sidenav" id="sidenav">
+    <div class="sidenav-header">
+      <button class="hamburger-btn" id="sidenav-toggle" title="Toggle sidebar (Ctrl+B)">
+        <span class="material-symbols-outlined">dock_to_right</span>
+      </button>
+      <span class="sidenav-brand">TRACE-AML</span>
+    </div>
+    <div class="sidenav-status">
+      <span class="status-dot" id="connection-badge"></span>
+      <span class="status-label"></span>
+    </div>
+    <nav class="sidenav-nav">
+      <a class="nav-item" href="../live_ops/index.html" data-tooltip="Live Ops">
+        <span class="material-symbols-outlined nav-icon">monitoring</span>
+        <span class="nav-label">Live Ops</span>
+      </a>
+      <a class="nav-item" href="../incidents/index.html" data-tooltip="Incidents">
+        <span class="material-symbols-outlined nav-icon">timeline</span>
+        <span class="nav-label">Incidents</span>
+      </a>
+      <a class="nav-item" href="../entities/index.html" data-tooltip="Entities">
+        <span class="material-symbols-outlined nav-icon">hub</span>
+        <span class="nav-label">Entities</span>
+      </a>
+      <a class="nav-item" href="../history/index.html" data-tooltip="History">
+        <span class="material-symbols-outlined nav-icon">history</span>
+        <span class="nav-label">History</span>
+      </a>
+      <a class="nav-item" href="../database/index.html" data-tooltip="Database">
+        <span class="material-symbols-outlined nav-icon">database</span>
+        <span class="nav-label">Database</span>
+      </a>
+    </nav>
+    <div class="sidenav-divider"></div>
+    <nav class="sidenav-nav">
+      <a class="nav-item" href="../enrollment/index.html" data-tooltip="Enrollment">
+        <span class="material-symbols-outlined nav-icon">person_add</span>
+        <span class="nav-label">Enrollment</span>
+      </a>
+    </nav>
+    <div class="sidenav-spacer"></div>
+    <div class="sidenav-bottom">
+      <a class="nav-item" href="../settings/index.html" data-tooltip="Settings">
+        <span class="material-symbols-outlined nav-icon">settings</span>
+        <span class="nav-label">Settings</span>
+      </a>
+      <button class="nav-item nav-btn" type="button" data-tooltip="Admin">
+        <span class="material-symbols-outlined nav-icon">person</span>
+        <span class="nav-label">Admin</span>
+      </button>
+      <div class="sidenav-divider"></div>
+      <a class="nav-item active" href="./index.html" data-tooltip="About">
+        <span class="material-symbols-outlined nav-icon">help_outline</span>
+        <span class="nav-label">About</span>
+      </a>
+      <button class="nav-item nav-btn" id="desktop-exit-button" type="button" data-tooltip="Exit">
+        <span class="material-symbols-outlined nav-icon">logout</span>
+        <span class="nav-label">Exit</span>
+      </button>
+    </div>
+    <div class="sidenav-splitter" id="sidenav-splitter"></div>
+  </aside>
+
+  <main class="main-content overflow-auto">
+    <div class="about-shell p-8 md:p-10">
+      <section class="about-panel p-8 md:p-10">
+        <span class="about-kicker">Project Credits</span>
+        <div class="mt-6 about-grid">
+          <div>
+            <h1 class="about-title">TRACE-AML</h1>
+            <p class="about-copy mt-5">
+              A local-first investigative workspace for live recognition, entity tracking, incident review, and evidence intelligence.
+              This desktop shell packages the operational workflow into a portable forensic interface without moving the core system away
+              from its original architecture.
+            </p>
+            <p class="about-copy mt-5">
+              Designed and developed by Utkarsh Chandra. The desktop flow, interface, and source architecture remain grounded in the
+              original TRACE-AML repository and its underlying local service model.
+            </p>
+
+            <div class="about-actions mt-8">
+              <a class="about-link about-link--primary" href="../live_ops/index.html">Return to Live Ops</a>
+              <a class="about-link" href="../entities/index.html">Open Entity Index</a>
+            </div>
+          </div>
+
+          <div class="space-y-4">
+            <section class="about-panel p-6">
+              <div class="about-meta-label">Developer</div>
+              <div class="about-meta-value">Utkarsh Chandra</div>
+            </section>
+
+            <section class="about-panel p-6">
+              <div class="about-meta-label">Repository</div>
+              <div class="about-meta-value">github.com/Utkarsh-X/TRACE-AML</div>
+            </section>
+
+            <section class="about-panel p-6">
+              <div class="about-meta-label">Build Notes</div>
+              <ul class="signal-list mt-3">
+                <li>Desktop splash initializes the local backend before the operator workspace loads.</li>
+                <li>Live Ops, recognition flow, and forensic review remain tied to the original source repository.</li>
+                <li>The packaged desktop shell is intended to showcase the system while preserving the local execution model.</li>
+              </ul>
+            </section>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+</div>
+
+<script src="../shared/sidenav.js?v=20260427001"></script>
+<script src="../shared/desktop_shell.js?v=20260427001"></script>
+</body>
+</html>
